@@ -1,0 +1,3 @@
+#+title: Notes
+
+Take a look table crate: https://crates.io/crates/leptos-struct-table
