@@ -1,3 +1,8 @@
-#+title: Notes
+# #+title: Notes
 
 Take a look table crate: https://crates.io/crates/leptos-struct-table
+
+* Tasks
+** DONE Add clap with "run-server" which will start axum
+** DONE move tokio to backend, so run-server should create runtime by it own
+** TODO make front-end work
