@@ -1,8 +1,10 @@
 # #+title: Notes
 
 Take a look table crate: https://crates.io/crates/leptos-struct-table
+Can get some ideas here: https://github.com/s1n7ax/my-website i.e docker-compose setup.
 
 * Tasks
 ** DONE Add clap with "run-server" which will start axum
 ** DONE move tokio to backend, so run-server should create runtime by it own
 ** TODO make front-end work
+** https://github.com/s1n7ax/my-website ids

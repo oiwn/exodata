@@ -1,3 +1,4 @@
 /target
 /dist
 Cargo.lock
+/data/*.csv
