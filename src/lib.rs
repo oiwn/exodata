@@ -1,7 +1,11 @@
 pub mod app;
+#[cfg(feature = "ssr")]
+pub mod common;
 pub mod error_template;
 #[cfg(feature = "ssr")]
 pub mod fileserv;
+#[cfg(feature = "ssr")]
+pub mod stellarhosts;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]

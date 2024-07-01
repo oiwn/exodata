@@ -37,14 +37,10 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:tracing",
-    "dep:surrealdb"
-]
-cli = [
-    "dep:tokio",
-    "dep:tracing",
+    "dep:surrealdb",
+    # for cli
     "dep:clap",
-    "dep:votable",
-    "dep:surrealdb"
+    "dep:votable"
 ]
 default = ["ssr"]
 

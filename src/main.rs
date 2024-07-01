@@ -1,6 +1,52 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    use clap::Parser;
+    use exoplanets_catalog::common;
+    use exoplanets_catalog::stellarhosts;
+
+    #[derive(Parser, Debug)]
+    #[clap(author, version, about, long_about = None)]
+    struct Cli {
+        #[clap(subcommand)]
+        command: Option<Commands>,
+    }
+
+    #[derive(Parser, Debug)]
+    enum Commands {
+        Serve,
+        ImportData,
+        ViewFields { path: String }, // Print VOTable fields
+        Fields2Struct { name: String, path: String }, // Genrate rust structure from VOTable fields
+    }
+
+    let cli = Cli::parse();
+
+    match &cli.command {
+        Some(Commands::Serve) | None => {
+            start_server().await;
+        }
+        Some(Commands::ImportData) => {
+            let _ = stellarhosts::load_data();
+        }
+        Some(Commands::ViewFields { path }) => {
+            common::print_votable_headers(path);
+        }
+        Some(Commands::Fields2Struct { name, path }) => {
+            common::print_structure_from(path, name);
+        }
+    }
+}
+
+#[cfg(not(feature = "ssr"))]
+pub fn main() {
+    // no client-side main function
+    // unless we want this to work with e.g., Trunk for a purely client-side app
+    // see lib.rs for hydration function instead
+}
+
+#[cfg(feature = "ssr")]
+async fn start_server() {
     use axum::Router;
     use exoplanets_catalog::app::*;
     use exoplanets_catalog::fileserv::file_and_error_handler;
@@ -28,11 +74,4 @@ async fn main() {
     axum::serve(listener, app.into_make_service())
         .await
         .unwrap();
-}
-
-#[cfg(not(feature = "ssr"))]
-pub fn main() {
-    // no client-side main function
-    // unless we want this to work with e.g., Trunk for a purely client-side app
-    // see lib.rs for hydration function instead
 }
