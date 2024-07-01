@@ -4,6 +4,17 @@ use leptos_meta::*;
 use leptos_router::*;
 
 #[component]
+pub fn TableWrapper() -> impl IntoView {
+    provide_meta_context();
+
+    view! {
+        <main>
+            <h1>Table here!</h1>
+        </main>
+    }
+}
+
+#[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
@@ -30,6 +41,7 @@ pub fn App() -> impl IntoView {
             <main>
                 <Routes>
                     <Route path="" view=HomePage/>
+                    <Route path="table" view=TableWrapper/>
                 </Routes>
             </main>
         </Router>
