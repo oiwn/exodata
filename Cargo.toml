@@ -3,6 +3,12 @@ name = "exoplanets-catalog"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+members = [
+    ".",
+    "struct_macro"
+]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -24,6 +30,7 @@ clap = { version = "4.5.7", features = ["derive"], optional = true }
 surrealdb = { version = "1.5.3", features = ["kv-mem"], optional = true }
 serde = { version = "1.0.203", features = ["derive"] }
 votable = { version = "0.6.0", optional = true  }
+struct_macro = { path = "struct_macro", optional = true }
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
@@ -40,7 +47,8 @@ ssr = [
     "dep:surrealdb",
     # for cli
     "dep:clap",
-    "dep:votable"
+    "dep:votable",
+    "struct_macro"
 ]
 default = ["ssr"]
 
