@@ -147,17 +147,18 @@ struct Stellarhosts {
 pub fn load_data() -> Result<(), VOTableError> {
     let mut votable_it = VOTableIterator::from_file("data/stellarhosts.vot").unwrap();
     let mut iter_num = 0;
-    while let Some(mut row_it) = votable_it.next_table_row_value_iter()? {
+    'outer: while let Some(row_it) = votable_it.next_table_row_value_iter()? {
         for (i, row) in row_it.enumerate() {
             println!("Row {}: {:?}", i, row);
-            // let stellarhost = Stellarhosts::new(row);
             iter_num += 1;
-            if iter_num > 2 {
-                break;
+            if iter_num > 200 {
+                break 'outer;
             }
         }
     }
+    println!("NEVER COME HERE!");
     let votable = votable_it.end_of_it();
+    println!("*****************************");
     println!("VOTable: {:?}", votable);
     Ok(())
 }

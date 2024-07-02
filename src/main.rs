@@ -17,11 +17,11 @@ async fn main() {
         Serve,
         ImportData,
         ViewFields { path: String }, // Print VOTable fields
-        Fields2Struct { name: String, path: String }, // Genrate rust structure from VOTable fields
+        CodegenVotable { name: String, path: String }, // Genrate rust structure from VOTable fields
+        Check,                                         // Check something
     }
 
     let cli = Cli::parse();
-
     match &cli.command {
         Some(Commands::Serve) | None => {
             start_server().await;
@@ -32,8 +32,15 @@ async fn main() {
         Some(Commands::ViewFields { path }) => {
             common::print_votable_headers(path);
         }
-        Some(Commands::Fields2Struct { name, path }) => {
-            common::print_structure_from(path, name);
+        Some(Commands::CodegenVotable { name, path }) => {
+            let _ = common::structure_from_votables_codegen(path, name);
+        }
+        Some(Commands::Check) => {
+            common::extract_coumns_types("data/stellarhosts.vot");
+
+            // let nullable_columns = common::detect_nullable_columns("data/stellarhosts.vot");
+            // println!("{:?}", nullable_columns);
+            // println!("LEN. {}", nullable_columns.len());
         }
     }
 }
