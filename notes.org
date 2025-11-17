@@ -3,6 +3,9 @@
 Take a look table crate: https://crates.io/crates/leptos-struct-table
 Can get some ideas here: https://github.com/s1n7ax/my-website i.e docker-compose setup.
 
+Oh wow https://www.reddit.com/r/LocalLLaMA/comments/1du414g/nasa_ibm_just_released_indus_an_llm_built_for/
+NASA-IBM Collaboration Develops INDUS Large Language Models for Advanced Science Research
+
 * Tasks
 ** DONE Add clap with "run-server" which will start axum
 ** DONE move tokio to backend, so run-server should create runtime by it own
