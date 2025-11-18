@@ -7,17 +7,17 @@ windows:
     panes:
       - shell_command:
         - helix
+  - window_name: agent
+    start-directory: ./
+    panes:
+      - shell_command:
+        - gemini-cli
   - window_name: cmd
     start-directory: ./
     panes:
       - shell_command:
-        - clear
-  - window_name: srv
-    start-directory: ./
+        - eza --long
+  - window_name: cmd2
     panes:
       - shell_command:
-        - clear
-  - window_name: notes
-    panes:
-      - shell_command:
-        - emacs -nw notes.org
+        - eza --long
