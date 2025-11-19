@@ -13,28 +13,28 @@ members = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axum = { version = "0.7", optional = true }
+axum = { version = "0.8", optional = true }
 console_error_panic_hook = "0.1"
-leptos = { version = "0.6" }
-leptos_axum = { version = "0.6", optional = true }
-leptos_meta = { version = "0.6" }
-leptos_router = { version = "0.6" }
+leptos = { version = "0.8" }
+leptos_axum = { version = "0.8", optional = true }
+leptos_meta = { version = "0.8" }
+leptos_router = { version = "0.8" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"], optional = true }
-tower = { version = "0.4", optional = true }
-tower-http = { version = "0.5", features = ["fs"], optional = true }
-wasm-bindgen = "=0.2.92"
-thiserror = "1"
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", features = ["fs"], optional = true }
+wasm-bindgen = "0.2.105"
+thiserror = "2"
 tracing = { version = "0.1", optional = true }
 http = "1"
-clap = { version = "4.5.7", features = ["derive"], optional = true }
-surrealdb = { version = "1.5.3", features = ["kv-mem"], optional = true }
-serde = { version = "1.0.203", features = ["derive"] }
-votable = { version = "0.6.0", optional = true  }
+clap = { version = "4.5.52", features = ["derive"], optional = true }
+surrealdb = { version = "2.3.10", features = ["kv-mem"], optional = true }
+serde = { version = "1.0.228", features = ["derive"] }
+votable = { version = "0.6.3", optional = true  }
 struct_macro = { path = "struct_macro", optional = true }
-anyhow = "1.0.86"
+anyhow = "1.0.100"
 
 [features]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+hydrate = ["leptos/hydrate"]
 ssr = [
     "dep:axum",
     "dep:tokio",

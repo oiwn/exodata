@@ -4,6 +4,7 @@ use votable::iter::{TableIter, VOTableIterator};
 use votable::{datatype::Datatype, impls::VOTableValue, TableElem};
 // use votable::{Field, VOTableElement};
 
+#[allow(dead_code)]
 pub struct TableColumn {
     name: String,
     datatype: Datatype,

@@ -1,7 +1,9 @@
 use crate::error_template::{AppError, ErrorTemplate};
-use leptos::*;
+use leptos::prelude::*; // Replaces `use leptos::*;`
+use leptos::error::Errors;
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::components::*; // Replaces `use leptos_router::*;`
+use leptos_router::path;
 
 #[component]
 pub fn TableWrapper() -> impl IntoView {
@@ -30,18 +32,18 @@ pub fn App() -> impl IntoView {
         <Title text="Welcome to Leptos"/>
 
         // content for this welcome page
-        <Router fallback=|| {
-            let mut outside_errors = Errors::default();
-            outside_errors.insert_with_default_key(AppError::NotFound);
-            view! {
-                <ErrorTemplate outside_errors/>
-            }
-            .into_view()
-        }>
+        <Router>
             <main>
-                <Routes>
-                    <Route path="" view=HomePage/>
-                    <Route path="table" view=TableWrapper/>
+                <Routes fallback=|| {
+                    let mut outside_errors = Errors::default();
+                    outside_errors.insert_with_default_key(AppError::NotFound);
+                    view! {
+                        <ErrorTemplate outside_errors/>
+                    }
+                    .into_view()
+                }>
+                    <Route path=path!("/") view=HomePage/>
+                    <Route path=path!("/table") view=TableWrapper/>
                 </Routes>
             </main>
         </Router>
@@ -52,7 +54,7 @@ pub fn App() -> impl IntoView {
 #[component]
 fn HomePage() -> impl IntoView {
     // Creates a reactive value to update the button
-    let (count, set_count) = create_signal(0);
+    let (count, set_count) = signal(0);
     static BTN_CLASS: &str = "flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 \
         text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline \
         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600";

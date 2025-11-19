@@ -2,9 +2,10 @@
 //! https://exoplanetarchive.ipac.caltech.edu/docs/API_STELLARHOSTS_columns.html
 use serde;
 // use struct_macro::ImplNew;
-use votable::iter::{TableIter, VOTableIterator};
-use votable::{impls::VOTableValue, VOTableError};
+use votable::iter::VOTableIterator;
+use votable::VOTableError;
 
+#[allow(dead_code)]
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Stellarhosts {
     hostname: Option<String>,

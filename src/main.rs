@@ -58,6 +58,7 @@ async fn start_server() {
     use exoplanets_catalog::app::*;
     use exoplanets_catalog::fileserv::file_and_error_handler;
     use leptos::*;
+    use leptos::prelude::get_configuration; // Added this import
     use leptos_axum::{generate_route_list, LeptosRoutes};
 
     // Setting get_configuration(None) means we'll be using cargo-leptos's env values
@@ -65,7 +66,7 @@ async fn start_server() {
     // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
     // Alternately a file can be specified such as Some("Cargo.toml")
     // The file would need to be included with the executable when moved to deployment
-    let conf = get_configuration(None).await.unwrap();
+    let conf = get_configuration(None).unwrap();
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
