@@ -22,31 +22,37 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                // injects a stylesheet into the document <head>
+                // id=leptos means cargo-leptos will hot-reload this stylesheet
+                <Stylesheet id="leptos" href="/pkg/exoplanets-catalog.css"/>
 
-
-        // injects a stylesheet into the document <head>
-        // id=leptos means cargo-leptos will hot-reload this stylesheet
-        <Stylesheet id="leptos" href="/pkg/exoplanets-catalog.css"/>
-
-        // sets the document title
-        <Title text="Welcome to Leptos"/>
-
-        // content for this welcome page
-        <Router>
-            <main>
-                <Routes fallback=|| {
-                    let mut outside_errors = Errors::default();
-                    outside_errors.insert_with_default_key(AppError::NotFound);
-                    view! {
-                        <ErrorTemplate outside_errors/>
-                    }
-                    .into_view()
-                }>
-                    <Route path=path!("/") view=HomePage/>
-                    <Route path=path!("/table") view=TableWrapper/>
-                </Routes>
-            </main>
-        </Router>
+                // sets the document title
+                <Title text="Welcome to Leptos"/>
+            </head>
+            <body>
+                // content for this welcome page
+                <Router>
+                    <main>
+                        <Routes fallback=|| {
+                            let mut outside_errors = Errors::default();
+                            outside_errors.insert_with_default_key(AppError::NotFound);
+                            view! {
+                                <ErrorTemplate outside_errors/>
+                            }
+                            .into_view()
+                        }>
+                            <Route path=path!("/") view=HomePage/>
+                            <Route path=path!("/table") view=TableWrapper/>
+                        </Routes>
+                    </main>
+                </Router>
+            </body>
+        </html>
     }
 }
 
