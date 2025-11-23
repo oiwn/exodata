@@ -6,7 +6,9 @@ use axum::{
     http::{Request, Response, StatusCode},
     response::IntoResponse,
 };
+use leptos::context::provide_context;
 use leptos::prelude::*;
+use leptos_axum::render_app_to_stream_with_context;
 use tower::ServiceExt;
 use tower_http::services::ServeDir;
 
@@ -32,7 +34,9 @@ pub async fn file_and_error_handler(
     if res.status() == StatusCode::OK {
         res.into_response()
     } else {
-        let handler = leptos_axum::render_app_to_stream(App);
+        let handler = render_app_to_stream_with_context(App, move || {
+            provide_context(options.clone());
+        });
         handler(Request::from_parts(parts, body))
             .await
             .into_response()

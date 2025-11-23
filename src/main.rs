@@ -55,8 +55,7 @@ pub fn main() {
 #[cfg(feature = "ssr")]
 async fn start_server() {
     use axum::Router;
-    use exoplanets_catalog::app::*;
-    use exoplanets_catalog::fileserv::file_and_error_handler;
+    use exoplanets_catalog::app::{App, shell};
     use leptos::*;
     use leptos::prelude::get_configuration; // Added this import
     use leptos_axum::{generate_route_list, LeptosRoutes};
@@ -73,8 +72,11 @@ async fn start_server() {
 
     // build our application with a route
     let app = Router::new()
-        .leptos_routes(&leptos_options, routes, App)
-        .fallback(file_and_error_handler)
+        .leptos_routes(&leptos_options, routes, {
+            let leptos_options = leptos_options.clone();
+            move || shell(leptos_options.clone())
+        })
+        .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

@@ -3,17 +3,16 @@ pub mod app;
 pub mod common;
 pub mod error_template;
 #[cfg(feature = "ssr")]
-pub mod fileserv;
+
 #[cfg(feature = "ssr")]
 pub mod stellarhosts;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
-    use crate::app::*;
-    use leptos::mount::mount_to_body;
+    use crate::app::App;
     console_error_panic_hook::set_once();
-    mount_to_body(App);
+    leptos::mount::hydrate_body(App);
 }
 
 #[cfg(test)]

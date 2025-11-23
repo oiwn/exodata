@@ -1,9 +1,29 @@
 use crate::error_template::{AppError, ErrorTemplate};
 use leptos::prelude::*; // Replaces `use leptos::*;`
 use leptos::error::Errors;
+use leptos::hydration::HydrationScripts;
 use leptos_meta::*;
 use leptos_router::components::*; // Replaces `use leptos_router::*;`
-use leptos_router::path;
+use leptos_router::StaticSegment;
+
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <AutoReload options=options.clone() />
+                <HydrationScripts options=options.clone() />
+                <MetaTags/>
+            </head>
+            <body>
+                <App/>
+            </body>
+        </html>
+    }
+}
+
 
 #[component]
 pub fn TableWrapper() -> impl IntoView {
@@ -18,41 +38,30 @@ pub fn TableWrapper() -> impl IntoView {
 
 #[component]
 pub fn App() -> impl IntoView {
-    // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
     view! {
-        <!DOCTYPE html>
-        <html lang="en">
-            <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                // injects a stylesheet into the document <head>
-                // id=leptos means cargo-leptos will hot-reload this stylesheet
-                <Stylesheet id="leptos" href="/pkg/exoplanets-catalog.css"/>
+        // injects a stylesheet into the document <head>
+        // id=leptos means cargo-leptos will hot-reload this stylesheet
+        <Stylesheet id="leptos" href="/pkg/exoplanets-catalog.css"/>
 
-                // sets the document title
-                <Title text="Welcome to Leptos"/>
-            </head>
-            <body>
-                // content for this welcome page
-                <Router>
-                    <main>
-                        <Routes fallback=|| {
-                            let mut outside_errors = Errors::default();
-                            outside_errors.insert_with_default_key(AppError::NotFound);
-                            view! {
-                                <ErrorTemplate outside_errors/>
-                            }
-                            .into_view()
-                        }>
-                            <Route path=path!("/") view=HomePage/>
-                            <Route path=path!("/table") view=TableWrapper/>
-                        </Routes>
-                    </main>
-                </Router>
-            </body>
-        </html>
+        // sets the document title
+        <Title text="Welcome to Leptos"/>
+
+        // content for this welcome page
+        <Router>
+            <Routes fallback=|| {
+                let mut outside_errors = Errors::default();
+                outside_errors.insert_with_default_key(AppError::NotFound);
+                view! {
+                    <ErrorTemplate outside_errors/>
+                }
+                .into_view()
+            }>
+                <Route path=StaticSegment("") view=HomePage/>
+                <Route path=StaticSegment("table") view=TableWrapper/>
+            </Routes>
+        </Router>
     }
 }
 
@@ -68,7 +77,9 @@ fn HomePage() -> impl IntoView {
     let on_click = move |_| set_count.update(|count| *count += 1);
 
     view! {
-        <h1>"Website!"</h1>
-        <button on:click=on_click class=BTN_CLASS>"Click Me: " {count}</button>
+        <main>
+            <h1>"Website!"</h1>
+            <button on:click=on_click class=BTN_CLASS>"Click Me: " {count}</button>
+        </main>
     }
 }
