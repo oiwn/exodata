@@ -32,6 +32,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 votable = { version = "0.6.3", optional = true  }
 struct_macro = { path = "struct_macro", optional = true }
 anyhow = "1.0.100"
+polars = { version = "0.52.0", features = ["lazy"] }
 
 [features]
 hydrate = ["leptos/hydrate"]
