@@ -1,165 +1,61 @@
 //! Everything related to "stellarhosts" table,
 //! https://exoplanetarchive.ipac.caltech.edu/docs/API_STELLARHOSTS_columns.html
-use serde;
-// use struct_macro::ImplNew;
-use votable::iter::VOTableIterator;
-use votable::VOTableError;
 
-#[allow(dead_code)]
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-struct Stellarhosts {
-    hostname: Option<String>,
-    hd_name: Option<String>,
-    hip_name: Option<String>,
-    tic_id: Option<String>,
-    st_refname: Option<String>,
-    sy_refname: Option<String>,
-    ra: Option<f64>,
-    rastr: Option<String>,
-    dec: Option<f64>,
-    decstr: Option<String>,
-    glon: Option<f64>,
-    glat: Option<f64>,
-    elon: Option<f64>,
-    elat: Option<f64>,
-    sy_icmag: Option<f64>,
-    sy_icmagerr1: Option<f64>,
-    sy_icmagerr2: Option<f64>,
-    st_teff: Option<f64>,
-    st_tefferr1: Option<f64>,
-    st_tefferr2: Option<f64>,
-    st_tefflim: Option<i32>,
-    st_met: Option<f64>,
-    st_meterr1: Option<f64>,
-    st_meterr2: Option<f64>,
-    st_metlim: Option<i32>,
-    st_radv: Option<f64>,
-    st_radverr1: Option<f64>,
-    st_radverr2: Option<f64>,
-    st_radvlim: Option<i32>,
-    st_vsin: Option<f64>,
-    st_vsinerr1: Option<f64>,
-    st_vsinerr2: Option<f64>,
-    st_vsinlim: Option<i32>,
-    st_lum: Option<f64>,
-    st_lumerr1: Option<f64>,
-    st_lumerr2: Option<f64>,
-    st_lumlim: Option<i32>,
-    st_logg: Option<f64>,
-    st_loggerr1: Option<f64>,
-    st_loggerr2: Option<f64>,
-    st_logglim: Option<i32>,
-    st_age: Option<f64>,
-    st_ageerr1: Option<f64>,
-    st_ageerr2: Option<f64>,
-    st_agelim: Option<i32>,
-    st_mass: Option<f64>,
-    st_masserr1: Option<f64>,
-    st_masserr2: Option<f64>,
-    st_masslim: Option<i32>,
-    st_dens: Option<f64>,
-    st_denserr1: Option<f64>,
-    st_denserr2: Option<f64>,
-    st_denslim: Option<i32>,
-    st_rad: Option<f64>,
-    st_raderr1: Option<f64>,
-    st_raderr2: Option<f64>,
-    st_radlim: Option<i32>,
-    sy_snum: Option<i32>,
-    sy_pnum: Option<i32>,
-    sy_mnum: Option<i32>,
-    sy_pm: Option<f64>,
-    sy_pmerr1: Option<f64>,
-    sy_pmerr2: Option<f64>,
-    sy_pmra: Option<f64>,
-    sy_pmraerr1: Option<f64>,
-    sy_pmraerr2: Option<f64>,
-    sy_pmdec: Option<f64>,
-    sy_pmdecerr1: Option<f64>,
-    sy_pmdecerr2: Option<f64>,
-    sy_plx: Option<f64>,
-    sy_plxerr1: Option<f64>,
-    sy_plxerr2: Option<f64>,
-    sy_dist: Option<f64>,
-    sy_disterr1: Option<f64>,
-    sy_disterr2: Option<f64>,
-    sy_bmag: Option<f64>,
-    sy_bmagerr1: Option<f64>,
-    sy_bmagerr2: Option<f64>,
-    sy_vmag: Option<f64>,
-    sy_vmagerr1: Option<f64>,
-    sy_vmagerr2: Option<f64>,
-    sy_jmag: Option<f64>,
-    sy_jmagerr1: Option<f64>,
-    sy_jmagerr2: Option<f64>,
-    sy_hmag: Option<f64>,
-    sy_hmagerr1: Option<f64>,
-    sy_hmagerr2: Option<f64>,
-    sy_kmag: Option<f64>,
-    sy_kmagerr1: Option<f64>,
-    sy_kmagerr2: Option<f64>,
-    sy_umag: Option<f64>,
-    sy_umagerr1: Option<f64>,
-    sy_umagerr2: Option<f64>,
-    sy_rmag: Option<f64>,
-    sy_rmagerr1: Option<f64>,
-    sy_rmagerr2: Option<f64>,
-    sy_imag: Option<f64>,
-    sy_imagerr1: Option<f64>,
-    sy_imagerr2: Option<f64>,
-    sy_zmag: Option<f64>,
-    sy_zmagerr1: Option<f64>,
-    sy_zmagerr2: Option<f64>,
-    sy_w1mag: Option<f64>,
-    sy_w1magerr1: Option<f64>,
-    sy_w1magerr2: Option<f64>,
-    sy_w2mag: Option<f64>,
-    sy_w2magerr1: Option<f64>,
-    sy_w2magerr2: Option<f64>,
-    sy_w3mag: Option<f64>,
-    sy_w3magerr1: Option<f64>,
-    sy_w3magerr2: Option<f64>,
-    sy_w4mag: Option<f64>,
-    sy_w4magerr1: Option<f64>,
-    sy_w4magerr2: Option<f64>,
-    sy_gmag: Option<f64>,
-    sy_gmagerr1: Option<f64>,
-    sy_gmagerr2: Option<f64>,
-    sy_gaiamag: Option<f64>,
-    sy_gaiamagerr1: Option<f64>,
-    sy_gaiamagerr2: Option<f64>,
-    sy_tmag: Option<f64>,
-    sy_tmagerr1: Option<f64>,
-    sy_tmagerr2: Option<f64>,
-    sy_name: Option<String>,
-    st_metratio: Option<String>,
-    st_spectype: Option<String>,
-    sy_kepmag: Option<f64>,
-    sy_kepmagerr1: Option<f64>,
-    sy_kepmagerr2: Option<f64>,
-    st_rotp: Option<f64>,
-    st_rotperr1: Option<f64>,
-    st_rotperr2: Option<f64>,
-    st_rotplim: Option<i32>,
-    gaia_id: Option<String>,
-    cb_flag: Option<i32>,
-}
+use anyhow::{anyhow, Error};
+use leptos::prelude::*;
+use polars::prelude::*;
+use serde_json;
+use votable::data::DataElem;
+use votable::datatype::Datatype;
+use votable::impls::mem::InMemTableDataRows;
+use votable::impls::VOTableValue;
+use votable::table::TableElem;
+use votable::votable::VOTableWrapper;
 
-pub fn load_data() -> Result<(), VOTableError> {
-    let mut votable_it = VOTableIterator::from_file("data/stellarhosts.vot").unwrap();
-    let mut iter_num = 0;
-    'outer: while let Some(row_it) = votable_it.next_table_row_value_iter()? {
-        for (i, row) in row_it.enumerate() {
-            println!("Row {}: {:?}", i, row);
-            iter_num += 1;
-            if iter_num > 200 {
-                break 'outer;
+#[server]
+pub async fn get_exoplanet_data() -> Result<String, ServerFnError> {
+    match load_data("data/stellarhosts.vot") {
+        Ok(df) => {
+            // Get column names
+            let columns: Vec<String> = df
+                .get_column_names_str()
+                .iter()
+                .map(|&name| name.to_string())
+                .collect();
+
+            // Get first few rows as a preview (limit to 10 rows)
+            let preview = df.head(Some(10));
+
+            let mut result = Vec::new();
+
+            // Add header row
+            result.push(columns);
+
+            // Add data rows
+            for i in 0..preview.height() {
+                let row_values: Vec<String> = (0..preview.width())
+                    .map(|j| {
+                        let col_name = preview.get_column_names_str()[j];
+                        let col = preview.column(col_name).unwrap();
+                        match col.get(i) {
+                            Ok(val) => format!("{:?}", val),
+                            Err(_) => "null".to_string(),
+                        }
+                    })
+                    .collect();
+                result.push(row_values);
+            }
+
+            // Convert to JSON string
+            match serde_json::to_string(&result) {
+                Ok(json) => Ok(json),
+                Err(_) => Err(ServerFnError::ServerError(
+                    "Failed to serialize data".to_string(),
+                )),
             }
         }
+        Err(_) => Err(ServerFnError::ServerError(
+            "Failed to load data".to_string(),
+        )),
     }
-    println!("NEVER COME HERE!");
-    let votable = votable_it.end_of_it();
-    println!("*****************************");
-    println!("VOTable: {:?}", votable);
-    Ok(())
 }

@@ -1,9 +1,9 @@
 use crate::error_template::{AppError, ErrorTemplate};
-use leptos::prelude::*; // Replaces `use leptos::*;`
+use leptos::prelude::*;
 use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos_meta::*;
-use leptos_router::components::*; // Replaces `use leptos_router::*;`
+use leptos_router::components::*;
 use leptos_router::StaticSegment;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
@@ -31,7 +31,8 @@ pub fn TableWrapper() -> impl IntoView {
 
     view! {
         <main>
-            <h1>Table here!</h1>
+            <h1>"Table here!"</h1>
+            <p>"Data loading functionality implemented in CLI"</p>
         </main>
     }
 }

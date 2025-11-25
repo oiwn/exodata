@@ -15,7 +15,7 @@ async fn main() {
     #[derive(Parser, Debug)]
     enum Commands {
         Serve,
-        ImportData,
+        ImportData { path: String },
         ViewFields { path: String }, // Print VOTable fields
         CodegenVotable { name: String, path: String }, // Genrate rust structure from VOTable fields
         Check,                                         // Check something
@@ -26,8 +26,17 @@ async fn main() {
         Some(Commands::Serve) | None => {
             start_server().await;
         }
-        Some(Commands::ImportData) => {
-            let _ = stellarhosts::load_data();
+        Some(Commands::ImportData { path }) => {
+            println!("Importing data from {}...", path);
+            match stellarhosts::load_data(path) {
+                Ok(df) => {
+                    println!("Successfully loaded data.");
+                    println!("DataFrame shape: {:?}", df.shape());
+                }
+                Err(e) => {
+                    eprintln!("Error loading data: {}", e);
+                }
+            }
         }
         Some(Commands::ViewFields { path }) => {
             common::print_votable_headers(path);
@@ -36,11 +45,15 @@ async fn main() {
             let _ = common::structure_from_votables_codegen(path, name);
         }
         Some(Commands::Check) => {
-            common::extract_coumns_types("data/stellarhosts.vot");
-
-            // let nullable_columns = common::detect_nullable_columns("data/stellarhosts.vot");
-            // println!("{:?}", nullable_columns);
-            // println!("LEN. {}", nullable_columns.len());
+            match stellarhosts::load_data("data/stellarhosts.vot") {
+                Ok(df) => {
+                    println!("Successfully loaded data.");
+                    println!("{}", df);
+                }
+                Err(e) => {
+                    eprintln!("Error loading data: {}", e);
+                }
+            }
         }
     }
 }
@@ -55,17 +68,15 @@ pub fn main() {
 #[cfg(feature = "ssr")]
 async fn start_server() {
     use axum::Router;
-    use exoplanets_catalog::app::{App, shell};
-    use leptos::*;
+    use exoplanets_catalog::app::{shell, App};
     use leptos::prelude::get_configuration; // Added this import
+    use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
 
-    // Setting get_configuration(None) means we'll be using cargo-leptos's env values
+    // Setting get_configuration(Some("Cargo.toml")) means we'll be using cargo-leptos's env values
     // For deployment these variables are:
     // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
-    // Alternately a file can be specified such as Some("Cargo.toml")
-    // The file would need to be included with the executable when moved to deployment
-    let conf = get_configuration(None).unwrap();
+    let conf = get_configuration(Some("Cargo.toml")).unwrap();
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);

@@ -6,7 +6,6 @@ edition = "2021"
 [workspace]
 members = [
     ".",
-    "struct_macro"
 ]
 
 [lib]
@@ -27,12 +26,11 @@ thiserror = "2"
 tracing = { version = "0.1", optional = true }
 http = "1"
 clap = { version = "4.5.52", features = ["derive"], optional = true }
-surrealdb = { version = "2.3.10", features = ["kv-mem"], optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
 votable = { version = "0.6.3", optional = true  }
-struct_macro = { path = "struct_macro", optional = true }
 anyhow = "1.0.100"
-polars = { version = "0.52.0", features = ["lazy"] }
+polars = { version = "0.52.0", features = ["lazy", "temporal", "timezones"] }
+serde_json = "1.0"
 
 [features]
 hydrate = ["leptos/hydrate"]
@@ -46,11 +44,9 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:tracing",
-    "dep:surrealdb",
     # for cli
     "dep:clap",
     "dep:votable",
-    "struct_macro"
 ]
 default = ["ssr"]
 
