@@ -1,16 +1,9 @@
 //! Everything related to "stellarhosts" table,
 //! https://exoplanetarchive.ipac.caltech.edu/docs/API_STELLARHOSTS_columns.html
 
-use anyhow::{anyhow, Error};
+use crate::tables::stellarhosts::load_data;
 use leptos::prelude::*;
-use polars::prelude::*;
 use serde_json;
-use votable::data::DataElem;
-use votable::datatype::Datatype;
-use votable::impls::mem::InMemTableDataRows;
-use votable::impls::VOTableValue;
-use votable::table::TableElem;
-use votable::votable::VOTableWrapper;
 
 #[server]
 pub async fn get_exoplanet_data() -> Result<String, ServerFnError> {

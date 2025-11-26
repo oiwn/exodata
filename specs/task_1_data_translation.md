@@ -1,14 +1,16 @@
 ## 1. Data Handling
 
-This document outlines the strategy for parsing, storing, and querying the exoplanet data. The primary goal is to load the data into a high-performance, in-memory structure that supports complex analytical queries.
+This document outlines the strategy for parsing, storing, and querying exoplanet and stellar host data. The primary goal is to load data into a high-performance, in-memory structure that supports complex analytical queries.
 
-### 1.1. Data Source
-The exoplanet data is provided as a VOTable file (`data/stellarhosts.vot`), acquired from the NASA Exoplanet Archive via the `just download-stellarhosts` command.
+### 1.1. Data Sources
+The exoplanet and stellar host data are provided as VOTable files, acquired from NASA Exoplanet Archive via Just commands:
+- `data/stellarhosts.vot` (167MB) - Information about stars hosting exoplanets
+- `data/exoplanets.vot` (394MB) - Confirmed exoplanets data from `ps` table
 
 ### 1.2. Core Technology
 We use two main Rust crates for this task:
--   **`votable`**: To parse the raw `stellarhosts.vot` file.
--   **`polars`**: To store the data in a `DataFrame` and perform all subsequent querying and analysis.
+-   **`votable`**: To parse raw VOTable files.
+-   **`polars`**: To store data in a `DataFrame` and perform all subsequent querying and analysis.
 
 ### 1.3. Data Loading and Storage Strategy - COMPLETED ✓
 
@@ -21,15 +23,38 @@ The implementation follows the specified approach:
 
 The implementation can be tested using:
 ```bash
-cargo run -- check
+cargo run -- view-fields data/stellarhosts.vot
+cargo run -- view-fields data/exoplanets.vot
 ```
 
-### 1.4. Querying and Analysis - PARTIALLY COMPLETED
+### 1.4. CLI Data Exploration Tools - PARTIALLY COMPLETED (STELLARHOSTS ONLY)
 
-All data queries and calculations can be performed on the in-memory Polars `DataFrame`.
+All data queries and calculations can be performed on in-memory Polars `DataFrame`.
 
--   **Column Access:** Columns are accessed using the string names read from the VOTable header (e.g., `"st_teff"`, `"st_tefferr1"`, `"st_tefflim"`).
--   **Analytical Calculations:** The columnar structure of the DataFrame makes it trivial to perform calculations on related fields.
+-   **Column Access:** Columns are accessed using string names read from VOTable header (e.g., `"st_teff"`, `"pl_name"`, `"pl_masse"`).
+-   **Current CLI Commands (stellarhosts only):** 
+    - `view-samples` - View data samples with customizable column categories
+      - Options: `--limit`, `--category` (basic, position, stellar, photometry)
+      - Example: `cargo run -- view-samples --limit 5 --category stellar`
+    - `view-stats` - Display basic statistics and distributions
+      - Shows mean, median, std dev, min/max for key columns
+      - Includes histogram visualizations for temperature, mass, and radius
+    - `view-fields` - Print all available fields in VOTable
+    - **Performance:** Optimized loading function (`load_data_with_limit`) for faster data exploration
+      - Only loads required rows instead of entire dataset
+      - Reduced load time from several seconds to <1s for sample viewing
+
+**COMPLETED:**
+- [x] CLI commands for stellarhosts data exploration
+- [x] Column categorization for stellarhosts
+- [x] Basic statistics for stellarhosts
+- [x] Performance optimization with partial loading
+
+**TODO:**
+- [ ] Add support for exoplanets data table
+- [ ] Create appropriate column categories for exoplanets data
+- [ ] Implement backend API endpoints to query both DataFrames
+- [ ] Add specific analytical calculations as needed by frontend
 
 Example conceptual calculation:
 ```rust
@@ -42,34 +67,32 @@ let result = df.lazy()
     .collect()?;
 ```
 
-**TODO:**
-- [ ] Implement backend API endpoints to query the central `DataFrame`
-- [ ] Add specific analytical calculations as needed by the frontend
-
 ### 1.5. Schema Reference
 
-The authoritative schema for the `stellarhosts` table can be retrieved from the NASA Exoplanet Archive's TAP service.
+The authoritative schemas for tables can be retrieved from NASA Exoplanet Archive's TAP service.
 
-**TAP Query URL:**
+**TAP Query URLs:**
 ```
+# For stellarhosts
 https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=SELECT+column_name,description,datatype,unit+FROM+TAP_SCHEMA.columns+WHERE+table_name+%3D+'stellarhosts'&format=csv
+
+# For exoplanets (ps table)
+https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=SELECT+column_name,description,datatype,unit+FROM+TAP_SCHEMA.columns+WHERE+table_name+%3D+'ps'&format=csv
 ```
 
 ### 1.6. Next Steps
 
-The data loading and parsing part of Task 1 is complete. The next focus area should be:
+The data loading for stellarhosts is complete, and CLI tools for stellarhosts are implemented. Next focus areas:
 
-1. **CLI Data Exploration Tools**: Create CLI commands for data exploration and analysis
-   - Schema inspection
-   - Data filtering and querying
-   - Basic statistics
-   - Data export capabilities
+1. **Extend CLI to Support Exoplanets Table**:
+   - Create `exoplanets.rs` module similar to `stellarhosts.rs`
+   - Implement data loading function for exoplanets VOTable
+   - Define appropriate column categories for exoplanets data
+   - Update CLI commands to accept table parameter
 
-2. **Backend API Integration**: Expose the DataFrame through API endpoints for frontend consumption
-   - RESTful endpoints for data queries
-   - Filtering and sorting capabilities
+2. **Backend API Integration**: Expose both DataFrames through API endpoints for frontend consumption
+   - RESTful endpoints for both stellarhosts and exoplanets
+   - Filtering and sorting capabilities for both tables
    - Pagination support
 
-3. **Frontend Integration**: Connect frontend to the backend API for interactive data browsing
-
-
+3. **Frontend Integration**: Connect frontend to backend API for interactive data browsing

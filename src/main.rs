@@ -3,7 +3,7 @@
 async fn main() {
     use clap::Parser;
     use exoplanets_catalog::common;
-    use exoplanets_catalog::stellarhosts;
+    use exoplanets_catalog::tables::commands;
 
     #[derive(Parser, Debug)]
     #[clap(author, version, about, long_about = None)]
@@ -15,10 +15,32 @@ async fn main() {
     #[derive(Parser, Debug)]
     enum Commands {
         Serve,
-        ImportData { path: String },
         ViewFields { path: String }, // Print VOTable fields
-        CodegenVotable { name: String, path: String }, // Genrate rust structure from VOTable fields
-        Check,                                         // Check something
+        ViewSamples { 
+            #[arg(short, long, default_value = "data/stellarhosts.vot")]
+            path: String,
+            #[arg(short, long, help = "Number of rows to show")]
+            limit: Option<usize>,
+            #[arg(short, long, help = "Category of columns to show (basic, position, stellar, photometry)")]
+            category: Option<String>
+        },
+        ViewStats {
+            #[arg(short, long, default_value = "data/stellarhosts.vot")]
+            path: String
+        },
+        // Exoplanets commands
+        ViewExoplanetsSamples { 
+            #[arg(short, long, default_value = "data/exoplanets.vot")]
+            path: String,
+            #[arg(short, long, help = "Number of rows to show")]
+            limit: Option<usize>,
+            #[arg(short, long, help = "Category of columns to show (basic, discovery, orbital, physical)")]
+            category: Option<String>
+        },
+        ViewExoplanetsStats {
+            #[arg(short, long, default_value = "data/exoplanets.vot")]
+            path: String
+        }
     }
 
     let cli = Cli::parse();
@@ -26,33 +48,29 @@ async fn main() {
         Some(Commands::Serve) | None => {
             start_server().await;
         }
-        Some(Commands::ImportData { path }) => {
-            println!("Importing data from {}...", path);
-            match stellarhosts::load_data(path) {
-                Ok(df) => {
-                    println!("Successfully loaded data.");
-                    println!("DataFrame shape: {:?}", df.shape());
-                }
-                Err(e) => {
-                    eprintln!("Error loading data: {}", e);
-                }
-            }
-        }
         Some(Commands::ViewFields { path }) => {
             common::print_votable_headers(path);
         }
-        Some(Commands::CodegenVotable { name, path }) => {
-            let _ = common::structure_from_votables_codegen(path, name);
+        Some(Commands::ViewSamples { path, limit, category }) => {
+            let cat = category.as_ref().map(|s| s.as_str());
+            if let Err(e) = commands::view_samples(path, *limit, cat) {
+                eprintln!("Error viewing samples: {}", e);
+            }
         }
-        Some(Commands::Check) => {
-            match stellarhosts::load_data("data/stellarhosts.vot") {
-                Ok(df) => {
-                    println!("Successfully loaded data.");
-                    println!("{}", df);
-                }
-                Err(e) => {
-                    eprintln!("Error loading data: {}", e);
-                }
+        Some(Commands::ViewStats { path }) => {
+            if let Err(e) = commands::view_stats(path) {
+                eprintln!("Error viewing stats: {}", e);
+            }
+        }
+        Some(Commands::ViewExoplanetsSamples { path, limit, category }) => {
+            let cat = category.as_ref().map(|s| s.as_str());
+            if let Err(e) = commands::view_exoplanets_samples(path, *limit, cat) {
+                eprintln!("Error viewing exoplanets samples: {}", e);
+            }
+        }
+        Some(Commands::ViewExoplanetsStats { path }) => {
+            if let Err(e) = commands::view_exoplanets_stats(path) {
+                eprintln!("Error viewing exoplanets stats: {}", e);
             }
         }
     }
