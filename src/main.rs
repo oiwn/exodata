@@ -53,12 +53,12 @@ async fn main() {
         }
         Some(Commands::ViewSamples { path, limit, category }) => {
             let cat = category.as_ref().map(|s| s.as_str());
-            if let Err(e) = commands::view_samples(path, *limit, cat) {
+            if let Err(e) = commands::view_stellarhosts_samples(path, *limit, cat) {
                 eprintln!("Error viewing samples: {}", e);
             }
         }
         Some(Commands::ViewStats { path }) => {
-            if let Err(e) = commands::view_stats(path) {
+            if let Err(e) = commands::view_stellarhosts_stats(path) {
                 eprintln!("Error viewing stats: {}", e);
             }
         }
