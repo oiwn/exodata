@@ -7,6 +7,8 @@ The exoplanet and stellar host data are provided as VOTable files, acquired from
 - `data/stellarhosts.vot` (167MB) - Information about stars hosting exoplanets
 - `data/exoplanets.vot` (394MB) - Confirmed exoplanets data from `ps` table
 
+^^^ NOTE: add they could be downloaded by commands in justfile
+
 ### 1.2. Core Technology
 We use two main Rust crates for this task:
 -   **`votable`**: To parse raw VOTable files.
@@ -54,13 +56,13 @@ All data queries and calculations can be performed on in-memory Polars `DataFram
       - Reduced load time from several seconds to <1s for sample viewing
       - Works with both stellarhosts (167MB) and exoplanets (394MB) datasets
 
-**COMPLETED:**
-- [x] CLI commands for stellarhosts data exploration
-- [x] CLI commands for exoplanets data exploration
-- [x] Column categorization for both tables
-- [x] Basic statistics and distribution visualization for both tables
-- [x] Performance optimization with partial loading
-- [x] Independent loaders for each table type
+**Memory Benchmark Results:**
+- stellarhosts (46,887 rows, 136 cols): 58.39MB in memory (0.3x file size)
+- exoplanets (39,119 rows, 355 cols): 145.83MB in memory (0.4x file size)
+- Combined usage: 204.22MB (0.20GB) - reasonable for production
+- Memory efficiency: ~1-4KB per row
+- Load times: <10 seconds each dataset
+- No memory warnings - Polars columnar format is highly efficient
 
 **TODO:**
 - [ ] Implement backend API endpoints to query both DataFrames
@@ -99,4 +101,8 @@ The data loading and CLI exploration for both tables are complete. The next focu
    - Filtering and sorting capabilities for both tables
    - Pagination support
 
-2. **Frontend Integration**: Connect frontend to backend API for interactive data browsing
+2. **Probably would be better to load DataFrames directly from files, parsing VOTables takes significiant amount of time.
+
+Need to review this and provide further ideas.
+
+
