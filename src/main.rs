@@ -3,7 +3,8 @@
 async fn main() {
     use clap::Parser;
     use exoplanets_catalog::common;
-    use exoplanets_catalog::tables::commands;
+    use exoplanets_catalog::tables::{commands, conversion};
+    use std::path::Path;
 
     #[derive(Parser, Debug)]
     #[clap(author, version, about, long_about = None)]
@@ -15,32 +16,48 @@ async fn main() {
     #[derive(Parser, Debug)]
     enum Commands {
         Serve,
-        ViewFields { path: String }, // Print VOTable fields
-        ViewSamples { 
-            #[arg(short, long, default_value = "data/stellarhosts.vot")]
+        ViewFields {
+            path: String,
+        }, // Print VOTable fields
+        ViewSamples {
+            #[arg(short, long, default_value = "data/stellarhosts.parquet")]
             path: String,
             #[arg(short, long, help = "Number of rows to show")]
             limit: Option<usize>,
-            #[arg(short, long, help = "Category of columns to show (basic, position, stellar, photometry)")]
-            category: Option<String>
+            #[arg(
+                short,
+                long,
+                help = "Category of columns to show (basic, position, stellar, photometry)"
+            )]
+            category: Option<String>,
         },
         ViewStats {
-            #[arg(short, long, default_value = "data/stellarhosts.vot")]
-            path: String
+            #[arg(short, long, default_value = "data/stellarhosts.parquet")]
+            path: String,
         },
         // Exoplanets commands
-        ViewExoplanetsSamples { 
-            #[arg(short, long, default_value = "data/exoplanets.vot")]
+        ViewExoplanetsSamples {
+            #[arg(short, long, default_value = "data/exoplanets.parquet")]
             path: String,
             #[arg(short, long, help = "Number of rows to show")]
             limit: Option<usize>,
-            #[arg(short, long, help = "Category of columns to show (basic, discovery, orbital, physical)")]
-            category: Option<String>
+            #[arg(
+                short,
+                long,
+                help = "Category of columns to show (basic, discovery, orbital, physical)"
+            )]
+            category: Option<String>,
         },
         ViewExoplanetsStats {
-            #[arg(short, long, default_value = "data/exoplanets.vot")]
-            path: String
-        }
+            #[arg(short, long, default_value = "data/exoplanets.parquet")]
+            path: String,
+        },
+        /// Convert all .vot files in the data directory to parquet
+        #[clap(name = "convert-raw-files")]
+        ConvertRawFiles {
+            #[arg(short, long, default_value = "data")]
+            data_dir: String,
+        },
     }
 
     let cli = Cli::parse();
@@ -51,9 +68,14 @@ async fn main() {
         Some(Commands::ViewFields { path }) => {
             common::print_votable_headers(path);
         }
-        Some(Commands::ViewSamples { path, limit, category }) => {
+        Some(Commands::ViewSamples {
+            path,
+            limit,
+            category,
+        }) => {
             let cat = category.as_ref().map(|s| s.as_str());
-            if let Err(e) = commands::view_stellarhosts_samples(path, *limit, cat) {
+            if let Err(e) = commands::view_stellarhosts_samples(path, *limit, cat)
+            {
                 eprintln!("Error viewing samples: {}", e);
             }
         }
@@ -62,7 +84,11 @@ async fn main() {
                 eprintln!("Error viewing stats: {}", e);
             }
         }
-        Some(Commands::ViewExoplanetsSamples { path, limit, category }) => {
+        Some(Commands::ViewExoplanetsSamples {
+            path,
+            limit,
+            category,
+        }) => {
             let cat = category.as_ref().map(|s| s.as_str());
             if let Err(e) = commands::view_exoplanets_samples(path, *limit, cat) {
                 eprintln!("Error viewing exoplanets samples: {}", e);
@@ -71,6 +97,11 @@ async fn main() {
         Some(Commands::ViewExoplanetsStats { path }) => {
             if let Err(e) = commands::view_exoplanets_stats(path) {
                 eprintln!("Error viewing exoplanets stats: {}", e);
+            }
+        }
+        Some(Commands::ConvertRawFiles { data_dir }) => {
+            if let Err(e) = conversion::convert_raw_files(Path::new(data_dir)) {
+                eprintln!("Error converting VOTable files: {}", e);
             }
         }
     }

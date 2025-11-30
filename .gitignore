@@ -3,6 +3,7 @@
 Cargo.lock
 /data/*.csv
 /data/*.vot
+/data/*.parquet
 
 end2end/playwright-report
 end2end/test-results

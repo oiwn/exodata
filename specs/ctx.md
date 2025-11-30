@@ -1,408 +1,193 @@
 ### Current Task
-Stellar Hosts Aggregation Example
+Data Performance Optimization and Interactive Exploration
 
 ### Goal
-Create an example that demonstrates aggregation queries over the stellar hosts dataset, providing relevant statistics and insights.
+Create fast-loading data formats and interactive tools for exploring exoplanet and stellar hosts datasets.
 
-### Stellar Host Dataset Information
-- **46,887 stars** hosting exoplanets
-- **136 columns** with stellar properties (temperature, mass, radius, metallicity, etc.)
-- **Columns include:**
-  - Basic: hostname, hd_name, hip_name, tic_id, gaia_ids
-  - Position: ra, dec, rastr, decstr, glon, glat, elon, elat
-  - Stellar Properties: st_teff, st_mass, st_rad, st_logg, st_lum, st_age, st_met, st_radv, st_vsin
-  - Photometry: sy_vmag, sy_bmag, sy_jmag, sy_hmag, sy_kmag, sy_gmag, sy_gaiamag, sy_kepmag
-  - Distance: sy_dist (when available)
+### Performance Issues Identified
+- **VOTable Loading**: ~8 seconds for 46,887 rows (stellarhosts)
+- **Missing Discovery Data**: Stellar hosts dataset contains no discovery information
+- **High Missing Values**: 19-83% missing in key stellar properties
+- **Memory Inefficiency**: 1.28 KB per row due to VOTable parsing overhead
 
-### Aggregation Query Ideas
+#### Root Cause Analysis (^^^ Need to figure out why)
+**VOTable Loading Slowness:**
+- **XML Parsing Overhead**: VOTable uses verbose XML format with lots of metadata
+- **Memory Allocations**: Each cell value goes through multiple conversion steps (XML → string → type conversion)
+- **Schema Discovery**: Needs to parse entire file structure first, then data
+- **Row-by-Row Processing**: Can't leverage vectorized operations during loading
 
-#### 1. **Stellar Property Distributions**
-- Temperature distribution histogram (st_teff)
-- Mass distribution (st_mass) 
-- Radius distribution (st_rad)
-- Metallicity distribution (st_met)
-- Age distribution (st_age)
+**Evidence from benchmark:**
+- 46,887 rows = ~8 seconds loading
+- 1.28 KB per row memory usage (very inefficient)
+- Even 100 row subsets take 8+ seconds (shows parsing overhead dominates)
 
-#### 2. **Discovery Statistics**
-- Stars by discovery method of their planets
-- Stars by discovery decade
-- Stars by discovery facility
-- Geographic distribution by sky coordinates
+### Immediate Solutions Needed
 
-#### 3. **Multi-dimensional Analysis**
-- Mass vs Temperature correlation
-- Radius vs Temperature correlation
-- Metallicity distribution across stellar types
-- Age distribution in stellar population
-
-#### 4. **Photometric Statistics**
-- Magnitude distributions across different bands
-- Color indices relationships
-- Photometric completeness by band
-
-#### 5. **Distance Analysis**
-- Distance distribution of sample
-- Volume of space surveyed
-- Distance vs magnitude relationships
-
-#### 6. **Cross-referenced Data**
-- Match rate between different catalogs (HD, HIP, TIC, GAIA)
-- Catalog completeness by stellar magnitude
-- Position accuracy across catalogs
-
-### Implementation Approach
-
-#### Example Query: **Stellar Temperature Analysis**
-```rust
-// Load data
-let df = load_data("data/stellarhosts.vot")?;
-
-// Temperature distribution
-let temp_stats = df
-    .lazy()
-    .select([
-        col("st_teff"),
-        // Create temperature bins
-        (col("st_teff") / lit(1000) * lit(10)).cast(DataType::Int32).alias("temp_bin_k")
-    ])
-    .filter(col("st_teff").is_not_null())
-    .collect()?;
-
-// Get histogram data
-let temp_histogram = temp_stats
-    .group_by(["temp_bin_k"])
-    .agg([
-        count().alias("star_count"),
-    ])
-    .sort("temp_bin_k", SortOptions::default())
-    .collect()?;
+#### 1. CLI Format Conversion Tools
+Convert VOTable files to high-performance formats for 10-50x faster loading:
+```bash
+# Convert all .vot files in data/ directory to .parquet
+cargo run -- convert-raw-files
 ```
 
-#### Example Query: **Discovery Timeline**
-```rust
-// Discovery timeline
-let discovery_stats = df
-    .lazy()
-    .select([
-        col("hostname"),
-        // Extract decade from disc_year
-        (col("disc_year") / lit(10) * lit(10)).cast(DataType::Int32).alias("discovery_decade")
-    ])
-    .filter(col("disc_year").is_not_null())
-    .group_by(["discovery_decade"])
-    .agg([
-        count().alias("stars_discovered"),
-        // Get median temperature for each decade
-        col("st_teff").median().alias("median_temp")
-    ])
-    .sort("discovery_decade", SortOptions::default())
-    .collect()?;
+^^^ Only parquet, same folder, batch conversion of all vot files
+*Status:* Implemented (`convert-raw-files`). Validates row/col counts after conversion. Current timings on Apple Silicon: exoplanets.vot ~20.5s (17.5s metadata parse + 0.37s rows + 2.7s write/validate); stellarhosts.vot ~9.3s (7.8s metadata parse + 0.15s rows + 1.3s write/validate). Compression ~22x (375.5MB → 16.2MB, 158.8MB → 7.7MB).
+
+#### 2. Data Inspection Examples
+Create focused inspection tools for understanding dataset structure:
+```bash
+# Stellar hosts inspection (catalog cross-match, photometric bands, stellar properties)
+cargo run --example stellarhosts_inspection
+
+# Exoplanets inspection (discovery timeline, orbital characteristics, physical properties)
+cargo run --example exoplanets_inspection
 ```
 
-#### Example Query: **Catalog Cross-matching**
-```rust
-// Cross-matching between catalogs
-let catalog_stats = df
-    .lazy()
-    .select([
-        col("hostname"),
-        // Count available identifiers for each star
-        col("hd_name").is_not_null().cast(DataType::Int32).alias("has_hd"),
-        col("hip_name").is_not_null().cast(DataType::Int32).alias("has_hip"),
-        col("tic_id").is_not_null().cast(DataType::Int32).alias("has_tic"),
-        col("gaia_dr2_id").is_not_null().cast(DataType::Int32).alias("has_gaia_dr2"),
-        col("gaia_dr3_id").is_not_null().cast(DataType::Int32).alias("has_gaia_dr3"),
-        // Count total identifiers available
-        (col("hd_name").is_not_null() + col("hip_name").is_not_null() + 
-         col("tic_id").is_not_null() + col("gaia_dr2_id").is_not_null() + 
-         col("gaia_dr3_id").is_not_null()).cast(DataType::Int32).alias("total_ids")
-    ])
-    .filter(col("hostname").is_not_null())
-    .group_by([all()])
-    .agg([
-        sum("has_hd").alias("stars_with_hd"),
-        sum("has_hip").alias("stars_with_hip"), 
-        sum("has_tic").alias("stars_with_tic"),
-        sum("has_gaia_dr2").alias("stars_with_gaia_dr2"),
-        sum("has_gaia_dr3").alias("stars_with_gaia_dr3"),
-        sum("total_ids").alias("total_catalog_entries"),
-        // Compute match rates
-        (sum("has_hd") / lit(46887)).alias("hd_completion_rate"),
-        (sum("has_gaia_dr2") / lit(46887)).alias("gaia_dr2_completion_rate")
-    ])
-    .collect()?;
+^^^ Holy shit, why benchmark is there?
+
+#### 3. Performance Benchmark
+```bash
+cargo run --example performance_benchmark
 ```
 
-### Output Format
+**Benchmark Requirements:**
+- Show parquet loading times (current impl); VOT parsing remains dominated by metadata (see timings above)
+- Compare file sizes and memory usage
+- Demonstrate speedup factor when VOT timing is added
 
-Results should be displayed as formatted tables with:
-- **Descriptive headers** for each aggregation
-- **Summary statistics** (count, mean, median, std, min, max)
-- **Histogram data** with appropriate binning
-- **Cross-tabulation** for categorical relationships
-- **Correlation coefficients** for continuous variables
+^^^ That's correct
 
-### Performance Considerations
-
-- Use lazy evaluation for complex aggregations
-- Apply filters early to reduce dataset size
-- Use appropriate data types to minimize memory
-- Consider sampling for very large aggregations
-- Cache intermediate results where beneficial
-
-### Next Steps
-
-1. Implement basic aggregation functions
-2. Create formatted output utilities
-3. Add visualization support (histograms, scatter plots)
-4. Extend to exoplanets dataset aggregation
-5. Create cross-dataset aggregation capabilities
-
----
-
-## MY NOTES: Interactive Aggregation Terminal UI
-
-### Concept
-Create an interactive terminal interface using `ratatui` crate for stellar hosts aggregation analysis.
-
-### UI Design
-
-#### Main Interface Layout
-```
-┌ Stellar Hosts Aggregation Explorer ─────────────────────────────────────┐
-│                                                        │
-│ [F1] Temperature Distribution    [F2] Discovery Timeline    │
-│ [F3] Catalog Cross-match    [F4] Photometric Stats   │
-│                                                        │
-│ Active Tab: Temperature Distribution                    │
-└────────────────────────────────────────────────────────────────┘
-
-┌ Data Results ────────────────────────────────────────────────┐
-│                                                        │
-│ Temperature Range    | Star Count    | Percentage    │
-│ 3000-4000 K        | 1,234         | 2.6%         │
-│ 4000-5000 K        | 15,678        | 33.4%        │
-│ 5000-6000 K        | 18,456        | 39.4%        │
-│ 6000-7000 K        | 8,923          | 19.0%        │
-│ 7000-8000 K        | 2,596          | 5.5%         │
-│                                                        │
-│ Total Stars: 46,887  | Mean Temp: 5,234 K              │
-└────────────────────────────────────────────────────────────────┘
-
-┌ Controls ──────────────────────────────────────────────────────┐
-│                                                        │
-│ [↑↓] Navigate     | [Enter] Select    | [q] Quit      │
-│ [←→] Switch Tab  | [r] Refresh      | [s] Save       │
-└────────────────────────────────────────────────────────────────┘
+#### 4. Interactive TUI Explorer
+Build terminal-based interactive exploration tool:
+```bash
+# Separate examples for each dataset
+cargo run --example stellarhosts_tui
+cargo run --example exoplanets_tui
 ```
 
-#### Tab System
+**Key TUI Organization Questions:**
+- What aggregations are most valuable to show data properties?
+- Should we combine data or keep separate tabs?
+- What export formats do users need?
+- How to represent large datasets in limited terminal space?
 
-**F1: Temperature Distribution**
-- Histogram of stellar temperatures (st_teff)
-- Temperature bins: 3000-4000K, 4000-5000K, etc.
-- Statistics: mean, median, std dev, quartiles
-- Bar chart visualization using ratatui block characters
+### Key Insights from Data Inspection
 
-**F2: Discovery Timeline**
-- Stars discovered per decade
-- Discovery methods breakdown (Transit, Radial Velocity, etc.)
-- Discovery facilities ranking
-- Timeline visualization
+#### Stellar Hosts Dataset (46,887 stars, 136 columns)
+- **Catalog Coverage**: HD (14.5%), HIP (15.2%), TIC (98.0%), GAIA (96-97%)
+- **Stellar Properties**: Only 28,662/46,887 stars have mass data (61.2%)
+- **Photometric Data**: Complete coverage across 8 bands (V, B, J, H, K, G, Gaia, Kepler)
+- **Missing Discovery Info**: This is host star data, not discovery data
 
-**F3: Catalog Cross-match**
-- Cross-reference between HD, HIP, TIC, GAIA catalogs
-- Match rates and completeness statistics
-- Venn diagram-style visualization
+#### Temperature Distribution Analysis
+- **Peak**: 45.9% of stars have 5000-6000K (G-type stars)
+- **Distribution**: 5.8% M-type (3000-4000K), 12.9% K-type (4000-5000K)
+- **Hot Stars**: Only 0.9% of stars >7000K (B/A-type)
 
-**F4: Photometric Statistics**
-- Magnitude distributions across photometric bands
-- Color indices relationships
-- Band completeness analysis
-- Multi-band comparison charts
+#### Planet Count Analysis
+- **Multiple Planet Systems**: Many hosts have 2+ planets
+- **Data Quality**: Need to analyze distribution from sy_pnum column
 
 ### Implementation Plan
 
-#### Phase 1: Basic Tab Framework
-```rust
-use ratatui::{
-    backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders, Gauge, List, ListItem, Paragraph, Tabs},
-    Terminal,
-};
+#### Phase 1: Format Conversion (Immediate - 1-2 days)
+- [ ] Add parquet feature to Cargo.toml
+- [ ] Create CLI conversion tool with progress bars
+- [ ] Implement validation and integrity checks
+- [ ] Benchmark loading performance improvements
 
-struct App {
-    current_tab: usize,
-    temperature_data: Vec<TemperatureBin>,
-    discovery_data: Vec<DecadeData>,
-    catalog_data: CatalogStats,
-    photometric_data: PhotometricStats,
-    // Status and loading
-    loading: bool,
-    status_message: String,
-}
+#### Phase 2: Data Inspection (1 day)
+- [ ] Create unified inspection framework
+- [ ] Implement specific stellar hosts analysis
+- [ ] Implement exoplanets discovery analysis  
+- [ ] Add comprehensive statistical summaries
 
-enum Tab {
-    Temperature,
-    Discovery,
-    Catalog,
-    Photometric,
-}
+#### Phase 3: Interactive TUI (2-3 days)
+- [ ] Set up ratatui framework and basic layout
+- [ ] Implement data table browser with pagination
+- [ ] Add interactive filtering and statistics panels
+- [ ] Create export functionality for filtered data
+
+### Performance Targets
+- **Loading Time**: <1 second from optimized formats
+- **Memory Usage**: Maintain <200MB total for both datasets
+- **Interactive Response**: <100ms for filtering/aggregation
+- **Export Speed**: <2 seconds for 10,000 row datasets
+
+### File Structure Reorganization
+```
+data/
+├── stellarhosts.vot      # 158.8MB, slow loading
+├── exoplanets.vot        # 375.5MB, slow loading
+├── stellarhosts.parquet  # 7.7MB, ~80ms load
+├── exoplanets.parquet    # 16.2MB, ~160ms load
 ```
 
-#### Phase 2: Data Processing Backend
-```rust
-// Lazy evaluation for aggregations
-fn compute_temperature_distribution(df: &DataFrame) -> Vec<TemperatureBin> {
-    df.lazy()
-        .filter(col("st_teff").is_not_null())
-        .select([
-            col("st_teff"),
-            // Create temperature bins
-            ((col("st_teff") - lit(3000)) / lit(1000))
-                .clip(0, 9)
-                .cast(DataType::Int32)
-                .alias("temp_bin")
-        ])
-        .group_by(["temp_bin"])
-        .agg([
-            count().alias("star_count"),
-            col("st_teff").mean().alias("mean_temp"),
-            col("st_teff").median().alias("median_temp"),
-        ])
-        .sort("temp_bin", SortOptions::default())
-        .collect()
-        .unwrap()
-}
+### Key Takeaways
+1. **VOTable is a bottleneck** - convert to columnar formats immediately
+2. **Stellar hosts = catalog data** - discovery analysis needs exoplanets dataset
+3. **Data quality varies** - different columns have very different missing rates
+4. **Aggregation potential** - rich dataset for stellar population analysis
 
-fn compute_discovery_timeline(df: &DataFrame) -> Vec<DecadeData> {
-    df.lazy()
-        .filter(col("disc_year").is_not_null())
-        .select([
-            col("disc_year"),
-            // Extract decade
-            (col("disc_year") / lit(10) * lit(10))
-                .cast(DataType::Int32)
-                .alias("decade"),
-            col("discoverymethod"),
-            col("hostname"),
-        ])
-        .group_by(["decade"])
-        .agg([
-            count().alias("stars_discovered"),
-            // Count by discovery method
-            col("discoverymethod").n_unique().alias("methods_used"),
-        ])
-        .sort("decade", SortOptions::default())
-        .collect()
-        .unwrap()
-}
-```
+---
 
-#### Phase 3: UI Components
+# TODO
 
-**Temperature Tab**
-```rust
-fn render_temperature_tab(f: &mut Frame, app: &App, area: Rect) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(20),
-            Constraint::Percentage(80),
-        ])
-        .split(area);
+## Phase 1: Format Conversion (Priority 1)
+- [x] Add parquet feature to Cargo.toml
+- [x] Create `convert-raw-files` CLI command
+  - [x] Auto-discover all .vot files in data/ directory
+  - [x] Convert to parquet format with progress bars (metadata parse still dominant)
+  - [x] Validate output integrity (row/col parity)
+  - [x] Show before/after performance comparison (VOT vs parquet timing still todo)
+- [x] Run conversion on stellarhosts.vot and exoplanets.vot
+- [x] Update all existing examples to use .parquet files (parquet-only loaders)
 
-    // Summary stats
-    let summary_text = format!(
-        "Total Stars: {} | Mean: {}K | Median: {}K",
-        app.temperature_data.iter().map(|b| b.count).sum::<usize>(),
-        format!("{:.0}", compute_temp_mean(&app.temperature_data)),
-        format!("{:.0}", compute_temp_median(&app.temperature_data))
-    );
+## Phase 2: Data Inspection (Priority 2)
+- [ ] Create `stellarhosts_inspection` example
+  - [ ] Column search and pattern matching
+  - [ ] Catalog cross-match analysis
+  - [ ] Photometric band statistics
+  - [ ] Stellar property distribution analysis
+- [ ] Create `exoplanets_inspection` example
+  - [ ] Discovery timeline analysis (exoplanets dataset has disc_year)
+  - [ ] Discovery method breakdown
+  - [ ] Orbital characteristic analysis
+  - [ ] Physical property distribution
+- [ ] Update `performance_benchmark` example
+  - [ ] Compare VOTable vs parquet loading times (parquet-only timing done; add VOT timing later)
+  - [ ] Show memory usage differences
+  - [ ] Show file size reduction
+  - [ ] Demonstrate query performance differences
 
-    let summary = Paragraph::new(summary_text)
-        .block(Block::default().borders(Borders::ALL).title("Temperature Summary"));
-    f.render_widget(summary, chunks[0]);
+## Phase 3: Interactive TUI (Priority 3)
+- [ ] Answer TUI organization questions:
+  - [ ] What aggregations are most valuable for scientists?
+  - [ ] How to handle datasets with different columns?
+  - [ ] Should we combine data or keep separate tabs?
+  - [ ] What export formats do users need?
+  - [ ] How to represent large datasets in terminal?
+- [ ] Create `stellarhosts_tui` example
+- [ ] Create `exoplanets_tui` example
+  - [ ] Basic framework with ratatui
+  - [ ] Data table browser with pagination
+  - [ ] Interactive filtering system
+  - [ ] Statistics panels with aggregations
+  - [ ] Export functionality
 
-    // Histogram
-    let max_count = app.temperature_data.iter().map(|b| b.count).max().unwrap_or(0);
-    let histogram_items: Vec<ListItem> = app.temperature_data
-        .iter()
-        .enumerate()
-        .map(|(i, bin)| {
-            let bar_width = (bin.count * 30 / max_count) as u16;
-            let bar = "█".repeat(bar_width as usize);
-            let bar_space = " ".repeat(30 - bar_width as usize);
-            
-            ListItem::new(format!(
-                "{}K  | {} {} | {:.1}%",
-                3000 + i * 1000,
-                bar,
-                bar_space,
-                bin.count,
-                bin.count as f64 / 46887.0 * 100.0
-            ))
-        })
-        .collect();
+## Phase 4: Integration & Polish (Priority 4)
+- [ ] Update web application to use parquet files
+- [ ] Add caching for query results
+- [ ] Error handling and data validation
+- [ ] Documentation and usage examples
+- [ ] Performance optimization and testing
 
-    let histogram = List::new(histogram_items)
-        .block(Block::default().borders(Borders::ALL).title("Temperature Distribution"));
-    f.render_widget(histogram, chunks[1]);
-}
-```
-
-#### Phase 4: Interaction Controls
-
-**Keyboard Navigation**
-- `F1-F4`: Switch between tabs
-- `↑↓`: Navigate within lists
-- `←→`: Navigate between panels
-- `r`: Refresh/recompute data
-- `s`: Save current view to file
-- `q`: Quit application
-
-**Data Refresh**
-- Background computation for large aggregations
-- Progress indicators during processing
-- Caching of computed results
-
-### Performance Optimizations
-
-1. **Lazy Evaluation**: Use Polars lazy for all aggregations
-2. **Progressive Loading**: Compute data in chunks for UI updates
-3. **Caching**: Store computed aggregations to avoid recomputation
-4. **Memory Management**: Use streaming for very large datasets
-
-### File Output Options
-
-```
-Export Format Options:
-[1] CSV - Tabular data
-[2] JSON - Structured data  
-[3] TXT - Formatted report
-[4] SVG - Charts and graphs
-```
-
-### Next Implementation Steps
-
-1. ✅ Add `ratatui` dependency to Cargo.toml
-2. 🔄 Create basic app structure and tab system
-3. 🔄 Implement temperature distribution aggregation and rendering
-4. 🔄 Add discovery timeline functionality
-5. 🔄 Implement catalog cross-matching visualization
-6. 🔄 Add photometric statistics display
-7. 🔄 Add keyboard navigation and controls
-8. 🔄 Add export/save functionality
-9. 🔄 Add error handling and data validation
-10. 🔄 Performance testing with full dataset
-
-### Dependencies Required
-```toml
-[dependencies]
-ratatui = "0.28"
-crossterm = "0.28"
-# Add to existing dependencies
-```
-
-This approach provides an intuitive, interactive way to explore stellar hosts aggregation data with visual feedback and multiple analysis perspectives.
+## Technical Debts & Questions
+- [ ] Should we cache converted files in memory for repeated access?
+- [ ] How to handle dataset updates (re-conversion needed)?
+- [ ] Should we add CSV export option for compatibility?
+- [ ] Memory management for large aggregations in TUI?
+- [ ] What should be the default data format for new users?
+- [ ] Check all fields are in format suited for calculations
+- [ ] Validate data types are appropriate for aggregations

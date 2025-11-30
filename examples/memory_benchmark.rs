@@ -1,6 +1,6 @@
+use polars::prelude::*;
 use std::process::id;
 use std::time::Instant;
-use polars::prelude::*;
 use votable::data::DataElem;
 use votable::datatype::Datatype;
 use votable::impls::mem::InMemTableDataRows;
@@ -12,7 +12,7 @@ use votable::votable::VOTableWrapper;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Memory Benchmark for Exoplanets Datasets ===");
     println!();
-    
+
     // Load stellarhosts and measure memory
     println!("Loading stellarhosts data (167MB file)...");
     let start_time = Instant::now();
@@ -21,14 +21,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stellarhosts_memory_bytes = stellarhosts_df.estimated_size();
     let stellarhosts_rows = stellarhosts_df.height();
     let stellarhosts_cols = stellarhosts_df.width();
-    
-    println!("✓ Loaded {} rows, {} columns in {:?}", 
-        stellarhosts_rows, 
-        stellarhosts_cols, 
-        stellarhosts_time);
-    println!("Memory usage: {:.2} MB", 
-        stellarhosts_memory_bytes as f64 / (1024.0 * 1024.0));
-    
+
+    println!(
+        "✓ Loaded {} rows, {} columns in {:?}",
+        stellarhosts_rows, stellarhosts_cols, stellarhosts_time
+    );
+    println!(
+        "Memory usage: {:.2} MB",
+        stellarhosts_memory_bytes as f64 / (1024.0 * 1024.0)
+    );
+
     // Load exoplanets and measure memory
     println!("\nLoading exoplanets data (394MB file)...");
     let start_time = Instant::now();
@@ -37,62 +39,82 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let exoplanets_memory_bytes = exoplanets_df.estimated_size();
     let exoplanets_rows = exoplanets_df.height();
     let exoplanets_cols = exoplanets_df.width();
-    
-    println!("✓ Loaded {} rows, {} columns in {:?}", 
-        exoplanets_rows, 
-        exoplanets_cols, 
-        exoplanets_time);
-    println!("Memory usage: {:.2} MB", 
-        exoplanets_memory_bytes as f64 / (1024.0 * 1024.0));
-    
+
+    println!(
+        "✓ Loaded {} rows, {} columns in {:?}",
+        exoplanets_rows, exoplanets_cols, exoplanets_time
+    );
+    println!(
+        "Memory usage: {:.2} MB",
+        exoplanets_memory_bytes as f64 / (1024.0 * 1024.0)
+    );
+
     // Summary report
     println!("\n=== MEMORY USAGE SUMMARY ===");
-    
+
     println!("Dataset        | Rows    | Columns | Memory (MB)");
     println!("---------------|---------|---------|--------------");
-    println!("stellarhosts   | {:>8}  | {:>7}     | {:>11.2}", 
+    println!(
+        "stellarhosts   | {:>8}  | {:>7}     | {:>11.2}",
         stellarhosts_rows,
         stellarhosts_cols,
-        stellarhosts_memory_bytes as f64 / (1024.0 * 1024.0));
-    
-    println!("exoplanets     | {:>8}  | {:>7}     | {:>11.2}", 
+        stellarhosts_memory_bytes as f64 / (1024.0 * 1024.0)
+    );
+
+    println!(
+        "exoplanets     | {:>8}  | {:>7}     | {:>11.2}",
         exoplanets_rows,
         exoplanets_cols,
-        exoplanets_memory_bytes as f64 / (1024.0 * 1024.0));
-    
-    let total_memory_mb = (stellarhosts_memory_bytes + exoplanets_memory_bytes) as f64 / (1024.0 * 1024.0);
-    println!("\nCombined Memory Usage: {:.2} MB ({:.2} GB)", 
-        total_memory_mb, 
-        total_memory_mb / 1024.0);
-    
+        exoplanets_memory_bytes as f64 / (1024.0 * 1024.0)
+    );
+
+    let total_memory_mb = (stellarhosts_memory_bytes + exoplanets_memory_bytes)
+        as f64
+        / (1024.0 * 1024.0);
+    println!(
+        "\nCombined Memory Usage: {:.2} MB ({:.2} GB)",
+        total_memory_mb,
+        total_memory_mb / 1024.0
+    );
+
     // File size to memory ratio
     println!("\nFile Size to Memory Ratio:");
-    println!("  stellarhosts: 167MB file → {:.2}MB memory ({:.1}x)", 
+    println!(
+        "  stellarhosts: 167MB file → {:.2}MB memory ({:.1}x)",
         stellarhosts_memory_bytes as f64 / (1024.0 * 1024.0),
-        stellarhosts_memory_bytes as f64 / (1024.0 * 1024.0) / 167.0);
-    
-    println!("  exoplanets: 394MB file → {:.2}MB memory ({:.1}x)", 
+        stellarhosts_memory_bytes as f64 / (1024.0 * 1024.0) / 167.0
+    );
+
+    println!(
+        "  exoplanets: 394MB file → {:.2}MB memory ({:.1}x)",
         exoplanets_memory_bytes as f64 / (1024.0 * 1024.0),
-        exoplanets_memory_bytes as f64 / (1024.0 * 1024.0) / 394.0);
-    
+        exoplanets_memory_bytes as f64 / (1024.0 * 1024.0) / 394.0
+    );
+
     // Warnings for high memory usage
     println!();
-    if total_memory_mb > 2048.0 { // > 2GB
+    if total_memory_mb > 2048.0 {
+        // > 2GB
         println!("⚠️  WARNING: High memory usage ({:.1}GB) - consider using pagination", 
             total_memory_mb / 1024.0);
     }
-    
-    if exoplanets_memory_bytes > 1024 * 1024 * 1024 { // > 1GB for exoplanets alone
+
+    if exoplanets_memory_bytes > 1024 * 1024 * 1024 {
+        // > 1GB for exoplanets alone
         println!("⚠️  WARNING: Exoplanets dataset uses {:.1}GB - may cause issues on systems with <4GB RAM", 
             exoplanets_memory_bytes as f64 / (1024.0 * 1024.0 * 1024.0));
     }
-    
+
     println!("\nPer-row memory efficiency:");
-    println!("  stellarhosts: {:.1} KB per row", 
-        stellarhosts_memory_bytes as f64 / stellarhosts_rows as f64 / 1024.0);
-    println!("  exoplanets: {:.1} KB per row", 
-        exoplanets_memory_bytes as f64 / exoplanets_rows as f64 / 1024.0);
-    
+    println!(
+        "  stellarhosts: {:.1} KB per row",
+        stellarhosts_memory_bytes as f64 / stellarhosts_rows as f64 / 1024.0
+    );
+    println!(
+        "  exoplanets: {:.1} KB per row",
+        exoplanets_memory_bytes as f64 / exoplanets_rows as f64 / 1024.0
+    );
+
     Ok(())
 }
 
@@ -150,16 +172,16 @@ fn load_data(path: &str) -> Result<DataFrame, Box<dyn std::error::Error>> {
     }
 
     // Convert buffers to Series.
-    let series_vec: Result<Vec<Series>, Box<dyn std::error::Error>> = column_buffers
-        .into_iter()
-        .zip(field_names.iter())
-        .map(|(buffer, name)| buffer.to_series(name))
-        .collect();
+    let series_vec: Result<Vec<Series>, Box<dyn std::error::Error>> =
+        column_buffers
+            .into_iter()
+            .zip(field_names.iter())
+            .map(|(buffer, name)| buffer.to_series(name))
+            .collect();
 
     let series = series_vec?;
     let columns: Vec<Column> = series.into_iter().map(Column::from).collect();
-    DataFrame::new(columns)
-        .map_err(|e| e.into())
+    DataFrame::new(columns).map_err(|e| e.into())
 }
 
 // Enum to hold different types of column data.
@@ -175,7 +197,10 @@ enum ColumnData {
 
 impl ColumnData {
     // Push a cell value to correct vector type.
-    fn push(&mut self, cell: &VOTableValue) -> Result<(), Box<dyn std::error::Error>> {
+    fn push(
+        &mut self,
+        cell: &VOTableValue,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             ColumnData::Float64(v) => match cell {
                 VOTableValue::Double(val) => v.push(Some(*val)),

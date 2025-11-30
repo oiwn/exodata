@@ -1,108 +1,151 @@
 ## 1. Data Handling
 
-This document outlines the strategy for parsing, storing, and querying exoplanet and stellar host data. The primary goal is to load data into a high-performance, in-memory structure that supports complex analytical queries.
+This document outlines strategy for parsing, storing, and querying exoplanet and stellar host data. The primary goal is to load data into high-performance structures that support complex analytical queries.
 
 ### 1.1. Data Sources
 The exoplanet and stellar host data are provided as VOTable files, acquired from NASA Exoplanet Archive via Just commands:
 - `data/stellarhosts.vot` (167MB) - Information about stars hosting exoplanets
 - `data/exoplanets.vot` (394MB) - Confirmed exoplanets data from `ps` table
 
-^^^ NOTE: add they could be downloaded by commands in justfile
-
 ### 1.2. Core Technology
 We use two main Rust crates for this task:
--   **`votable`**: To parse raw VOTable files.
--   **`polars`**: To store data in a `DataFrame` and perform all subsequent querying and analysis.
+- **`votable`**: To parse raw VOTable files
+- **`polars`**: To store data in `DataFrame` and perform all subsequent querying and analysis
 
-### 1.3. Data Loading and Storage Strategy - COMPLETED ✓
+### 1.3. Performance Issues & Solutions
 
-The implementation follows the specified approach for both datasets:
-1.  **Parse VOTable Schema:** The `votable` crate is used to read the header of VOTable files, extracting `FIELD` definitions to get their `name` and `datatype`.
-2.  **Initialize Column Buffers:** For each field in the schema, we create typed `Vec` buffers based on the field's datatype (e.g., `Vec<Option<f64>>` for Double, `Vec<Option<String>>` for CharASCII/CharUnicode).
-3.  **Populate Buffers:** We iterate through the data rows of the VOTable, parsing each cell value and appending it to the corresponding column buffer.
-4.  **Build DataFrame:** After processing all rows, each column buffer is converted into a Polars `Series` with the appropriate name, then combined to create the final `DataFrame`.
-5.  **Store DataFrame:** The completed `DataFrame` is ready to be stored in shared state or used for queries.
+#### 1.3.1. Current Problems
+- **Slow Loading**: VOTable parsing takes ~8 seconds for 46,887 rows
+- **No Discovery Data**: Stellar hosts dataset lacks discovery information
+- **High Missing Values**: 19-83% missing values in key stellar properties
 
-The implementation can be tested using:
+#### 1.3.2. Proposed Solutions
+
+**CLI Tool for Fast Format Conversion**
 ```bash
-cargo run -- view-fields data/stellarhosts.vot
-cargo run -- view-fields data/exoplanets.vot
+# Convert VOTable to high-performance formats
+cargo run -- convert-to-parquet data/stellarhosts.vot
+cargo run -- convert-to-parquet data/exoplanets.vot
 ```
 
-### 1.4. CLI Data Exploration Tools - COMPLETED ✓
+**Supported Formats**
+- **Parquet**: 10-50x faster loading, smaller file size
+- **CSV**: Universal compatibility, easy inspection
+- **Feather/IPC**: Fastest Polars native format
 
-All data queries and calculations can be performed on in-memory Polars `DataFrame`.
+### 1.4. Data Exploration Tools
 
--   **Stellarhosts Table Commands:**
-    - `view-samples` - View data samples with customizable column categories
-      - Options: `--limit`, `--category` (basic, position, stellar, photometry)
-      - Example: `cargo run -- view-samples --limit 5 --category stellar`
-    - `view-stats` - Display basic statistics and distributions
-      - Shows mean, median, std dev, min/max for key columns
-      - Includes histogram visualizations for temperature, mass, and radius
-    - `view-fields` - Print all available fields in VOTable
+#### 1.4.1. Data Inspection Examples
+```bash
+# Quick inspection of datasets
+cargo run --example data_inspection
+cargo run --example exoplanets_inspection
 
--   **Exoplanets Table Commands:**
-    - `view-exoplanets-samples` - View exoplanet data samples with categories
-      - Options: `--limit`, `--category` (basic, discovery, orbital, physical)
-      - Example: `cargo run -- view-exoplanets-samples --limit 5 --category orbital`
-    - `view-exoplanets-stats` - Display basic statistics for exoplanets
-      - Shows statistics for mass (Earth/Jupiter), radius, orbital period, etc.
-      - Includes histogram visualizations for key planetary properties
-    - `view-fields data/exoplanets.vot` - Print all exoplanet fields
-
--   **Performance:** Optimized loading functions with partial loading
-      - Only loads required rows instead of entire datasets
-      - Reduced load time from several seconds to <1s for sample viewing
-      - Works with both stellarhosts (167MB) and exoplanets (394MB) datasets
-
-**Memory Benchmark Results:**
-- stellarhosts (46,887 rows, 136 cols): 58.39MB in memory (0.3x file size)
-- exoplanets (39,119 rows, 355 cols): 145.83MB in memory (0.4x file size)
-- Combined usage: 204.22MB (0.20GB) - reasonable for production
-- Memory efficiency: ~1-4KB per row
-- Load times: <10 seconds each dataset
-- No memory warnings - Polars columnar format is highly efficient
-
-**TODO:**
-- [ ] Implement backend API endpoints to query both DataFrames
-- [ ] Add specific analytical calculations as needed by frontend
-
-Example conceptual calculation:
-```rust
-// df is our DataFrame
-let result = df.lazy()
-    .with_column(
-        // Add a new column by combining two existing ones
-        (col("st_teff") + col("st_tefferr1")).alias("st_teff_upper_bound")
-    )
-    .collect()?;
+# Performance benchmarking
+cargo run --example data_loading_benchmark
 ```
 
-### 1.5. Schema Reference
-
-The authoritative schemas for tables can be retrieved from NASA Exoplanet Archive's TAP service.
-
-**TAP Query URLs:**
-```
-# For stellarhosts
-https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=SELECT+column_name,description,datatype,unit+FROM+TAP_SCHEMA.columns+WHERE+table_name+%3D+'stellarhosts'&format=csv
-
-# For exoplanets (ps table)
-https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=SELECT+column_name,description,datatype,unit+FROM+TAP_SCHEMA.columns+WHERE+table_name+%3D+'ps'&format=csv
+#### 1.4.2. Interactive TUI Exploration
+```bash
+# Terminal UI for interactive exploration
+cargo run --example tui_explorer
 ```
 
-### 1.6. Next Steps
+### 1.5. CLI Tool Specification
 
-The data loading and CLI exploration for both tables are complete. The next focus area should be:
+#### 1.5.1. Data Format Conversion Tool
+```bash
+# Convert VOTable to fast-loading formats
+cargo run -- convert --input data/stellarhosts.vot --output data/stellarhosts.parquet --format parquet
+cargo run -- convert --input data/exoplanets.vot --output data/exoplanets.parquet --format parquet
 
-1. **Backend API Integration**: Expose both DataFrames through API endpoints for frontend consumption
-   - RESTful endpoints for both stellarhosts and exoplanets
-   - Filtering and sorting capabilities for both tables
-   - Pagination support
+# Batch conversion
+cargo run -- convert-all --input-dir data/ --output-dir data/converted/
+```
 
-2. **Probably would be better to load DataFrames directly from files, parsing VOTables takes significiant amount of time.
+**Features**
+- Progress bars for large files
+- Memory usage monitoring
+- Format-specific optimizations
+- Validation of output integrity
 
-Need to review this and provide further ideas.
+#### 1.5.2. Data Inspection Tool
+```bash
+# Stellar hosts inspection
+cargo run -- inspect stellarhosts --limit 1000 --columns hostname,st_teff,st_mass
 
+# Exoplanets inspection  
+cargo run -- inspect exoplanets --limit 1000 --columns pl_name,pl_orbper,pl_bmasse
 
+# Column search
+cargo run -- inspect stellarhosts --search discovery
+cargo run -- inspect exoplanets --search disc_year
+```
+
+**Features**
+- Column pattern matching
+- Data type information
+- Missing value analysis
+- Statistical summaries
+- Sample data preview
+
+#### 1.5.3. Interactive TUI Explorer
+```bash
+# Launch interactive TUI explorer
+cargo run -- tui-explorer --file data/stellarhosts.parquet
+cargo run -- tui-explorer --file data/exoplanets.parquet
+```
+
+**TUI Features**
+- **Data Browser**: Paginated view of all rows/columns
+- **Filter Panel**: Interactive filtering by column values
+- **Statistics View**: Real-time aggregation statistics
+- **Export Options**: CSV, JSON, filtered data extraction
+
+### 1.6. Implementation Tasks
+
+#### Phase 1: CLI Format Conversion
+- [ ] Add parquet/feather support to dependencies
+- [ ] Implement format conversion with progress bars
+- [ ] Add validation for converted files
+- [ ] Benchmark performance improvements
+
+#### Phase 2: Data Inspection Tools
+- [ ] Create unified inspection example for both datasets
+- [ ] Add column search and pattern matching
+- [ ] Implement statistical analysis for key columns
+- [ ] Add data quality assessment
+
+#### Phase 3: Interactive TUI Explorer
+- [ ] Create TUI framework with `ratatui`
+- [ ] Implement data table with pagination
+- [ ] Add interactive filtering system
+- [ ] Create statistics panel with aggregations
+- [ ] Add export functionality
+
+### 1.7. Performance Targets
+- **Loading Time**: <1 second for full datasets (from optimized formats)
+- **Memory Usage**: Maintain <200MB total for both datasets
+- **Query Response**: <100ms for common aggregations
+- **Export Speed**: <2 seconds for 10,000 row exports
+
+### 1.8. File Management Strategy
+```
+data/
+├── raw/                    # Original VOTable files
+│   ├── stellarhosts.vot
+│   └── exoplanets.vot
+├── processed/              # Converted fast-loading formats
+│   ├── stellarhosts.parquet
+│   ├── stellarhosts.ipc
+│   ├── exoplanets.parquet
+│   └── exoplanets.ipc
+└── cache/                 # Query result caches
+    └── *.cache
+```
+
+### 1.9. Next Steps
+1. **Implement CLI conversion tools** for immediate performance gains
+2. **Create data inspection examples** for better understanding of datasets
+3. **Build TUI explorer** for interactive analysis
+4. **Integrate with web application** for fast backend data loading

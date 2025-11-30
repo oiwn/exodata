@@ -2,8 +2,8 @@
 //
 // ## Specification
 //
-// Creates an interactive terminal interface using `ratatui` crate for stellar hosts 
-// aggregation analysis, providing insights into the 46,887 stars hosting exoplanets 
+// Creates an interactive terminal interface using `ratatui` crate for stellar hosts
+// aggregation analysis, providing insights into the 46,887 stars hosting exoplanets
 // with 136 columns of stellar properties.
 //
 // ### Features
@@ -27,27 +27,33 @@
 // - s: Save current view to file
 // - q: Quit application
 
-use std::collections::HashMap;
-use std::io::{self, stdout};
 use anyhow::Result;
+use exoplanets_catalog::tables::aggregation::*;
+use exoplanets_catalog::tables::stellarhosts::load_data_with_limit;
 use polars::prelude::*;
 use ratatui::{
     backend::CrosstermBackend,
     crossterm::{
-        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent},
+        event::{
+            self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode,
+            KeyEvent,
+        },
         execute,
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+        terminal::{
+            disable_raw_mode, enable_raw_mode, EnterAlternateScreen,
+            LeaveAlternateScreen,
+        },
     },
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{
-        Block, Borders, Clear, Gauge, List, ListItem, Paragraph, Tabs, Wrap
+        Block, Borders, Clear, Gauge, List, ListItem, Paragraph, Tabs, Wrap,
     },
     Frame, Terminal,
 };
-use exoplanets_catalog::tables::aggregation::*;
-use exoplanets_catalog::tables::stellarhosts::load_data_with_limit;
+use std::collections::HashMap;
+use std::io::{self, stdout};
 
 // UI state structure
 #[derive(Debug, Clone)]
@@ -131,7 +137,7 @@ impl App {
 
         // Load the full dataset
         let df = load_data_with_limit(path, None)?;
-        
+
         // Compute all aggregations
         self.temperature_data = temperature_distribution(&df)?;
         self.discovery_data = discovery_timeline(&df)?;
@@ -149,9 +155,9 @@ fn ui(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header with tabs
-            Constraint::Min(0),      // Main content area
-            Constraint::Length(3),  // Status bar
+            Constraint::Length(3), // Header with tabs
+            Constraint::Min(0),    // Main content area
+            Constraint::Length(3), // Status bar
         ])
         .split(f.area());
 
@@ -168,19 +174,22 @@ fn render_header(f: &mut Frame, app: &App, area: Rect) {
         .split(area);
 
     // Title
-    let title = Paragraph::new("Stellar Hosts Aggregation Explorer")
-        .style(Style::default()
+    let title = Paragraph::new("Stellar Hosts Aggregation Explorer").style(
+        Style::default()
             .add_modifier(Modifier::BOLD)
-            .fg(Color::Cyan));
+            .fg(Color::Cyan),
+    );
     f.render_widget(title, header_chunks[0]);
 
     // Tabs
     let tabs = Tabs::new(Tab::titles().iter().copied())
         .block(Block::default().borders(Borders::ALL))
         .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default()
-            .add_modifier(Modifier::BOLD)
-            .bg(Color::Blue))
+        .highlight_style(
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .bg(Color::Blue),
+        )
         .select(app.current_tab);
     f.render_widget(tabs, header_chunks[1]);
 }
@@ -200,7 +209,11 @@ fn render_temperature_tab(f: &mut Frame, app: &App, area: Rect) {
     if app.temperature_data.is_empty() {
         let no_data = Paragraph::new("No temperature data available")
             .style(Style::default().fg(Color::Red))
-            .block(Block::default().borders(Borders::ALL).title("Temperature Distribution"));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Temperature Distribution"),
+            );
         f.render_widget(no_data, area);
         return;
     }
@@ -211,43 +224,61 @@ fn render_temperature_tab(f: &mut Frame, app: &App, area: Rect) {
         .split(area);
 
     // Summary statistics
-    let total_stars: u32 = app.temperature_data.iter().map(|b| b.star_count).sum();
-    let mean_temp = app.temperature_data.iter()
+    let total_stars: u32 =
+        app.temperature_data.iter().map(|b| b.star_count).sum();
+    let mean_temp = app
+        .temperature_data
+        .iter()
         .map(|b| (b.min_temp + b.max_temp) / 2.0 * b.star_count as f64)
-        .sum::<f64>() / total_stars as f64;
+        .sum::<f64>()
+        / total_stars as f64;
 
     let summary_text = format!(
         "Total Stars: {} | Mean Temperature: {:.0}K | Bins: {}",
-        total_stars, mean_temp, app.temperature_data.len()
+        total_stars,
+        mean_temp,
+        app.temperature_data.len()
     );
 
-    let summary = Paragraph::new(summary_text)
-        .block(Block::default().borders(Borders::ALL).title("Temperature Summary"));
+    let summary = Paragraph::new(summary_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Temperature Summary"),
+    );
     f.render_widget(summary, chunks[0]);
 
     // Temperature histogram
-    let max_count = app.temperature_data.iter().map(|b| b.star_count).max().unwrap_or(1);
-    let histogram_items: Vec<ListItem> = app.temperature_data
+    let max_count = app
+        .temperature_data
+        .iter()
+        .map(|b| b.star_count)
+        .max()
+        .unwrap_or(1);
+    let histogram_items: Vec<ListItem> = app
+        .temperature_data
         .iter()
         .map(|bin| {
             let bar_width = (bin.star_count * 30 / max_count) as u16;
             let bar = "█".repeat(bar_width as usize);
             let bar_space = " ".repeat(30 - bar_width as usize);
-            
+
             ListItem::new(Line::from(vec![
                 Span::raw(format!("{:<12} | ", bin.range)),
                 Span::styled(bar, Style::default().fg(Color::Yellow)),
                 Span::raw(bar_space),
                 Span::styled(
                     format!(" {} ({:.1}%)", bin.star_count, bin.percentage),
-                    Style::default().fg(Color::Green)
+                    Style::default().fg(Color::Green),
                 ),
             ]))
         })
         .collect();
 
-    let histogram = List::new(histogram_items)
-        .block(Block::default().borders(Borders::ALL).title("Temperature Distribution"));
+    let histogram = List::new(histogram_items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Temperature Distribution"),
+    );
     f.render_widget(histogram, chunks[1]);
 }
 
@@ -256,22 +287,34 @@ fn render_discovery_tab(f: &mut Frame, app: &App, area: Rect) {
     if app.discovery_data.is_empty() {
         let no_data = Paragraph::new("No discovery data available")
             .style(Style::default().fg(Color::Red))
-            .block(Block::default().borders(Borders::ALL).title("Discovery Timeline"));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Discovery Timeline"),
+            );
         f.render_widget(no_data, area);
         return;
     }
 
-    let total_discovered: u32 = app.discovery_data.iter().map(|d| d.stars_discovered).sum();
-    let max_decade = app.discovery_data.iter().map(|d| d.stars_discovered).max().unwrap_or(1);
+    let total_discovered: u32 =
+        app.discovery_data.iter().map(|d| d.stars_discovered).sum();
+    let max_decade = app
+        .discovery_data
+        .iter()
+        .map(|d| d.stars_discovered)
+        .max()
+        .unwrap_or(1);
 
-    let items: Vec<ListItem> = app.discovery_data
+    let items: Vec<ListItem> = app
+        .discovery_data
         .iter()
         .map(|decade| {
             let bar_width = (decade.stars_discovered * 30 / max_decade) as u16;
             let bar = "█".repeat(bar_width as usize);
             let bar_space = " ".repeat(30 - bar_width as usize);
-            
-            let median_temp_text = decade.median_temp
+
+            let median_temp_text = decade
+                .median_temp
                 .map(|t| format!(" | Median Temp: {:.0}K", t))
                 .unwrap_or_default();
 
@@ -281,15 +324,20 @@ fn render_discovery_tab(f: &mut Frame, app: &App, area: Rect) {
                 Span::raw(bar_space),
                 Span::styled(
                     format!(" {} stars", decade.stars_discovered),
-                    Style::default().fg(Color::Green)
+                    Style::default().fg(Color::Green),
                 ),
                 Span::raw(median_temp_text),
             ]))
         })
         .collect();
 
-    let summary = Paragraph::new(format!("Total Stars Discovered: {}", total_discovered))
-        .block(Block::default().borders(Borders::ALL).title("Discovery Summary"));
+    let summary =
+        Paragraph::new(format!("Total Stars Discovered: {}", total_discovered))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Discovery Summary"),
+            );
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -298,8 +346,11 @@ fn render_discovery_tab(f: &mut Frame, app: &App, area: Rect) {
 
     f.render_widget(summary, chunks[0]);
 
-    let timeline = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Discovery Timeline by Decade"));
+    let timeline = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Discovery Timeline by Decade"),
+    );
     f.render_widget(timeline, chunks[1]);
 }
 
@@ -308,7 +359,11 @@ fn render_catalog_tab(f: &mut Frame, app: &App, area: Rect) {
     if app.catalog_data.total_stars == 0 {
         let no_data = Paragraph::new("No catalog data available")
             .style(Style::default().fg(Color::Red))
-            .block(Block::default().borders(Borders::ALL).title("Catalog Cross-Match"));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Catalog Cross-Match"),
+            );
         f.render_widget(no_data, area);
         return;
     }
@@ -321,11 +376,15 @@ fn render_catalog_tab(f: &mut Frame, app: &App, area: Rect) {
     // Overall coverage
     let coverage_text = format!(
         "Total Stars: {} | Cross-matched across {} catalogs",
-        app.catalog_data.total_stars, 5 // HD, HIP, TIC, GAIA DR2, GAIA DR3
+        app.catalog_data.total_stars,
+        5 // HD, HIP, TIC, GAIA DR2, GAIA DR3
     );
 
-    let coverage = Paragraph::new(coverage_text)
-        .block(Block::default().borders(Borders::ALL).title("Catalog Coverage"));
+    let coverage = Paragraph::new(coverage_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Catalog Coverage"),
+    );
     f.render_widget(coverage, chunks[0]);
 
     // Catalog match rates
@@ -334,41 +393,44 @@ fn render_catalog_tab(f: &mut Frame, app: &App, area: Rect) {
             Span::raw("HD Catalog    : "),
             Span::styled(
                 format!("{:.1}% coverage", app.catalog_data.hd_match_rate),
-                Style::default().fg(Color::Green)
+                Style::default().fg(Color::Green),
             ),
         ])),
         ListItem::new(Line::from(vec![
             Span::raw("HIP Catalog   : "),
             Span::styled(
                 format!("{:.1}% coverage", app.catalog_data.hip_match_rate),
-                Style::default().fg(Color::Green)
+                Style::default().fg(Color::Green),
             ),
         ])),
         ListItem::new(Line::from(vec![
             Span::raw("TIC Catalog   : "),
             Span::styled(
                 format!("{:.1}% coverage", app.catalog_data.tic_match_rate),
-                Style::default().fg(Color::Green)
+                Style::default().fg(Color::Green),
             ),
         ])),
         ListItem::new(Line::from(vec![
             Span::raw("GAIA DR2      : "),
             Span::styled(
                 format!("{:.1}% coverage", app.catalog_data.gaia_dr2_match_rate),
-                Style::default().fg(Color::Green)
+                Style::default().fg(Color::Green),
             ),
         ])),
         ListItem::new(Line::from(vec![
             Span::raw("GAIA DR3      : "),
             Span::styled(
                 format!("{:.1}% coverage", app.catalog_data.gaia_dr3_match_rate),
-                Style::default().fg(Color::Green)
+                Style::default().fg(Color::Green),
             ),
         ])),
     ];
 
-    let catalog_list = List::new(catalog_items)
-        .block(Block::default().borders(Borders::ALL).title("Catalog Match Rates"));
+    let catalog_list = List::new(catalog_items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Catalog Match Rates"),
+    );
     f.render_widget(catalog_list, chunks[1]);
 }
 
@@ -377,28 +439,42 @@ fn render_photometric_tab(f: &mut Frame, app: &App, area: Rect) {
     if app.photometric_data.band_stats.is_empty() {
         let no_data = Paragraph::new("No photometric data available")
             .style(Style::default().fg(Color::Red))
-            .block(Block::default().borders(Borders::ALL).title("Photometric Statistics"));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Photometric Statistics"),
+            );
         f.render_widget(no_data, area);
         return;
     }
 
-    let items: Vec<ListItem> = app.photometric_data.band_stats
+    let items: Vec<ListItem> = app
+        .photometric_data
+        .band_stats
         .iter()
         .map(|(band, stats)| {
             ListItem::new(Line::from(vec![
                 Span::styled(
                     format!("{:<8} ", band),
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(format!("{} stars | ", stats.count)),
                 Span::raw(format!("Mean: {:<6.2} | ", stats.mean_mag)),
-                Span::raw(format!("Range: [{:.2}, {:.2}]", stats.min_mag, stats.max_mag)),
+                Span::raw(format!(
+                    "Range: [{:.2}, {:.2}]",
+                    stats.min_mag, stats.max_mag
+                )),
             ]))
         })
         .collect();
 
-    let photometric_list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Photometric Band Statistics"));
+    let photometric_list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Photometric Band Statistics"),
+    );
     f.render_widget(photometric_list, area);
 }
 
@@ -440,7 +516,8 @@ fn handle_events(app: &mut App) -> Result<bool> {
                 KeyCode::Left => app.previous_tab(),
                 KeyCode::Char('r') => {
                     // Refresh data (in a real implementation, you'd reload here)
-                    app.status_message = "Refresh requested (not implemented)".to_string();
+                    app.status_message =
+                        "Refresh requested (not implemented)".to_string();
                 }
                 _ => {}
             }
@@ -460,7 +537,7 @@ async fn main() -> Result<()> {
 
     // Initialize app
     let mut app = App::new();
-    
+
     // Load data
     let data_path = "data/stellarhosts.vot";
     app.load_all_data(data_path).await?;
@@ -470,7 +547,7 @@ async fn main() -> Result<()> {
     while running {
         // Draw UI
         terminal.draw(|f| ui(f, &app))?;
-        
+
         // Handle events
         running = handle_events(&mut app)?;
     }

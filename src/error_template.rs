@@ -1,6 +1,6 @@
 use http::status::StatusCode;
-use leptos::prelude::*; // Replaces `use leptos::*;`
 use leptos::error::Errors;
+use leptos::prelude::*; // Replaces `use leptos::*;`
 use thiserror::Error;
 
 #[derive(Clone, Debug, Error)]

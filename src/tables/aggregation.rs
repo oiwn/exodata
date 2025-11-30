@@ -1,9 +1,9 @@
 // Shared aggregation functions for stellar hosts data analysis.
 // These functions can be used by CLI commands, examples, and other parts of the application.
 
-use std::collections::HashMap;
 use anyhow::Result;
 use polars::prelude::*;
+use std::collections::HashMap;
 
 /// Temperature distribution data for histogram visualization
 #[derive(Debug, Clone)]
@@ -63,7 +63,7 @@ pub fn temperature_distribution(df: &DataFrame) -> Result<Vec<TemperatureBin>> {
             if let Ok(st_teff_data) = st_teff_series.f64() {
                 let total_stars = st_teff_data.len() as f64;
                 let mut bin_counts = vec![0; 7]; // 7 bins from 3000-10000K
-                
+
                 // Count values in each bin
                 for opt_temp in st_teff_data.into_iter() {
                     if let Some(temp) = opt_temp {
@@ -75,13 +75,13 @@ pub fn temperature_distribution(df: &DataFrame) -> Result<Vec<TemperatureBin>> {
                         }
                     }
                 }
-                
+
                 // Create bins
                 let mut bins = Vec::new();
                 for (i, &count) in bin_counts.iter().enumerate() {
                     let min_temp = 3000.0 + (i as f64) * 1000.0;
                     let max_temp = min_temp + 1000.0;
-                    
+
                     bins.push(TemperatureBin {
                         range: format!("{:.0}-{:.0}K", min_temp, max_temp),
                         min_temp,
@@ -90,12 +90,12 @@ pub fn temperature_distribution(df: &DataFrame) -> Result<Vec<TemperatureBin>> {
                         percentage: (count as f64 / total_stars) * 100.0,
                     });
                 }
-                
+
                 return Ok(bins);
             }
         }
     }
-    
+
     Ok(vec![])
 }
 
@@ -103,29 +103,36 @@ pub fn temperature_distribution(df: &DataFrame) -> Result<Vec<TemperatureBin>> {
 /// Analyzes when stars were discovered and their properties
 pub fn discovery_timeline(df: &DataFrame) -> Result<Vec<DecadeData>> {
     if let (Ok(disc_year_col), Ok(st_teff_col), Ok(hostname_col)) = (
-        df.column("disc_year"), 
-        df.column("st_teff"), 
-        df.column("hostname")
+        df.column("disc_year"),
+        df.column("st_teff"),
+        df.column("hostname"),
     ) {
-        if let (Some(disc_year_series), Some(st_teff_series), Some(_hostname_series)) = (
+        if let (
+            Some(disc_year_series),
+            Some(st_teff_series),
+            Some(_hostname_series),
+        ) = (
             disc_year_col.as_series(),
             st_teff_col.as_series(),
-            hostname_col.as_series()
+            hostname_col.as_series(),
         ) {
             if let Ok(disc_year_data) = disc_year_series.f64() {
                 let st_teff_data = st_teff_series.f64()?;
-                let mut decade_map: HashMap<i32, (u32, Vec<f64>)> = HashMap::new();
-                
+                let mut decade_map: HashMap<i32, (u32, Vec<f64>)> =
+                    HashMap::new();
+
                 // Group by decade and collect temperatures
                 for (i, opt_year) in disc_year_data.into_iter().enumerate() {
                     if let Some(year) = opt_year {
                         let decade = (year as i32 / 10) * 10;
-                        
+
                         if i < st_teff_data.len() {
                             let opt_temp = st_teff_data.get(i);
                             if let Some(temp) = opt_temp {
                                 if temp > 0.0 {
-                                    let entry = decade_map.entry(decade).or_insert((0, Vec::new()));
+                                    let entry = decade_map
+                                        .entry(decade)
+                                        .or_insert((0, Vec::new()));
                                     entry.0 += 1;
                                     entry.1.push(temp);
                                 }
@@ -133,7 +140,7 @@ pub fn discovery_timeline(df: &DataFrame) -> Result<Vec<DecadeData>> {
                         }
                     }
                 }
-                
+
                 // Create result
                 let mut result = Vec::new();
                 for (decade, (count, temps)) in decade_map {
@@ -143,14 +150,18 @@ pub fn discovery_timeline(df: &DataFrame) -> Result<Vec<DecadeData>> {
                         sorted_temps.sort_by(|a, b| a.partial_cmp(b).unwrap());
                         let len = sorted_temps.len();
                         if len % 2 == 0 {
-                            Some((sorted_temps[len/2 - 1] + sorted_temps[len/2]) / 2.0)
+                            Some(
+                                (sorted_temps[len / 2 - 1]
+                                    + sorted_temps[len / 2])
+                                    / 2.0,
+                            )
                         } else {
-                            Some(sorted_temps[len/2])
+                            Some(sorted_temps[len / 2])
                         }
                     } else {
                         None
                     };
-                    
+
                     result.push(DecadeData {
                         decade,
                         stars_discovered: count,
@@ -158,14 +169,14 @@ pub fn discovery_timeline(df: &DataFrame) -> Result<Vec<DecadeData>> {
                         median_temp,
                     });
                 }
-                
+
                 // Sort by decade
                 result.sort_by_key(|d| d.decade);
                 return Ok(result);
             }
         }
     }
-    
+
     Ok(vec![])
 }
 
@@ -173,7 +184,7 @@ pub fn discovery_timeline(df: &DataFrame) -> Result<Vec<DecadeData>> {
 /// Analyzes coverage across different star catalogs (HD, HIP, TIC, GAIA)
 pub fn catalog_crossmatch(df: &DataFrame) -> Result<CatalogStats> {
     let total_stars = df.height() as u32;
-    
+
     // Count non-null values for each catalog
     let count_column = |col_name: &str| -> Result<u32> {
         if let Ok(col) = df.column(col_name) {
@@ -183,7 +194,7 @@ pub fn catalog_crossmatch(df: &DataFrame) -> Result<CatalogStats> {
         }
         Ok(0)
     };
-    
+
     let stars_with_hd = count_column("hd_name")?;
     let stars_with_hip = count_column("hip_name")?;
     let stars_with_tic = count_column("tic_id")?;
@@ -195,8 +206,10 @@ pub fn catalog_crossmatch(df: &DataFrame) -> Result<CatalogStats> {
         hd_match_rate: (stars_with_hd as f64 / total_stars as f64) * 100.0,
         hip_match_rate: (stars_with_hip as f64 / total_stars as f64) * 100.0,
         tic_match_rate: (stars_with_tic as f64 / total_stars as f64) * 100.0,
-        gaia_dr2_match_rate: (stars_with_gaia_dr2 as f64 / total_stars as f64) * 100.0,
-        gaia_dr3_match_rate: (stars_with_gaia_dr3 as f64 / total_stars as f64) * 100.0,
+        gaia_dr2_match_rate: (stars_with_gaia_dr2 as f64 / total_stars as f64)
+            * 100.0,
+        gaia_dr3_match_rate: (stars_with_gaia_dr3 as f64 / total_stars as f64)
+            * 100.0,
         cross_match_matrix: Vec::new(), // Simplified for now
     })
 }
@@ -216,7 +229,7 @@ pub fn photometric_statistics(df: &DataFrame) -> Result<PhotometricStats> {
     ];
 
     let mut band_stats = HashMap::new();
-    
+
     for (col_name, band_name) in photometric_bands {
         if let Ok(stats) = compute_band_stats(df, col_name) {
             band_stats.insert(band_name.to_string(), stats);
@@ -264,6 +277,6 @@ fn compute_band_stats(df: &DataFrame, column: &str) -> Result<BandStats> {
             }
         }
     }
-    
+
     Err(anyhow::anyhow!("No data for band {}", column))
 }
