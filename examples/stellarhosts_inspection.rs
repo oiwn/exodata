@@ -1,5 +1,6 @@
 use anyhow::Error;
 use clap::Parser;
+use polars::lazy::dsl::{col, len};
 use polars::prelude::*;
 
 use exoplanets_catalog::tables::common::load_parquet;
@@ -132,7 +133,7 @@ fn print_planet_count_distribution(df: &DataFrame) {
     println!("Host planet count distribution (sy_pnum):");
     match value_counts(df, "sy_pnum", 10) {
         Ok(table) => {
-            for row in table.iter() {
+            for row in table {
                 println!("  {:>5} planets : {:>6}", row.value, row.count);
             }
         }
@@ -194,15 +195,17 @@ fn value_counts(
 ) -> Result<Vec<ValueCount>, Error> {
     let counts_df = df
         .clone()
-        .group_by([column])?
-        .count()?
+        .lazy()
+        .group_by([col(column)])
+        .agg([len().alias("count")])
         .sort(
             ["count"],
             SortMultipleOptions {
                 descending: vec![true],
                 ..Default::default()
             },
-        )?
+        )
+        .collect()?
         .head(Some(top_n));
 
     let values_col = counts_df

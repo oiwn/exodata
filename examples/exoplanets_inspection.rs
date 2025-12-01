@@ -1,7 +1,7 @@
 use anyhow::Error;
 use clap::Parser;
+use polars::lazy::dsl::{col, len};
 use polars::prelude::*;
-use polars::prelude::AnyValue;
 
 use exoplanets_catalog::tables::common::load_parquet;
 
@@ -73,15 +73,17 @@ fn search_columns(df: &DataFrame, query: &str) {
 fn print_discovery_timeline(df: &DataFrame) -> Result<(), Error> {
     let timeline = df
         .clone()
-        .group_by(["disc_year"])?
-        .count()?
+        .lazy()
+        .group_by([col("disc_year")])
+        .agg([len().alias("count")])
         .sort(
             ["disc_year"],
             SortMultipleOptions {
                 descending: vec![false],
                 ..Default::default()
             },
-        )?;
+        )
+        .collect()?;
 
     println!("Discovery timeline (disc_year):");
     let years = timeline.column("disc_year")?.i32()?;
@@ -97,27 +99,34 @@ fn print_discovery_timeline(df: &DataFrame) -> Result<(), Error> {
 fn print_discovery_methods(df: &DataFrame) -> Result<(), Error> {
     let methods = df
         .clone()
-        .group_by(["discoverymethod"])?
-        .count()?
+        .lazy()
+        .group_by([col("discoverymethod")])
+        .agg([len().alias("count")])
         .sort(
             ["count"],
             SortMultipleOptions {
                 descending: vec![true],
                 ..Default::default()
             },
-        )?
+        )
+        .collect()?
         .head(Some(15));
 
     println!("Discovery methods:");
-    let names_col = methods.column("discoverymethod")?;
-    let counts = methods.column("count")?.u32()?;
-    let names_iter = names_col.to_owned().into_series().iter();
-    for (name, count) in names_iter.zip(counts) {
-        if let Some(c) = count {
-            let label = match name {
-                AnyValue::Null => "<unknown>".to_string(),
-                _ => name.to_string(),
-            };
+    let name_col = methods
+        .select_at_idx(0)
+        .cloned()
+        .ok_or_else(|| Error::msg("missing discoverymethod column"))?;
+    let count_col = methods
+        .select_at_idx(1)
+        .cloned()
+        .ok_or_else(|| Error::msg("missing count column"))?;
+    
+    let names = name_col.str()?;
+    let counts = count_col.u32()?;
+
+    for (name, count) in names.into_iter().zip(counts) {
+        if let (Some(label), Some(c)) = (name, count) {
             println!("  {:<25} {:>6}", label, c);
         }
     }
