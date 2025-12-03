@@ -60,3 +60,31 @@ This will download the data into the `data/` directory.
 
 1.  **Explicit Instruction Compliance:** I will not perform any actions, including file modifications or command execution, unless I am explicitly asked to do so by the user. I will wait for a direct instruction before taking any action.
 2.  **Confidence Threshold for Human-in-the-Loop:** If my confidence in understanding a request or predicting the outcome of an action is below a high threshold (e.g., 70%), I will immediately stop and ask the user for clarification or guidance. I will state what I am unsure about and why.
+
+# Workflow
+
+## Development Process
+
+1. **Specification Development**: We develop specifications through an iterative process
+   - Start with high-level requirements
+   - Refine through implementation feedback
+   - Update with insights gained from data analysis
+
+2. **Specification Storage**: All specifications are stored in the `@specs` directory
+   - Each major task has its own specification file
+   - Specifications are versioned with git history
+   - Use consistent markdown format
+
+3. **Specification Requirements**: Specifications should be purely technical, not scientific
+   - Focus on what code should do (implementation details)
+   - Include just enough information to generate code
+   - Avoid scientific analysis or domain-specific knowledge
+   - Provide clear, actionable technical requirements
+
+## Specification Guidelines
+
+- **Technical Focus**: Specify functions, data structures, interfaces
+- **Code Generation**: Include enough detail for implementation
+- **Avoid Science**: Don't explain astrophysics, only what to implement
+- **Iterative**: Update specs as implementation reveals insights
+- **Examples**: Provide code examples and expected outputs

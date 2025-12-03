@@ -85,40 +85,7 @@ cargo run --example tui_aggregations
 - ✅ Photometric statistics across bands
 - ✅ Interactive navigation (F1-F4 tabs, arrow keys)
 
-^^^ this is not complete and will require future work or should be completely removed
 
-### 1.5. Implementation Status
-
-#### Phase 1: CLI Format Conversion ✅ COMPLETE
-- ✅ Add parquet feature to Cargo.toml
-- ✅ Implement format conversion with progress bars
-- ✅ Add validation for converted files
-- ✅ Benchmark performance improvements
-
-#### Phase 2: Data Inspection Tools ✅ COMPLETE
-- ✅ Create unified inspection examples for both datasets
-- ✅ Add column search and pattern matching
-- ✅ Implement statistical analysis for key columns
-- ✅ Add data quality assessment
-
-#### Phase 3: Interactive TUI Explorer ✅ COMPLETE
-- ✅ Create TUI framework with `ratatui`
-- ✅ Implement data table with pagination
-- ✅ Add interactive filtering system
-- ✅ Create statistics panel with aggregations
-- ✅ Add export functionality
-
-### 1.6. Performance Targets
-- ✅ **Loading Time**: <200ms for full datasets (from optimized formats)
-  - stellarhosts.parquet: 76.39ms
-  - exoplanets.parquet: 125.87ms
-- ✅ **Memory Usage**: Efficient columnar storage with significant size reduction
-  - Original: 534.4 MB
-  - Optimized: 23.9 MB (22.38x reduction)
-- ✅ **Query Response**: Sub-millisecond for simple aggregations with Polars
-- ✅ **Export Speed**: Fast data export with parquet serialization
-
-^^^ let's remove it since this is specification not a todo tracker.
 
 ### 1.7. File Management Strategy
 ```
@@ -128,37 +95,3 @@ data/
 ├── stellarhosts.parquet     # Optimized format (7.7 MB, 76.39ms load)
 └── exoplanets.parquet       # Optimized format (16.2 MB, 125.87ms load)
 ```
-
-### 1.8. Key Insights from Data Analysis
-
-#### Stellar Hosts Dataset (46,887 stars, 136 columns)
-- **Catalog Coverage**: 
-  - HD: 14.5% coverage (6,809 stars)
-  - HIP: 15.2% coverage (7,141 stars)
-  - TIC: 98.0% coverage (45,927 stars)
-  - GAIA: 96-97% coverage (45,455 stars)
-- **Temperature Distribution**: 
-  - Peak: 45.9% of stars have 5000-6000K (G-type stars)
-  - 5.8% M-type (3000-4000K), 12.9% K-type (4000-5000K)
-  - Only 0.9% of stars >7000K (B/A-type)
-- **Photometric Data**: Complete coverage across 8 bands (V, B, J, H, K, G, Gaia, Kepler)
-- **Stellar Properties**: 61.2% of stars have mass data (28,662/46,887)
-
-#### Exoplanets Dataset (39,119 exoplanets, 355 columns)
-- **Discovery Timeline**: 
-  - Peak discovery years: 2014 (9,745 planets), 2016 (13,408 planets)
-  - Recent surge: 2021-2023 showing high discovery rates
-- **Discovery Methods**:
-  - Transit: 35,233 planets (90.0%)
-  - Radial Velocity: 2,740 planets (7.0%)
-  - Microlensing: 762 planets (2.0%)
-- **Physical Properties**: 
-  - Mean mass: 718.3 Earth masses (2.26 Jupiter masses)
-  - Mean radius: 5.4 Earth radii (0.486 Jupiter radii)
-
-### 1.9. Next Steps
-1. ✅ **IMPLEMENTED**: CLI conversion tools for immediate performance gains
-2. ✅ **IMPLEMENTED**: Data inspection examples for better understanding of datasets  
-3. ✅ **IMPLEMENTED**: TUI explorer for interactive analysis
-4. 🔄 **IN PROGRESS**: Integration with web application to use parquet files
-5. 📋 **PENDING**: Advanced analysis features for scientific workflows
