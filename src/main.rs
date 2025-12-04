@@ -118,7 +118,8 @@ pub fn main() {
 async fn start_server() {
     use axum::Router;
     use exoplanets_catalog::app::{shell, App};
-    use leptos::prelude::get_configuration; // Added this import
+    use exoplanets_catalog::server;
+    use leptos::prelude::get_configuration;
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
 
@@ -136,6 +137,7 @@ async fn start_server() {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
         })
+        .nest_service("/api", server::api_routes())
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options);
 

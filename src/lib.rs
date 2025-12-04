@@ -2,6 +2,8 @@ pub mod app;
 #[cfg(feature = "ssr")]
 pub mod common;
 pub mod error_template;
+#[cfg(feature = "ssr")]
+pub mod server;
 pub mod tables;
 
 #[cfg(feature = "ssr")]

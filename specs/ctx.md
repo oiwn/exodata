@@ -1,6 +1,8 @@
 ### Current Task
 Web Application Integration
 
+**Specification File**: `specs/task_2_web_integration.md`
+
 ### Goal
 Integrate high-performance parquet data loading into the Leptos web application to provide fast, interactive browsing of exoplanet and stellar hosts datasets.
 
@@ -15,7 +17,6 @@ Integrate high-performance parquet data loading into the Leptos web application 
    - Replace VOTable loading with parquet loading
    - Use existing `load_parquet` function from tables::common
    - Update API endpoints to handle parquet-based queries
-   - Add caching for frequently accessed data
 
 2. **Frontend Updates**
    - Update data fetching to use new parquet-based endpoints
@@ -45,51 +46,32 @@ Integrate high-performance parquet data loading into the Leptos web application 
 
 ### API Design
 ```
-GET /api/exoplanets           # Load exoplanets data (parquet)
-GET /api/stellarhosts        # Load stellar hosts data (parquet)
-GET /api/search?query=...    # Search across datasets
-GET /api/export?format=...   # Export filtered data
+GET /api/exoplanets                    # Load exoplanets data (parquet)
+GET /api/stellarhosts                 # Load stellar hosts data (parquet)
+GET /api/search?query=...            # SQL query across datasets
+GET /api/export?format=...           # Export filtered data
+GET /api/system/{hostname}           # Get specific solar system data
+GET /api/planet/{pl_name}           # Get specific planet data
 ```
+
+**SQL Query Support**: Leverage Polars SQL execution context for `/api/search?query=...` endpoint to enable complex filtering and aggregations.
 
 ### File Structure Updates
 ```
 src/
 ├── main.rs                 # Update with parquet loading
-├── app.rs                  # Update data fetching logic
+├── app.rs                  # Update data fetching logic and routing
 ├── server/
-│   └── handlers.rs        # Add parquet-based endpoints
+│   ├── handlers.rs        # Add parquet-based endpoints
+│   └── api.rs           # SQL query execution for search
 └── components/
     ├── data_table.rs       # Add pagination/loading states
-    └── search.rs         # Add search functionality
+    ├── search.rs         # Add search functionality
+    ├── system_page.rs     # Solar system detail page
+    └── planet_page.rs    # Planet detail page
 ```
 
-### Implementation Steps
-
-#### Phase 1: Backend Parquet Integration
-- [ ] Update data loading to use `load_parquet` function
-- [ ] Modify existing API endpoints
-- [ ] Add error handling for parquet file missing
-- [ ] Test performance improvements
-
-#### Phase 2: Frontend Updates
-- [ ] Update data fetching components
-- [ ] Add loading indicators and error states
-- [ ] Implement pagination for large datasets
-- [ ] Test end-to-end functionality
-
-#### Phase 3: Advanced Features
-- [ ] Add real-time search functionality
-- [ ] Implement data export capabilities
-- [ ] Add data visualization components
-- [ ] Optimize for mobile devices
-
-### Success Metrics
-- **Performance**: Page load time reduced from 8+ seconds to <2 seconds
-- **User Experience**: Smooth loading with proper indicators
-- **Functionality**: All existing features work with parquet data
-- **Scalability**: Support for concurrent users with efficient data loading
-
----
+**Individual System Pages**: Add routing for `/system/{hostname}` and `/planet/{pl_name}` pages with detailed information about specific solar systems and individual planets.
 
 # TODO
 
@@ -110,9 +92,11 @@ src/
 - [ ] Ensure UI responsiveness during data loading
 
 ### Phase 3: Enhanced User Experience
-- [ ] Add real-time search functionality
+- [ ] Add real-time SQL-based search functionality
 - [ ] Implement pagination for large datasets
 - [ ] Add data export capabilities (CSV, JSON)
+- [ ] Create solar system detail pages
+- [ ] Create planet detail pages
 - [ ] Optimize loading states and user feedback
 - [ ] Test cross-browser compatibility
 
@@ -128,3 +112,5 @@ src/
 - [ ] What's the best caching strategy for web requests?
 - [ ] Should we implement server-side rendering with parquet data?
 - [ ] How to handle concurrent users accessing same datasets?
+- [ ] How should SQL queries be validated and secured?
+- [ ] What's the optimal data structure for individual system pages?
