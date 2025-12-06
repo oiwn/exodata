@@ -1,3 +1,4 @@
+use crate::components::overview::OverviewPage;
 use crate::error_template::{AppError, ErrorTemplate};
 use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
@@ -58,7 +59,8 @@ pub fn App() -> impl IntoView {
                 }
                 .into_view()
             }>
-                <Route path=StaticSegment("") view=HomePage/>
+                <Route path=StaticSegment("") view=OverviewPage/>
+                <Route path=StaticSegment("overview") view=OverviewPage/>
                 <Route path=StaticSegment("table") view=TableWrapper/>
             </Routes>
         </Router>

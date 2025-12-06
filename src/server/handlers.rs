@@ -54,23 +54,7 @@ pub struct ApiResponse<T> {
     pub filters: QueryParams,
 }
 
-pub fn api_routes() -> Router {
-    // Load dataframes at startup
-    let stellarhosts_df = match common::load_parquet("data/stellarhosts.parquet", None) {
-        Ok(df) => Arc::new(df),
-        Err(e) => panic!("Failed to load stellarhosts data: {}", e),
-    };
-
-    let exoplanets_df = match common::load_parquet("data/exoplanets.parquet", None) {
-        Ok(df) => Arc::new(df),
-        Err(e) => panic!("Failed to load exoplanets data: {}", e),
-    };
-
-    let state = ApiState {
-        stellarhosts_df,
-        exoplanets_df,
-    };
-
+pub fn api_routes(state: ApiState) -> Router {
     Router::new()
         .route("/stellarhosts", get(get_stellarhosts))
         .route("/exoplanets", get(get_exoplanets))

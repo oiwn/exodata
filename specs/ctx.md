@@ -1,116 +1,97 @@
-### Current Task
-Web Application Integration
+# Exoplanet Catalog - Task 2: Overview Page Implementation
 
-**Specification File**: `specs/task_2_web_integration.md`
+## Current Status
+- Frontend components already exist in `src/components/overview.rs`
+- ApiState exists in `src/server/handlers.rs` with data loading
+- REST API endpoints work (`/api/stellarhosts`, `/api/exoplanets`)
+- Server function makes inefficient HTTP requests (needs refactoring)
+- Routes configured in `src/app.rs` for "/" and "/overview"
 
-### Goal
-Integrate high-performance parquet data loading into the Leptos web application to provide fast, interactive browsing of exoplanet and stellar hosts datasets.
+## Implementation Checklist
 
-### Current State
-- **Backend**: Uses Axum with VOTable loading (slow)
-- **Frontend**: Leptos-based web interface
-- **Data Format**: Currently loads VOTable files directly
-- **Performance**: Web pages load slowly due to VOTable parsing overhead
+### Phase 1: Add Simple Aggregation Functions (tables/aggregation.rs)
+- [ ] Add function `get_total_counts(stellarhosts_df: &DataFrame, exoplanets_df: &DataFrame) -> (usize, usize)` that returns tuple of heights
+- [ ] Add function `get_avg_temperature(df: &DataFrame) -> Option<f64>` that calculates mean of `st_teff` column
+- [ ] Add function `get_avg_distance(df: &DataFrame) -> Option<f64>` that calculates mean of `sy_dist` column
+- [ ] Add function `get_discovery_methods(df: &DataFrame, limit: usize) -> Vec<(String, usize)>` that groups by `discoverymethod` and returns top N
+- [ ] Add function `get_planet_size_categories(df: &DataFrame) -> Vec<(String, usize)>` that categorizes by `pl_rade` radius
+- [ ] Compile and verify no errors: `cargo check`
 
-### Integration Requirements
-1. **Backend Updates**
-   - Replace VOTable loading with parquet loading
-   - Use existing `load_parquet` function from tables::common
-   - Update API endpoints to handle parquet-based queries
+### Phase 2: Create Shared State Structure (new file or modify handlers.rs)
+- [ ] In handlers.rs, make ApiState derive Clone if needed (already has Clone)
+- [ ] Verify ApiState has pub fields: `pub stellarhosts_df: Arc<DataFrame>` and `pub exoplanets_df: Arc<DataFrame>`
+- [ ] Compile and verify: `cargo check`
 
-2. **Frontend Updates**
-   - Update data fetching to use new parquet-based endpoints
-   - Improve loading indicators for better UX
-   - Add progressive loading for large datasets
-   - Implement search functionality
+### Phase 3: Refactor main.rs to Share State with Leptos
+- [ ] In main.rs `start_server()`, load stellarhosts dataframe before creating Router (around line 135)
+- [ ] In main.rs `start_server()`, load exoplanets dataframe before creating Router
+- [ ] Create ApiState instance in main.rs from the loaded dataframes
+- [ ] Pass ApiState to `server::api_routes()` function (modify api_routes signature to accept state)
+- [ ] Compile and fix errors: `cargo check`
 
-3. **Performance Targets**
-   - Page load time: <2 seconds (vs current 8+ seconds)
-   - Search response: <500ms
-   - Filter application: <1 second
-   - Data export: <5 seconds for 10,000 rows
+### Phase 4: Modify api_routes() to Accept State Parameter
+- [ ] In handlers.rs, change `api_routes()` signature from `pub fn api_routes() -> Router` to `pub fn api_routes(state: ApiState) -> Router`
+- [ ] Remove data loading code from inside `api_routes()` (lines 59-72)
+- [ ] Use the passed `state` parameter in `.with_state(state)`
+- [ ] Compile and verify: `cargo check`
 
-### Technical Approach
+### Phase 5: Add Leptos Context for State Sharing
+- [ ] In main.rs, add code to provide ApiState to Leptos context in the shell closure (line 138)
+- [ ] Use leptos `provide_context` to make ApiState available to server functions
+- [ ] Compile and verify: `cargo check`
 
-#### Backend Integration
-- Modify data loading functions in `src/app.rs` or `src/main.rs`
-- Update server endpoints to use parquet loader
-- Implement query optimization for common requests
-- Add error handling for missing parquet files
+### Phase 6: Implement Server Function in server/functions.rs
+- [ ] In server/functions.rs, inside `get_stats()`, add code to extract ApiState from leptos context using `use_context::<ApiState>()`
+- [ ] Add error handling if context is missing: return ServerFnError with message
+- [ ] Compile and fix syntax errors: `cargo check`
 
-#### Frontend Integration
-- Update component data fetching logic
-- Add loading states and error handling
-- Implement pagination for large datasets
-- Add real-time search capabilities
+### Phase 7: Use Aggregation Functions in Server Function
+- [ ] Import aggregation functions: `use crate::tables::aggregation::*;`
+- [ ] Call `get_total_counts()` with both dataframes from state
+- [ ] Call `get_avg_temperature()` with stellarhosts dataframe
+- [ ] Call `get_avg_distance()` with stellarhosts dataframe
+- [ ] Call `get_discovery_methods()` with exoplanets dataframe and limit of 10
+- [ ] Call `get_planet_size_categories()` with exoplanets dataframe
+- [ ] Build DataStats struct from aggregation results and return Ok()
+- [ ] Compile and verify: `cargo check`
 
-### API Design
-```
-GET /api/exoplanets                    # Load exoplanets data (parquet)
-GET /api/stellarhosts                 # Load stellar hosts data (parquet)
-GET /api/search?query=...            # SQL query across datasets
-GET /api/export?format=...           # Export filtered data
-GET /api/system/{hostname}           # Get specific solar system data
-GET /api/planet/{pl_name}           # Get specific planet data
-```
+### Phase 8: Update OverviewPage Component to Use New Server Function
+- [ ] In components/overview.rs, remove old DataStats struct (lines 6-14)
+- [ ] Import DataStats from server module: `use crate::server::functions::{DataStats, get_stats};`
+- [ ] Remove old `get_stats()` server function (lines 166-197)
+- [ ] Remove old `calculate_stats_server()` function (lines 199-274)
+- [ ] Fix temperature display bug in line 85: remove division by 1000
+- [ ] Compile: `cargo check`
 
-**SQL Query Support**: Leverage Polars SQL execution context for `/api/search?query=...` endpoint to enable complex filtering and aggregations.
+### Phase 9: Build and Test
+- [ ] Run full build: `cargo leptos build`
+- [ ] Fix any compilation errors that appear
+- [ ] Start server: `cargo leptos serve`
+- [ ] Open browser to http://localhost:3000
+- [ ] Verify overview page loads without errors
+- [ ] Check browser console for JavaScript errors
+- [ ] Verify all 4 stat cards show reasonable values
+- [ ] Verify discovery methods section displays data
+- [ ] Verify planet size categories section displays data
 
-### File Structure Updates
-```
-src/
-├── main.rs                 # Update with parquet loading
-├── app.rs                  # Update data fetching logic and routing
-├── server/
-│   ├── handlers.rs        # Add parquet-based endpoints
-│   └── api.rs           # SQL query execution for search
-└── components/
-    ├── data_table.rs       # Add pagination/loading states
-    ├── search.rs         # Add search functionality
-    ├── system_page.rs     # Solar system detail page
-    └── planet_page.rs    # Planet detail page
-```
+### Phase 10: Final Verification
+- [ ] Test with browser DevTools Network tab to ensure no localhost HTTP calls
+- [ ] Verify page loads quickly (no self-HTTP-requests)
+- [ ] Test responsive design on mobile viewport
+- [ ] Verify loading spinner appears briefly during SSR
+- [ ] Check that error handling works (temporarily break data loading)
+- [ ] Restore working code and final test
 
-**Individual System Pages**: Add routing for `/system/{hostname}` and `/planet/{pl_name}` pages with detailed information about specific solar systems and individual planets.
+## Key Architecture Notes
+- **State Flow**: main.rs loads data → creates ApiState → passes to both Axum (.with_state) and Leptos (provide_context)
+- **Server Functions**: Access ApiState via `use_context()` instead of HTTP requests
+- **Data Layer**: All aggregation logic lives in tables/aggregation.rs module
+- **Frontend**: Already implemented, should work without changes after backend refactoring
 
-# TODO
-
-## Web Application Integration (Priority 1)
-
-### Phase 1: Backend Parquet Integration (Immediate)
-- [ ] Identify current VOTable loading locations in backend
-- [ ] Replace with `load_parquet` function calls
-- [ ] Update error handling for parquet file dependencies
-- [ ] Test backend performance improvements
-- [ ] Ensure API endpoints return same data structure
-
-### Phase 2: Frontend Data Fetching Updates
-- [ ] Locate data fetching logic in Leptos components
-- [ ] Update to handle faster parquet-based responses
-- [ ] Add loading indicators and error states
-- [ ] Test frontend with new backend performance
-- [ ] Ensure UI responsiveness during data loading
-
-### Phase 3: Enhanced User Experience
-- [ ] Add real-time SQL-based search functionality
-- [ ] Implement pagination for large datasets
-- [ ] Add data export capabilities (CSV, JSON)
-- [ ] Create solar system detail pages
-- [ ] Create planet detail pages
-- [ ] Optimize loading states and user feedback
-- [ ] Test cross-browser compatibility
-
-### Phase 4: Advanced Features (Future)
-- [ ] Add data visualization components
-- [ ] Implement advanced filtering options
-- [ ] Add bookmarking/favorites functionality
-- [ ] Optimize for mobile devices
-- [ ] Add offline data caching
-
-### Technical Questions to Resolve
-- [ ] How should the app handle missing parquet files?
-- [ ] What's the best caching strategy for web requests?
-- [ ] Should we implement server-side rendering with parquet data?
-- [ ] How to handle concurrent users accessing same datasets?
-- [ ] How should SQL queries be validated and secured?
-- [ ] What's the optimal data structure for individual system pages?
+## Files to Modify
+1. `src/tables/aggregation.rs` - Add 5 new simple aggregation functions
+2. `src/server/handlers.rs` - Modify api_routes() signature to accept state
+3. `src/main.rs` - Move data loading, create and share ApiState
+4. `src/server/functions.rs` - Implement get_stats() server function (NEW FILE)
+5. `src/server/mod.rs` - Add functions module declaration (DONE)
+6. `src/components/overview.rs` - Remove old server function, import from server/functions

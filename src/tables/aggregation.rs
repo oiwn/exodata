@@ -280,3 +280,83 @@ fn compute_band_stats(df: &DataFrame, column: &str) -> Result<BandStats> {
 
     Err(anyhow::anyhow!("No data for band {}", column))
 }
+
+// Simple aggregation functions for overview page statistics
+
+/// Get total counts of stellar hosts and exoplanets
+pub fn get_total_counts(
+    stellarhosts_df: &DataFrame,
+    exoplanets_df: &DataFrame,
+) -> (usize, usize) {
+    (stellarhosts_df.height(), exoplanets_df.height())
+}
+
+/// Calculate average stellar effective temperature
+pub fn get_avg_temperature(df: &DataFrame) -> Option<f64> {
+    df.column("st_teff")
+        .ok()
+        .and_then(|col| col.f64().ok())
+        .and_then(|series| series.mean())
+}
+
+/// Calculate average distance to stellar systems
+pub fn get_avg_distance(df: &DataFrame) -> Option<f64> {
+    df.column("sy_dist")
+        .ok()
+        .and_then(|col| col.f64().ok())
+        .and_then(|series| series.mean())
+}
+
+/// Get top N discovery methods with counts
+pub fn get_discovery_methods(
+    df: &DataFrame,
+    limit: usize,
+) -> Vec<(String, usize)> {
+    let mut methods = std::collections::HashMap::new();
+
+    if let Ok(col) = df.column("discoverymethod") {
+        if let Ok(str_col) = col.str() {
+            for i in 0..str_col.len() {
+                if let Some(method) = str_col.get(i) {
+                    *methods.entry(method.to_string()).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+
+    let mut methods_vec: Vec<_> = methods.into_iter().collect();
+    methods_vec.sort_by(|a, b| b.1.cmp(&a.1));
+    methods_vec.truncate(limit);
+    methods_vec
+}
+
+/// Categorize planets by radius into size categories
+pub fn get_planet_size_categories(df: &DataFrame) -> Vec<(String, usize)> {
+    let mut categories = std::collections::HashMap::new();
+
+    if let Ok(col) = df.column("pl_rade") {
+        if let Ok(f64_col) = col.f64() {
+            for i in 0..f64_col.len() {
+                if let Some(radius) = f64_col.get(i) {
+                    let category = if radius < 1.0 {
+                        "Sub-Earth (< 1 R⊕)"
+                    } else if radius < 1.5 {
+                        "Earth-like (1-1.5 R⊕)"
+                    } else if radius < 2.5 {
+                        "Super-Earth (1.5-2.5 R⊕)"
+                    } else if radius < 4.0 {
+                        "Neptune-like (2.5-4 R⊕)"
+                    } else {
+                        "Jupiter-like (> 4 R⊕)"
+                    };
+                    *categories.entry(category.to_string()).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+
+    let mut categories_vec: Vec<_> = categories.into_iter().collect();
+    // Sort by count descending
+    categories_vec.sort_by(|a, b| b.1.cmp(&a.1));
+    categories_vec
+}
