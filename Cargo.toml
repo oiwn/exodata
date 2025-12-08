@@ -6,7 +6,10 @@ edition = "2021"
 [workspace]
 members = [
     ".",
+    "crates/exo-core",
+    "crates/exo-cli",
 ]
+resolver = "2"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
