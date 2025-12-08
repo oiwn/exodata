@@ -70,30 +70,26 @@ pub fn OverviewPage() -> impl IntoView {
                     }
                 >
                     {move || {
-                        stats_resource.get().map(|result| {
-                            match result {
-                                Ok(stats) => {
-                                    view! {
-                                        <div class="space-y-10">
-                                            <StatsOverview stats=stats.clone()/>
-                                            <DetailedStats stats=stats/>
-                                        </div>
-                                    }
-                                }
-                                Err(err) => {
-                                    let error_msg = format!("Error loading data: {}", err);
-                                    view! {
-                                        <div class="max-w-2xl mx-auto mt-10 bg-red-900/50 border-2 border-red-500 text-red-100 px-6 py-4 rounded-xl backdrop-blur-sm">
-                                            <div class="flex items-center gap-3">
-                                                <span class="text-2xl">"⚠️"</span>
-                                                <div>
-                                                    <h3 class="font-semibold text-lg">"Connection Error"</h3>
-                                                    <p class="text-sm text-red-200">{error_msg}</p>
-                                                </div>
+                        stats_resource.get().map(|result| match result {
+                            Ok(stats) => leptos::either::Either::Left(view! {
+                                <div class="space-y-10">
+                                    <StatsOverview stats=stats.clone()/>
+                                    <DetailedStats stats=stats/>
+                                </div>
+                            }),
+                            Err(err) => {
+                                let error_msg = format!("Error loading data: {}", err);
+                                leptos::either::Either::Right(view! {
+                                    <div class="max-w-2xl mx-auto mt-10 bg-red-900/50 border-2 border-red-500 text-red-100 px-6 py-4 rounded-xl backdrop-blur-sm">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">"⚠️"</span>
+                                            <div>
+                                                <h3 class="font-semibold text-lg">"Connection Error"</h3>
+                                                <p class="text-sm text-red-200">{error_msg}</p>
                                             </div>
                                         </div>
-                                    }
-                                }
+                                    </div>
+                                })
                             }
                         })
                     }}

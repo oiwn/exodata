@@ -51,16 +51,11 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:tracing",
-    # for cli
-    "dep:clap",
-    "dep:votable",
     # data processing
     "dep:anyhow",
     "dep:polars",
     "dep:serde_json",
-    "dep:comfy-table",
-    "dep:ratatui",
-    "dep:crossterm",
+    "dep:votable",
     "dep:indicatif",
 ]
 default = ["ssr"]

@@ -12,7 +12,6 @@ use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use crate::tables::common;
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
