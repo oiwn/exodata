@@ -1,34 +1,67 @@
 # Project Overview
 
-This project is a web application for browsing a catalog of exoplanets. It is built with the [Leptos](https://github.com/leptos-rs/leptos) web framework and uses [Axum](https://github.com/tokio-rs/axum) as the web server. The frontend is styled with [Tailwind CSS](https://tailwindcss.com/).
+This project is a web application and CLI tool for browsing and analyzing exoplanet catalog data. The project is organized as a Cargo workspace with three main components:
 
-The application has two main parts:
-1.  A web server that provides the main user interface for browsing the exoplanet data.
-2.  A command-line interface (CLI) for managing the application's data, including importing data from external sources.
+## Architecture
 
-The project is written in Rust and uses a feature flag system to distinguish between server-side rendering (`ssr`) and client-side hydration (`hydrate`) code.
+1. **exoplanets-catalog** (Root) - Web application
+   - Built with [Leptos](https://github.com/leptos-rs/leptos) (frontend) and [Axum](https://github.com/tokio-rs/axum) (backend)
+   - Styled with [Tailwind CSS](https://tailwindcss.com/)
+   - Provides interactive UI for browsing exoplanet data
+
+2. **exo-core** (`crates/exo-core`) - Shared data processing library
+   - Handles VOTable parsing and Parquet I/O
+   - Provides DataFrame operations using [Polars](https://pola.rs/)
+   - Statistical aggregations and analysis functions
+   - Used by both the CLI and web app
+
+3. **exo-cli** (`crates/exo-cli`) - Command-line tool
+   - Standalone binary for data exploration and conversion
+   - Built with [clap](https://github.com/clap-rs/clap)
+   - Uses exo-core for all data operations
+
+The project uses feature flags (`ssr` for server, `hydrate` for client) to separate server-side and client-side code in the web application.
 
 # Building and Running
 
 The following commands are the primary way to interact with the project.
 
-## Development
+## Web Application
 
-To run the application in development mode with hot-reloading, use the following command:
-
+**Development:**
 ```bash
-cargo leptos watch
+cargo leptos watch    # Hot-reload development server
+cargo leptos serve    # Development server without watch
 ```
 
-## Production Build
-
-To build the application for production, use the following command:
-
+**Production:**
 ```bash
 cargo leptos build --release
+# Output: target/server/release/exoplanets-catalog (server)
+#         target/site/ (WASM + static assets)
 ```
 
-This will create a server binary in `target/server/release` and the static site assets in `target/site`.
+## CLI Tool
+
+**Development:**
+```bash
+cargo run --package exo-cli -- <command>
+cargo run --package exo-cli -- --help
+```
+
+**Production:**
+```bash
+cargo build --package exo-cli --release
+# Output: target/release/exo
+```
+
+**Examples:**
+```bash
+exo view-stats                              # View stellarhosts statistics
+exo view-samples -l 20 -c stellar          # View stellar properties
+exo view-exoplanets-samples -c orbital     # View orbital parameters
+exo convert-raw-files                       # Convert VOTable to Parquet
+```
 
 ## Testing
 
@@ -50,11 +83,33 @@ This will download the data into the `data/` directory.
 
 # Development Conventions
 
-*   **Main Application Logic:** The primary application logic for the Leptos frontend is located in `src/app.rs`.
-*   **Server and CLI:** The main entry point for the application is `src/main.rs`, which handles both starting the web server and running the CLI commands.
-*   **Styling:** The project uses Tailwind CSS for styling. The main CSS file is `style/tailwind.css`, and the configuration is in `tailwind.config.js`.
-*   **End-to-End Tests:** End-to-end tests are written using Playwright and are located in the `end2end` directory.
-*   **Feature Flags:** The project uses the `ssr` and `hydrate` feature flags to separate server-side and client-side code.
+## Directory Structure
+
+*   **`src/`** - Web application (Leptos + Axum)
+    *   `main.rs` - Web server entry point
+    *   `app.rs` - Leptos application and routing
+    *   `components/` - UI components
+    *   `server/` - Server functions and API handlers
+    *   `tables/` - Data processing (local copy for web app)
+*   **`crates/exo-core/`** - Shared data processing library
+    *   Pure data processing logic (no CLI, no web)
+    *   Used by both exo-cli and web app
+*   **`crates/exo-cli/`** - CLI tool
+    *   Command-line interface using exo-core
+*   **`style/`** - Tailwind CSS configuration and styles
+*   **`specs/`** - Technical specifications
+    *   `architecture.md` - Workspace overview
+    *   `data-layer.md` - exo-core library spec
+    *   `cli.md` - CLI tool spec
+    *   `web-backend.md` - Axum server spec
+    *   `web-frontend.md` - Leptos UI spec
+
+## Code Organization
+
+*   **Feature Flags:** The web app uses `ssr` (server) and `hydrate` (client) flags to separate code
+*   **Styling:** Tailwind CSS with utility-first approach
+*   **Testing:** Playwright E2E tests in `end2end/` directory
+*   **Data:** Parquet files in `data/` directory
 
 # Agent Rules
 
