@@ -55,7 +55,7 @@ async fn start_server() {
                 shell(leptos_options.clone())
             }
         })
-        .nest_service("/api", server::api_routes(api_state))
+        .nest_service("/rest", server::api_routes(api_state))  // Axum REST API at /rest/* (Leptos uses /api/*)
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options);
 

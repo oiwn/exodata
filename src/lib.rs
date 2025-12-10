@@ -3,8 +3,11 @@ pub mod components;
 #[cfg(feature = "ssr")]
 pub mod common;
 pub mod error_template;
-#[cfg(feature = "ssr")]
+
+// Server module contains server functions that need to be visible to both client and server
+// The #[server] macro handles conditional compilation
 pub mod server;
+
 #[cfg(feature = "ssr")]
 pub mod tables;
 

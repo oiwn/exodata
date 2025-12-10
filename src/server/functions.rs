@@ -3,7 +3,14 @@
 
 use leptos::prelude::*;
 use leptos::server_fn::ServerFnError;
+use leptos::serde_json::Value;  // Needed for TableData on both client and server
+
+// Server-only imports
+#[cfg(feature = "ssr")]
 use crate::server::handlers::ApiState;
+#[cfg(feature = "ssr")]
+use crate::server::common;
+#[cfg(feature = "ssr")]
 use crate::tables::aggregation;
 
 /// Statistics data structure for the overview page
@@ -18,7 +25,7 @@ pub struct DataStats {
 }
 
 /// Server function to fetch and calculate overview statistics
-#[server(GetStats, "/api")]
+#[server]
 pub async fn get_stats() -> Result<DataStats, ServerFnError> {
     // Get ApiState from leptos context
     let state = expect_context::<ApiState>();
@@ -50,5 +57,50 @@ pub async fn get_stats() -> Result<DataStats, ServerFnError> {
         avg_stellar_distance,
         discovery_methods,
         planet_size_categories,
+    })
+}
+
+/// Table data structure for paginated tables
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct TableData {
+    pub rows: Vec<Value>,
+    pub columns: Vec<String>,
+    pub total: usize,
+    pub page: usize,
+    pub limit: usize,
+}
+
+/// Server function to fetch paginated stellar hosts data
+///
+/// This is a thin wrapper around the common business logic.
+/// It handles Leptos-specific concerns (context extraction, error mapping)
+/// and delegates the actual work to common::get_stellarhosts_data.
+#[server]
+pub async fn get_stellarhosts_page(
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+) -> Result<TableData, ServerFnError> {
+    // Get ApiState from leptos context
+    let state = expect_context::<ApiState>();
+
+    // Call the common business logic
+    let (rows, total, columns) = common::get_stellarhosts_data(
+        &state.stellarhosts_df,
+        page,
+        limit,
+        sort_by,
+        order,
+    )
+    .map_err(|e| ServerFnError::<leptos::server_fn::error::NoCustomError>::ServerError(e))?;
+
+    // Wrap in TableData response
+    Ok(TableData {
+        rows,
+        columns,
+        total,
+        page,
+        limit,
     })
 }
