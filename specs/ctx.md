@@ -1,5 +1,10 @@
 # Current Context: Stellar Hosts Data Table - Status & Next Steps
 
+# IDEAS
+
+- [ ] each page should have address, for table this mean it will include parameters, i would like to have api endpoints if i just add ".json" at the end of address.
+- [ ] when sorting table by some parameter need to exclude empty (no data).
+
 ## Completed Work ✅
 
 ### Implementation Complete

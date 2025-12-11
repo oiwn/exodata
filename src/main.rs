@@ -45,16 +45,34 @@ async fn start_server() {
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
 
+    // Create a shared context provider closure for both SSR and server functions
+    let provide_api_state = {
+        let api_state = api_state.clone();
+        move || {
+            provide_context(api_state.clone());
+        }
+    };
+
     // build our application with a route
     let app = Router::new()
-        .leptos_routes(&leptos_options, routes, {
-            let leptos_options = leptos_options.clone();
-            let api_state = api_state.clone();
-            move || {
-                provide_context(api_state.clone());
-                shell(leptos_options.clone())
+        .leptos_routes_with_context(
+            &leptos_options,
+            routes,
+            provide_api_state.clone(),
+            {
+                let leptos_options = leptos_options.clone();
+                move || shell(leptos_options.clone())
             }
-        })
+        )
+        .route("/api/{*fn_name}", axum::routing::post({
+            let provide_api_state = provide_api_state.clone();
+            move |req| async move {
+                leptos_axum::handle_server_fns_with_context(
+                    provide_api_state.clone(),
+                    req
+                ).await
+            }
+        }))
         .nest_service("/rest", server::api_routes(api_state))  // Axum REST API at /rest/* (Leptos uses /api/*)
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options);
