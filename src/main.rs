@@ -22,15 +22,17 @@ async fn start_server() {
     use std::sync::Arc;
 
     // Load dataframes at startup
-    let stellarhosts_df = match common::load_parquet("data/stellarhosts.parquet", None) {
-        Ok(df) => Arc::new(df),
-        Err(e) => panic!("Failed to load stellarhosts data: {}", e),
-    };
+    let stellarhosts_df =
+        match common::load_parquet("data/stellarhosts.parquet", None) {
+            Ok(df) => Arc::new(df),
+            Err(e) => panic!("Failed to load stellarhosts data: {}", e),
+        };
 
-    let exoplanets_df = match common::load_parquet("data/exoplanets.parquet", None) {
-        Ok(df) => Arc::new(df),
-        Err(e) => panic!("Failed to load exoplanets data: {}", e),
-    };
+    let exoplanets_df =
+        match common::load_parquet("data/exoplanets.parquet", None) {
+            Ok(df) => Arc::new(df),
+            Err(e) => panic!("Failed to load exoplanets data: {}", e),
+        };
 
     let api_state = ApiState {
         stellarhosts_df,
@@ -62,18 +64,9 @@ async fn start_server() {
             {
                 let leptos_options = leptos_options.clone();
                 move || shell(leptos_options.clone())
-            }
+            },
         )
-        .route("/api/{*fn_name}", axum::routing::post({
-            let provide_api_state = provide_api_state.clone();
-            move |req| async move {
-                leptos_axum::handle_server_fns_with_context(
-                    provide_api_state.clone(),
-                    req
-                ).await
-            }
-        }))
-        .nest_service("/rest", server::api_routes(api_state))  // Axum REST API at /rest/* (Leptos uses /api/*)
+        .nest_service("/rest", server::api_routes(api_state)) // Axum REST API at /rest/* (Leptos uses /api/*)
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options);
 

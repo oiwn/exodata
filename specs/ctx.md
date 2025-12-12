@@ -1,298 +1,314 @@
-# Current Context: Stellar Hosts Data Table - Status & Next Steps
+# Current Context: Routing & Navigation Issues
 
-# IDEAS
+## Session Summary: What We Accomplished
 
-- [ ] each page should have address, for table this mean it will include parameters, i would like to have api endpoints if i just add ".json" at the end of address.
-- [ ] when sorting table by some parameter need to exclude empty (no data).
+### ✅ Completed: Three-Layer Architecture Implementation
 
-## Completed Work ✅
+We successfully implemented the clean architecture from the previous plan:
 
-### Implementation Complete
-We successfully implemented the basic stellar hosts table feature:
+1. **Created `src/server/common.rs`** - Pure business logic for data operations
+   - `get_stellarhosts_data()` function with Polars operations
+   - Isolated from HTTP/Leptos concerns
+   - Unit tests included
+   - Easy to test and maintain
 
-1. **Server Function** (`get_stellarhosts_page`) ✅
-   - Takes page, limit, sort_by, order parameters
-   - Selects 5 columns: hostname, sy_dist, st_teff, st_mass, sy_pnum
-   - Applies sorting and pagination using Polars
-   - Returns JSON via TableData struct
-   - **Working**: Server logs confirm function executes successfully, returns 50 rows
+2. **Refactored `src/server/functions.rs`** - Thin Leptos server function wrappers
+   - `get_stellarhosts_page()` now just extracts context and calls `common::`
+   - `get_stats()` does the same for overview stats
+   - Fixed `serde_json::Value` import to use `leptos::serde_json::Value` for WASM compatibility
 
-2. **Table Component** (`table.rs`) ✅
-   - Reusable presentation component
-   - Renders headers with sort indicators
-   - Formats cells (nulls as "—", numbers with 2 decimals)
-   - Clickable column headers for sorting
+3. **Updated `src/server/mod.rs`** - Exported common module properly
 
-3. **Page Component** (`stellarhosts_table.rs`) ✅
-   - Manages reactive state (page, sort_column, sort_order)
-   - Resource that fetches data on state changes
-   - Pagination controls (Previous/Next buttons)
-   - Loading and error states
+4. **Build Success** ✅
+   - Server-side compilation works (`cargo build --features ssr`)
+   - WASM compilation works (`cargo leptos build`)
+   - Three-layer architecture compiles cleanly
 
-4. **Integration** ✅
-   - Routes configured: `/stellarhosts`
-   - Navigation link from overview page
-   - Components exported in mod.rs
+### ✅ Partial Success: Stellar Hosts Table
 
-5. **Configuration Fixes** ✅
-   - Moved Axum REST API to `/rest/*` (was conflicting with Leptos `/api/*`)
-   - Fixed `#[server]` macro syntax for Leptos 0.8
-   - Fixed client-side imports and stub functions
+The stellar hosts table at `/stellarhosts` is **working**:
+- Loads data successfully
+- Displays 50 rows with 5 columns
+- Pagination controls present
+- Sorting UI present
 
-## Known Issues ⚠️
+## 🚨 Critical Issues Discovered
 
-### Critical Bugs Identified
+### Issue 1: Server Functions Not Registered for HTTP Calls
 
-The implementation has significant stability issues:
+**Problem**: Server functions work during SSR (in-process calls) but fail when called via HTTP POST from the client.
 
-1. **Initial Load Fails**
-   - Table does not load on first click to `/stellarhosts`
-   - Requires page refresh (F5) to display data
-   - **Evidence**: `Errors: [ NotFound, ]` in server logs despite successful data fetch
+**Symptoms**:
+- Initial page load at `/overview` works ✅ (SSR renders with data)
+- Navigate to `/stellarhosts` works ✅
+- Navigate back to `/overview` FAILS ❌ with:
+  ```
+  POST http://127.0.0.1:3000/api/get_stats11877934666105900369
+  Status: 404 Not Found
+  Error: "Could not find a server function at the route /api/get_stats..."
+  ```
 
-2. **Sorting Hangs**
-   - Clicking column headers shows infinite "Loading..." indicator
-   - Server function executes successfully (confirmed in logs)
-   - Client never receives response or fails to process it
+  ^^^ why it's POST not get? We should not transmit any data into the API. Is it possible to make all api requests GET (server functions) ? Replace this comment with remark, you need to find out the answer!
 
-3. **Pagination Not Working**
-   - Previous/Next buttons likely have same issue as sorting
-   - Untested due to initial load failures
+**Root Cause**:
+`leptos_routes_with_context()` does **NOT** automatically set up `/api/*` routes for server function HTTP endpoints. It only sets up:
+- SSR page rendering routes
+- Context provision during SSR
 
-4. **Navigation Issues**
-   - Back button from table to overview shows errors
-   - State not properly maintained between routes
-   - Requires full page reload to fix
+^^^ No idea is it's true. "https://raw.githubusercontent.com/leptos-rs/leptos/refs/heads/main/examples/server_fns_axum/src/app.rs" i think here is example of everything. 
 
-5. **Suspected Root Cause**
-   - `NotFound` error suggests asset loading issue (WASM, CSS) OR routing conflict
-   - Server function works but client-side hydration/rendering failing
-   - Possible serialization/deserialization mismatch between server and client
+Server functions need **explicit HTTP route handlers**.
 
-### What's Actually Working
+**Evidence**:
+- Server logs show: `Errors: [ NotFound, ]`
+- Client receives HTML 404 page instead of JSON
+- Error message: "missing delimiter" (trying to parse HTML as JSON)
 
-From server logs we know:
-- ✅ Server function registration works
-- ✅ Data loading from Parquet works (46,887 rows)
-- ✅ Polars operations work (select, sort, pagination)
-- ✅ JSON serialization works (50 rows returned)
-- ❌ Client-side rendering/hydration broken
+### Issue 2: Confusing Duplicate Code in `overview.rs`
 
-### Root Cause Analysis
+Lines 10-27 in `src/components/overview.rs`:
 
-**Problem Identified**: Client-side WASM panic - `unreachable!()` at line 17
-
-```
-panicked at src/components/stellarhosts_table.rs:17:5:
-internal error: entered unreachable code
-```
-
-**Why it happened:**
-1. Manual client-side stub function hit `unreachable!()` instead of calling server
-2. Server module was `#[cfg(feature = "ssr")]` only - client couldn't see server functions
-3. Helper functions without proper `#[cfg]` guards compiled on client (WASM)
-4. Polars/server deps tried to compile for WASM → compilation errors
-
-**Lesson learned**: Conditional compilation (`#[cfg(feature = "ssr")]`) is tricky and error-prone when mixing server-only code with shared types.
-
-## Architectural Decision: Common Business Logic Layer
-
-### The Problem
-
-Both Leptos server functions and Axum REST handlers need to do the **same operations**:
-1. Take parameters (page, limit, sort_by, order)
-2. Access DataFrame from ApiState
-3. Apply Polars operations (select, sort, paginate)
-4. Convert to JSON
-5. Return results
-
-Currently: **Code duplication** and **confusion** about where logic belongs.
-
-### The Solution: Three-Layer Architecture
-
-```
-┌─────────────────────────────────────┐
-│  Transport Layer (HTTP/RPC)         │
-├─────────────────────────────────────┤
-│  functions.rs  │  handlers.rs       │  ← Thin wrappers
-│  (Leptos)      │  (Axum)            │
-└────────┬───────┴──────┬─────────────┘
-         │              │
-         └──────┬───────┘
-                ↓
-┌─────────────────────────────────────┐
-│  Business Logic Layer               │
-├─────────────────────────────────────┤
-│  common.rs                          │  ← Core logic (server-only)
-│  - Pure functions                   │
-│  - No HTTP/Leptos deps              │
-│  - Easy to test                     │
-└─────────────────────────────────────┘
-                ↓
-┌─────────────────────────────────────┐
-│  Data Layer                         │
-├─────────────────────────────────────┤
-│  ApiState (Arc<DataFrame>)          │
-└─────────────────────────────────────┘
-```
-
-### Structure
-
-```
-src/server/
-├── common.rs       [NEW] Core business logic (pure functions)
-│                   - #[cfg(feature = "ssr")] on entire module
-│                   - get_stellarhosts_data(df, page, limit, sort, order)
-│                   - Returns (rows, total, columns) or error
-│                   - No HTTP, no Leptos, just Polars + logic
-│
-├── functions.rs    Thin Leptos wrappers
-│                   - Visible to both client and server
-│                   - #[server] macro on each function
-│                   - Extracts ApiState from context
-│                   - Calls common::* functions
-│                   - Wraps result in TableData
-│
-└── handlers.rs     Thin Axum wrappers
-                    - #[cfg(feature = "ssr")] on entire module
-                    - Extracts State and Query
-                    - Calls common::* functions
-                    - Wraps result in Json<ApiResponse>
-```
-
-### Benefits
-
-✅ **Single source of truth** - Business logic in one place
-✅ **Easy testing** - Test `common.rs` without HTTP/Leptos overhead
-✅ **DRY** - No duplication between handlers and functions
-✅ **Flexibility** - Same logic via REST API AND server functions
-✅ **Clean separation** - Transport vs business logic
-✅ **SSR optimization** - Server functions have zero HTTP overhead
-✅ **External API** - REST endpoints available for other clients
-✅ **Clear compilation** - No confusion about what compiles where
-
-### Why This Works for SSR
-
-**During SSR (server-side):**
 ```rust
-// Leptos server function executes directly (no HTTP)
-#[server]
-async fn get_stellarhosts_page(...) -> Result<TableData, _> {
-    let state = expect_context::<ApiState>();
-    let (rows, total, cols) = common::get_stellarhosts_data(&state.df, ...)?;
-    Ok(TableData { rows, total, ... })
+// DataStats struct for client-side (must match server definition)
+#[cfg(not(feature = "ssr"))]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct DataStats {
+    // ... duplicate definition ...
 }
-// ↑ Zero overhead, direct function call
+
+#[cfg(not(feature = "ssr"))]
+#[leptos::server]
+pub async fn get_stats() -> Result<DataStats, leptos::server_fn::ServerFnError> {
+    // This will be replaced by actual implementation on the server
+    unreachable!()
+}
 ```
 
-**After hydration (client-side):**
+**Problems**:
+- Duplicate `DataStats` definition (also in `src/server/functions.rs`)
+- Client-side stub with `unreachable!()` - unclear if needed
+- Confusing conditional compilation
+- Might be causing server function registration issues
+
+### Issue 3: Poor UX - No Navigation Menu
+
+**Current State**:
+- Root page `/` shows overview stats
+- Navigation to `/stellarhosts` via button at bottom of stats
+- No way to navigate back except browser back button
+- No persistent navigation menu
+
+**Problems**:
+- Button at bottom is terrible UX
+- No clear navigation structure
+- Can't directly access pages via URL parameters
+- Doesn't align with ideas.md goals
+
+### Issue 4: No URL-Based State (ideas.md Requirements)
+
+From `specs/ideas.md`:
+> - [ ] each page should have address, for table this mean it will include parameters,
+> - [ ] would be cool to route to api endpoints if i just add ".json" at the end of address.
+
+**Current State**:
+- Table state (page, sort, filters) lives only in client-side signals
+- No URL query parameters
+- Can't bookmark or share a specific table view
+- No `.json` endpoint variant
+
+**What We Need**:
+- `/stellarhosts?page=2&sort=sy_dist&order=desc` - URL reflects table state
+- `/stellarhosts.json?page=2` - JSON API variant
+- URL updates as user interacts with table
+- Direct navigation to any table state via URL
+
+## 🔍 Open Questions
+
+### Q1: Server Function Registration Strategy
+
+**Options**:
+
+**A) Explicit Route Handler (Previous Attempt)**
 ```rust
-// Client calls same function, #[server] macro generates HTTP stub
-get_stellarhosts_page(...).await
-// ↑ Makes POST to /api/get_stellarhosts_page automatically
+.route("/api/{*fn_name}", axum::routing::post(
+    handle_server_fns_with_context(provide_api_state)
+))
 ```
+- We tried this, removed it thinking leptos_routes_with_context handled it
+- Actually, we DO need this!
 
-**REST API (external clients):**
+**B) Use Different Prefix**
 ```rust
-// Traditional REST endpoint for external tools/testing
-GET /api/stellarhosts?page=1&limit=50
-// ↑ Calls same common::get_stellarhosts_data() function
+#[server(prefix = "/server-fns")]
+pub async fn get_stats() -> Result<...>
+```
+- Avoid potential conflicts with leptos routing
+- Requires explicit handler at `/server-fns/*`
+
+**C) Explicit Registration in main()**
+```rust
+GetStats::register_explicit()?;
+GetStellarhostsPage::register_explicit()?;
+```
+- Error message suggested this
+- Manual but explicit
+
+**Which approach is correct?**
+
+### Q2: Client-Side Stubs Needed?
+
+Do we need the `#[cfg(not(feature = "ssr"))]` client-side definitions and stubs?
+- The `#[server]` macro supposedly generates client stubs automatically
+- But maybe we need matching type definitions on both sides?
+- Why is there an `unreachable!()` stub?
+
+### Q3: Route Structure
+
+**Current**:
+```
+/              -> OverviewPage
+/overview      -> OverviewPage (duplicate)
+/stellarhosts  -> StellarHostsTablePage
 ```
 
-### Implementation Plan
+**Should we**:
+- Remove root `/` route, use `/overview` as canonical?
+- Add redirect from `/` to `/overview`?
+- Keep both but fix server function routing first?
 
-1. **Create `src/server/common.rs`**
-   - Pure business logic functions
-   - All marked `#[cfg(feature = "ssr")]`
-   - No HTTP/Leptos dependencies
-   - Returns simple Result types
+## 📋 Next Steps Plan
 
-2. **Refactor `functions.rs`**
-   - Keep `#[server]` functions
-   - Remove all Polars logic
-   - Call `common::*` functions
-   - Handle context extraction and error mapping
+### Priority 1: Fix Server Function HTTP Routes ⚠️
 
-3. **Update `handlers.rs`**
-   - Keep Axum handlers
-   - Remove duplicate logic
-   - Call same `common::*` functions
-   - Handle HTTP-specific concerns
+**Goal**: Make server functions accessible via POST `/api/*` for client calls.
 
-4. **Add unit tests**
-   - Test `common.rs` functions directly
-   - No HTTP server needed
-   - Fast, reliable tests
+**Approach**:
+1. Add explicit server function handler to `main.rs` **BEFORE** `leptos_routes_with_context`
+2. Use the correct Axum 0.8 wildcard syntax: `/api/{*fn_name}`
+3. Ensure `handle_server_fns_with_context` receives the same context as SSR
+4. Test both `get_stats` and `get_stellarhosts_page` work from client
 
-### Decision Rationale
+**Success Criteria**:
+- Navigate from `/stellarhosts` back to `/overview` without errors
+- Browser Network tab shows successful POST to `/api/get_stats...`
+- No 404 errors in server logs
 
-**Why not pure REST API?**
-- Server functions optimize SSR (no HTTP overhead)
-- Type-safe client/server communication
-- Integrated with Leptos patterns
+### Priority 2: Clean Up Duplicate Definitions 🧹
 
-**Why not only server functions?**
-- REST API useful for testing (curl, Postman)
-- External integrations may need it
-- Standard HTTP patterns
+**Goal**: Remove confusing client-side stubs and duplicate types.
 
-**Why both?**
-- Best of both worlds
-- Minimal code duplication (shared `common.rs`)
-- Flexible for future needs
+**Actions**:
+1. Remove lines 10-27 from `src/components/overview.rs`
+2. Import `DataStats` and `get_stats` from `crate::server::functions` on both client and server
+3. Verify the `#[server]` macro generates proper client stubs without our manual stubs
+4. Test SSR and client hydration still work
 
-## Next Immediate Steps
+### Priority 3: Implement Proper Navigation 🧭
 
-### Priority 1: Implement Clean Architecture ⏭️
+**Goal**: Add persistent navigation menu, clean up routing.
 
-Follow the implementation plan above to create the three-layer architecture.
+**Actions**:
+1. Create `src/components/nav.rs` - Navigation component
+   - Links to: Overview, Stellar Hosts, (future: Exoplanets)
+   - Sticky header with current page highlighting
+   - Clean, space-themed design
+2. Remove navigation button from bottom of overview stats
+3. Add nav component to shell/layout
+4. Consider: Remove root `/` route or add redirect to `/overview`
 
-**Steps:**
-1. Create `src/server/common.rs` with core business logic
-2. Refactor `functions.rs` to thin wrappers
-3. Update `handlers.rs` to use common logic
-4. Verify compilation (both SSR and WASM)
-5. Test in browser
+### Priority 4: URL-Based Table State 🔗
 
-**Success criteria:**
-- Code compiles cleanly
-- Table loads without errors
-- Sorting works
-- Pagination works
-- No WASM panics
+**Goal**: Table state in URL query parameters (ideas.md requirement).
 
-### Priority 2: Add Testing Infrastructure 🧪
+**Approach**:
+1. Use Leptos router's query parameter support
+2. Read page/sort/order from URL on mount
+3. Update URL when user changes page/sorting
+4. Make table state bookmarkable and shareable
 
-Once the architecture is stable:
+**Implementation**:
+- Use `use_query_map()` from leptos_router
+- Parse `?page=2&sort=sy_dist&order=desc`
+- Update signals from URL params
+- Use `use_navigate()` to update URL when state changes
 
-1. **Unit tests for `common.rs`**
-   - Test Polars operations in isolation
-   - Test pagination edge cases
-   - Test sorting logic
-   - Test error handling
+### Priority 5: JSON API Endpoints (Optional) 📊
 
-2. **Integration tests**
-   - Test Axum handlers with test server
-   - Verify JSON response format
-   - Test all query parameters
+From ideas.md:
+> would be cool to route to api endpoints if i just add ".json" at the end of address.
 
-3. **E2E tests** (future)
-   - Browser automation with Playwright
-   - User interaction flows
-   - Visual regression testing
+**Approach**:
+- Add route handlers for `/{page}.json` variants
+- Return same data as REST API (`/rest/*`) in JSON format
+- Example: `/stellarhosts.json?page=2` returns raw table data
 
-### Priority 3: Documentation 📝
+## 🏗️ Architecture Status
 
-- Document the three-layer architecture
-- Add code comments explaining `#[cfg]` usage
-- Create developer guide for adding new endpoints
-- Document testing approach
+### What's Working ✅
+- **Three-layer architecture**: Clean separation of concerns
+- **SSR rendering**: Pages render with data on initial load
+- **Data layer**: Polars operations in `common.rs`
+- **Thin wrappers**: Server functions and handlers call common logic
+- **Build system**: Both server and WASM compile cleanly
+
+### What's Broken ❌
+- **Server function HTTP routing**: 404 on client-initiated calls
+- **Client-side type definitions**: Duplicate and confusing
+- **Navigation**: No persistent menu, poor UX
+- **URL state**: Table state not in URL
+
+### Next Session Focus 🎯
+
+**Start with Priority 1** - Fix server function routing. Everything else depends on this working correctly.
+
+Once server functions work reliably, tackle the UX improvements (navigation, URL state) to align with project goals in ideas.md.
+
+## Technical Notes
+
+### Server Function Registration Research
+
+From documentation and testing:
+- `#[server]` macro generates unique URL paths (function name + hash)
+- Registration happens at compile time
+- `leptos_routes_with_context` handles SSR + context provision
+- `handle_server_fns_with_context` needed for HTTP endpoint handling
+- Both must receive the same context closure
+
+### Current main.rs Setup
+
+```rust
+.leptos_routes_with_context(
+    &leptos_options,
+    routes,
+    provide_api_state.clone(),  // Context for SSR
+    move || shell(leptos_options.clone())
+)
+.nest_service("/rest", server::api_routes(api_state))
+.fallback(leptos_axum::file_and_error_handler(shell))
+```
+
+**Missing**: Explicit `/api/*` handler for server function HTTP calls!
+
+### Files Modified This Session
+
+- ✅ `src/server/common.rs` - Created with business logic
+- ✅ `src/server/functions.rs` - Refactored to thin wrappers
+- ✅ `src/server/mod.rs` - Added common module export
+- ✅ `src/main.rs` - Updated routing (attempted server function handler)
+- ✅ `src/components/table.rs` - Fixed `serde_json::Value` import
+- ⏭️ `src/components/overview.rs` - Needs cleanup (duplicate definitions)
+- ⏭️ `src/app.rs` - Needs navigation menu addition
+- ⏭️ `src/components/stellarhosts_table.rs` - Needs URL param integration
+
+## References
+
+- specs/ideas.md - Project goals (URL state, .json endpoints)
+- specs/architecture.md - Workspace structure
+- specs/web-frontend.md - Leptos UI patterns
+- specs/web-backend.md - Server function patterns
 
 ---
 
-## Current Status
+**Session Status**: Architecture complete, server function routing broken, UX needs improvement.
 
-**Blocked**: Code doesn't compile due to improper conditional compilation setup.
-
-**Next action**: Implement the common.rs architecture to unblock development.
-
+**Ready for**: Priority 1 implementation - Fix server function HTTP routes.

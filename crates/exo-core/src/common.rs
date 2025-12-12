@@ -29,7 +29,8 @@ pub fn print_votable_headers(path: &str) {
 }
 
 /// Function to detect if columns in a VOTable are nullable or not.
-/// Returns a HashMap with field names as keys and a boolean indicating if the field is nullable.
+/// Returns a HashMap with field names as keys and a boolean indicating
+/// if the field is nullable.
 pub fn detect_nullable_columns(path: &str) -> HashSet<usize> {
     let mut is_null_columns: HashSet<usize> = HashSet::new();
     let mut votable_it = VOTableIterator::from_file(path).unwrap();
