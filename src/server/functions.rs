@@ -3,6 +3,7 @@
 
 use leptos::prelude::*;
 use leptos::server_fn::ServerFnError;
+use leptos::server_fn::codec::GetUrl;  // For GET request encoding
 use leptos::serde_json::Value;  // Needed for TableData on both client and server
 
 // Server-only imports
@@ -25,7 +26,7 @@ pub struct DataStats {
 }
 
 /// Server function to fetch and calculate overview statistics
-#[server]
+#[server(input = GetUrl)]
 pub async fn get_stats() -> Result<DataStats, ServerFnError> {
     // Get ApiState from leptos context
     let state = expect_context::<ApiState>();
@@ -75,7 +76,7 @@ pub struct TableData {
 /// This is a thin wrapper around the common business logic.
 /// It handles Leptos-specific concerns (context extraction, error mapping)
 /// and delegates the actual work to common::get_stellarhosts_data.
-#[server]
+#[server(input = GetUrl)]
 pub async fn get_stellarhosts_page(
     page: usize,
     limit: usize,
