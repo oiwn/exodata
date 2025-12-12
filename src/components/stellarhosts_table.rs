@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
+use leptos_router::hooks::{use_query_map, use_navigate};
 use crate::components::table::Table;
 
 // Import the server function - #[server] macro generates client stub automatically
@@ -7,10 +8,31 @@ use crate::server::functions::get_stellarhosts_page;
 
 #[component]
 pub fn StellarHostsTablePage() -> impl IntoView {
+    // Read URL query parameters
+    let query_map = use_query_map();
+    let navigate = use_navigate();
+
+    // Initialize state from URL params (or defaults)
+    let initial_page = query_map.with_untracked(|q| {
+        q.get("page")
+            .and_then(|p| p.parse::<usize>().ok())
+            .unwrap_or(1)
+    });
+
+    let initial_sort_column = query_map.with_untracked(|q| {
+        q.get("sort").map(|s| s.to_string())
+    });
+
+    let initial_sort_order = query_map.with_untracked(|q| {
+        q.get("order")
+            .map(|o| o.to_string())
+            .unwrap_or_else(|| "asc".to_string())
+    });
+
     // Reactive state for pagination and sorting
-    let (current_page, set_current_page) = signal(1);
-    let (sort_column, set_sort_column) = signal(None::<String>);
-    let (sort_order, set_sort_order) = signal("asc".to_string());
+    let (current_page, set_current_page) = signal(initial_page);
+    let (sort_column, set_sort_column) = signal(initial_sort_column);
+    let (sort_order, set_sort_order) = signal(initial_sort_order);
 
     // Resource that fetches data when dependencies change
     let table_resource = Resource::new(
@@ -38,21 +60,11 @@ pub fn StellarHostsTablePage() -> impl IntoView {
     let can_go_prev = move || current_page.get() > 1;
     let can_go_next = move || current_page.get() < total_pages();
 
-    // Pagination handlers
-    let go_prev = move |_| {
-        if can_go_prev() {
-            set_current_page.update(|p| *p -= 1);
-        }
-    };
-
-    let go_next = move |_| {
-        if can_go_next() {
-            set_current_page.update(|p| *p += 1);
-        }
-    };
 
     // Sorting handler
-    let on_sort = Callback::new(move |column: String| {
+    let on_sort = Callback::new({
+        let navigate = navigate.clone();
+        move |column: String| {
         if let Some(current) = sort_column.get() {
             if current == column {
                 // Toggle order or clear
@@ -76,6 +88,18 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         }
         // Reset to page 1 when sorting changes
         set_current_page.set(1);
+        // Update URL with new state
+        let page = current_page.get();
+        let sort_col = sort_column.get();
+        let order = sort_order.get();
+        let mut query_params = vec![format!("page={}", page)];
+        if let Some(col) = sort_col {
+            query_params.push(format!("sort={}", col));
+            query_params.push(format!("order={}", order));
+        }
+        let query_string = query_params.join("&");
+        navigate(&format!("/stellarhosts?{}", query_string), Default::default());
+        }
     });
 
     view! {
@@ -139,7 +163,25 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                 <button
                                                     class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                                     disabled=move || !can_go_prev()
-                                                    on:click=go_prev
+                                                    on:click={
+                                                        let navigate = navigate.clone();
+                                                        move |_| {
+                                                            if can_go_prev() {
+                                                                set_current_page.update(|p| *p -= 1);
+                                                                // Update URL
+                                                                let page = current_page.get();
+                                                                let sort_col = sort_column.get();
+                                                                let order = sort_order.get();
+                                                                let mut query_params = vec![format!("page={}", page)];
+                                                                if let Some(col) = sort_col {
+                                                                    query_params.push(format!("sort={}", col));
+                                                                    query_params.push(format!("order={}", order));
+                                                                }
+                                                                let query_string = query_params.join("&");
+                                                                navigate(&format!("/stellarhosts?{}", query_string), Default::default());
+                                                            }
+                                                        }
+                                                    }
                                                 >
                                                     "Previous"
                                                 </button>
@@ -151,7 +193,25 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                 <button
                                                     class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                                     disabled=move || !can_go_next()
-                                                    on:click=go_next
+                                                    on:click={
+                                                        let navigate = navigate.clone();
+                                                        move |_| {
+                                                            if can_go_next() {
+                                                                set_current_page.update(|p| *p += 1);
+                                                                // Update URL
+                                                                let page = current_page.get();
+                                                                let sort_col = sort_column.get();
+                                                                let order = sort_order.get();
+                                                                let mut query_params = vec![format!("page={}", page)];
+                                                                if let Some(col) = sort_col {
+                                                                    query_params.push(format!("sort={}", col));
+                                                                    query_params.push(format!("order={}", order));
+                                                                }
+                                                                let query_string = query_params.join("&");
+                                                                navigate(&format!("/stellarhosts?{}", query_string), Default::default());
+                                                            }
+                                                        }
+                                                    }
                                                 >
                                                     "Next"
                                                 </button>
