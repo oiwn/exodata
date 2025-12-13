@@ -58,6 +58,11 @@ ssr = [
     "dep:serde_json",
     "dep:votable",
     "dep:indicatif",
+    # cli/examples dependencies
+    "dep:clap",
+    "dep:comfy-table",
+    "dep:ratatui",
+    "dep:crossterm",
 ]
 default = ["ssr"]
 

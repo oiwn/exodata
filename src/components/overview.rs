@@ -7,7 +7,6 @@ use crate::server::functions::DataStats;
 #[cfg(feature = "ssr")]
 use crate::server::functions::get_stats;
 
-
 // DataStats struct for client-side (must match server definition)
 #[cfg(not(feature = "ssr"))]
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -30,10 +29,8 @@ pub async fn get_stats() -> Result<DataStats, leptos::server_fn::ServerFnError> 
 #[component]
 pub fn OverviewPage() -> impl IntoView {
     // Create a resource that calls the server function
-    let stats_resource = Resource::new(
-        move || (),
-        move |_| async move { get_stats().await },
-    );
+    let stats_resource =
+        Resource::new(move || (), move |_| async move { get_stats().await });
 
     view! {
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -228,7 +225,7 @@ fn StatSection(
             <div class="space-y-3">
                 {items.into_iter().enumerate().map(|(idx, (name, count))| {
                     let percentage = if total > 0 {
-                        (count as f64 / total as f64 * 100.0)
+                        count as f64 / total as f64 * 100.0
                     } else {
                         0.0
                     };
