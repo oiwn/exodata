@@ -1,4 +1,3 @@
-use anyhow::{Context, Error};
 use polars::prelude::*;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -11,7 +10,7 @@ const OUTPUT_DIR: &str = "crates/exo-core/tests/fixtures";
 const SAMPLE_SIZE: usize = 100;
 const RANDOM_SEED: u64 = 42;
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("VOTable Fixture Generator");
     println!("=========================");
     println!("Data directory: {}", DATA_DIR);
@@ -22,7 +21,7 @@ fn main() -> Result<(), Error> {
 
     // Create output directory if it doesn't exist
     fs::create_dir_all(OUTPUT_DIR)
-        .context("Failed to create output directory")?;
+        .expect(format!("Unable to create directory: {}", OUTPUT_DIR).as_str());
 
     // Find all .vot files in data directory
     let votable_files = discover_votable_files(DATA_DIR)?;
@@ -40,7 +39,7 @@ fn main() -> Result<(), Error> {
 
     // Process each VOTable file
     for votable_path in votable_files {
-        process_votable(&votable_path)?;
+        process_votable(&votable_path);
     }
 
     println!("\n✓ All fixtures generated successfully!");
@@ -48,11 +47,13 @@ fn main() -> Result<(), Error> {
 }
 
 /// Discover all .vot files in the given directory
-fn discover_votable_files(data_dir: &str) -> Result<Vec<String>, Error> {
+fn discover_votable_files(
+    data_dir: &str,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut votable_files = Vec::new();
 
     let entries = fs::read_dir(data_dir)
-        .context(format!("Failed to read directory: {}", data_dir))?;
+        .expect(format!("Failed to read directory: {}", data_dir).as_str());
 
     for entry in entries {
         let entry = entry?;
@@ -74,7 +75,7 @@ fn discover_votable_files(data_dir: &str) -> Result<Vec<String>, Error> {
 }
 
 /// Process a single VOTable file and generate fixture
-fn process_votable(votable_path: &str) -> Result<(), Error> {
+fn process_votable(votable_path: &str) {
     println!("Processing: {}", votable_path);
 
     // Load the VOTable
@@ -82,7 +83,7 @@ fn process_votable(votable_path: &str) -> Result<(), Error> {
         votable_path,
         None,
     )
-    .context(format!("Failed to load VOTable: {}", votable_path))?;
+    .expect(format!("Failed to load VOTable: {}", votable_path).as_str());
 
     let total_rows = df.height();
     println!("  Total rows: {}", total_rows);
@@ -106,7 +107,7 @@ fn process_votable(votable_path: &str) -> Result<(), Error> {
         indices.sort();
         let indices_ca =
             UInt32Chunked::from_vec(PlSmallStr::from("idx"), indices);
-        df.take(&indices_ca).context("Failed to sample DataFrame")?
+        df.take(&indices_ca).expect("Failed to sample DataFrame")
     } else {
         df.clone()
     };
@@ -118,16 +119,17 @@ fn process_votable(votable_path: &str) -> Result<(), Error> {
     let basename = path
         .file_stem()
         .and_then(|s| s.to_str())
-        .context("Invalid file path")?;
+        .expect("Invalid file path");
 
     // Save as .fixture file (Parquet format)
     let fixture_path = format!("{}/{}.fixture", OUTPUT_DIR, basename);
-    let mut file = fs::File::create(&fixture_path)
-        .context(format!("Failed to create fixture file: {}", fixture_path))?;
+    let mut file = fs::File::create(&fixture_path).expect(
+        format!("Failed to create fixture file: {}", fixture_path).as_str(),
+    );
 
     ParquetWriter::new(&mut file)
         .finish(&mut sampled.clone())
-        .context("Failed to write Parquet fixture")?;
+        .expect("Failed to write Parquet fixture");
 
     println!("  ✓ Created: {}", fixture_path);
 
@@ -144,11 +146,12 @@ fn process_votable(votable_path: &str) -> Result<(), Error> {
     });
 
     let json_path = format!("{}/{}.fixture.json", OUTPUT_DIR, basename);
-    fs::write(&json_path, serde_json::to_string_pretty(&metadata)?)
-        .context(format!("Failed to write metadata: {}", json_path))?;
+    fs::write(
+        &json_path,
+        serde_json::to_string_pretty(&metadata).expect("Failed to prettify json"),
+    )
+    .expect(format!("Failed to write metadata: {}", json_path).as_str());
 
     println!("  ✓ Created: {}", json_path);
     println!();
-
-    Ok(())
 }
