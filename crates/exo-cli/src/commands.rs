@@ -1,15 +1,16 @@
+use std::path::Path;
+
+use anyhow::Error;
+use comfy_table::Table;
+use exo_core::load_data_with_limit;
 use exo_core::tables::common::{
     create_histogram, get_numeric_stats, print_histogram,
 };
-use exo_core::tables::exoplanets::load_data_with_limit as load_exoplanets_data;
-use exo_core::tables::stellarhosts::load_data_with_limit as load_stellarhosts_data;
-use anyhow::Error;
-use comfy_table::Table;
 use polars::prelude::*;
 
 /// Display sample data from stellarhosts table
 pub fn view_stellarhosts_samples(
-    path: &str,
+    path: &Path,
     limit: Option<usize>,
     category: Option<&str>,
 ) -> Result<(), Error> {

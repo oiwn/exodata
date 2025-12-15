@@ -1,15 +1,9 @@
-use anyhow::Error;
-use polars::prelude::*;
+// Exoplanets domain-specific functions and data structures
+// This module contains logic specific to exoplanet data analysis
 
-use crate::tables::common::load_parquet;
-
-pub fn load_data(path: &str) -> Result<DataFrame, Error> {
-    load_data_with_limit(path, None)
-}
-
-pub fn load_data_with_limit(
-    path: &str,
-    limit: Option<usize>,
-) -> Result<DataFrame, Error> {
-    load_parquet(path, limit)
-}
+// TODO: Add exoplanet specific domain logic here:
+// - Orbital parameter analysis
+// - Habitability zone calculations
+// - Mass-radius relationships
+// - Discovery method analysis
+// - etc.

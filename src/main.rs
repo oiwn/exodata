@@ -18,7 +18,9 @@ async fn start_server() {
     use exoplanets_catalog::server::{self, ApiState};
     use exoplanets_catalog::tables::common;
     use leptos::prelude::{get_configuration, provide_context};
-    use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
+    use leptos_axum::{
+        generate_route_list, handle_server_fns_with_context, LeptosRoutes,
+    };
     use std::sync::Arc;
 
     // Load dataframes at startup
@@ -60,9 +62,7 @@ async fn start_server() {
         let context_provider = provide_api_state.clone();
         move |req: axum::extract::Request| {
             let context_provider = context_provider.clone();
-            async move {
-                handle_server_fns_with_context(context_provider, req).await
-            }
+            async move { handle_server_fns_with_context(context_provider, req).await }
         }
     };
 

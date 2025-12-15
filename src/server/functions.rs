@@ -2,15 +2,15 @@
 // These functions can be called from the client but execute on the server
 
 use leptos::prelude::*;
-use leptos::server_fn::ServerFnError;
-use leptos::server_fn::codec::GetUrl;  // For GET request encoding
-use leptos::serde_json::Value;  // Needed for TableData on both client and server
+use leptos::serde_json::Value;
+use leptos::server_fn::codec::GetUrl; // For GET request encoding
+use leptos::server_fn::ServerFnError; // Needed for TableData on both client and server
 
 // Server-only imports
 #[cfg(feature = "ssr")]
-use crate::server::handlers::ApiState;
-#[cfg(feature = "ssr")]
 use crate::server::common;
+#[cfg(feature = "ssr")]
+use crate::server::handlers::ApiState;
 #[cfg(feature = "ssr")]
 use crate::tables::aggregation;
 
@@ -38,18 +38,20 @@ pub async fn get_stats() -> Result<DataStats, ServerFnError> {
     );
 
     // Get average temperature (default to 0 if None)
-    let avg_stellar_temp = aggregation::get_avg_temperature(&state.stellarhosts_df)
-        .unwrap_or(0.0);
+    let avg_stellar_temp =
+        aggregation::get_avg_temperature(&state.stellarhosts_df).unwrap_or(0.0);
 
     // Get average distance (default to 0 if None)
-    let avg_stellar_distance = aggregation::get_avg_distance(&state.stellarhosts_df)
-        .unwrap_or(0.0);
+    let avg_stellar_distance =
+        aggregation::get_avg_distance(&state.stellarhosts_df).unwrap_or(0.0);
 
     // Get top 10 discovery methods
-    let discovery_methods = aggregation::get_discovery_methods(&state.exoplanets_df, 10);
+    let discovery_methods =
+        aggregation::get_discovery_methods(&state.exoplanets_df, 10);
 
     // Get planet size categories
-    let planet_size_categories = aggregation::get_planet_size_categories(&state.exoplanets_df);
+    let planet_size_categories =
+        aggregation::get_planet_size_categories(&state.exoplanets_df);
 
     Ok(DataStats {
         stellarhosts_total,
@@ -94,7 +96,9 @@ pub async fn get_stellarhosts_page(
         sort_by,
         order,
     )
-    .map_err(|e| ServerFnError::<leptos::server_fn::error::NoCustomError>::ServerError(e))?;
+    .map_err(|e| {
+        ServerFnError::<leptos::server_fn::error::NoCustomError>::ServerError(e)
+    })?;
 
     // Wrap in TableData response
     Ok(TableData {

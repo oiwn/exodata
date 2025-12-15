@@ -1,15 +1,8 @@
-use anyhow::Error;
-use polars::prelude::*;
+// Stellar hosts domain-specific functions and data structures
+// This module contains logic specific to stellar host data analysis
 
-use crate::tables::common::load_parquet;
-
-pub fn load_data(path: &str) -> Result<DataFrame, Error> {
-    load_data_with_limit(path, None)
-}
-
-pub fn load_data_with_limit(
-    path: &str,
-    limit: Option<usize>,
-) -> Result<DataFrame, Error> {
-    load_parquet(path, limit)
-}
+// TODO: Add stellar host specific domain logic here:
+// - Stellar classification functions
+// - Temperature analysis specific to hosts
+// - Metallicity distribution
+// - etc.

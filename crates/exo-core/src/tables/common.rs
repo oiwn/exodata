@@ -13,6 +13,19 @@ pub fn load_parquet(path: &str, limit: Option<usize>) -> Result<DataFrame, Error
     Ok(df)
 }
 
+/// Load data from a parquet file (convenience wrapper)
+pub fn load_data(path: &str) -> Result<DataFrame, Error> {
+    load_parquet(path, None)
+}
+
+/// Load data from a parquet file with a row limit
+pub fn load_data_with_limit(
+    path: &str,
+    limit: Option<usize>,
+) -> Result<DataFrame, Error> {
+    load_parquet(path, limit)
+}
+
 /// Common functions for table operations
 pub fn count_non_null_values(
     df: &DataFrame,

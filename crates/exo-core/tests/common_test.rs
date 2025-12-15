@@ -1,7 +1,6 @@
 use anyhow::Error;
 use exo_core::tables::common::{
-    NumericStats, count_non_null_values, create_histogram, get_numeric_stats,
-    load_parquet,
+    count_non_null_values, create_histogram, get_numeric_stats, load_parquet,
 };
 
 const EXOPLANETS_FIXTURE: &str = "tests/fixtures/exoplanets.fixture";
@@ -53,7 +52,6 @@ fn test_create_histogram() -> Result<(), Error> {
     // Verify bin structure
     for bin in &histogram {
         assert!(bin.min < bin.max, "Bin min should be less than max");
-        assert!(bin.count >= 0, "Count should be non-negative");
     }
     Ok(())
 }
