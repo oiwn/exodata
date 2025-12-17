@@ -91,6 +91,24 @@ pub fn Table(
     }
 }
 
+/// Build query string for table pagination and sorting
+///
+/// # Arguments
+/// * `page` - Current page number
+/// * `sort_col` - Optional column name to sort by
+/// * `order` - Sort order ("asc" or "desc")
+///
+/// # Returns
+/// Query string like "page=1&sort=hostname&order=asc"
+pub fn build_table_query(page: usize, sort_col: Option<&str>, order: &str) -> String {
+    let mut query_params = vec![format!("page={}", page)];
+    if let Some(col) = sort_col {
+        query_params.push(format!("sort={}", col));
+        query_params.push(format!("order={}", order));
+    }
+    query_params.join("&")
+}
+
 /// Format column name for display
 fn format_column_name(col: &str) -> String {
     match col {

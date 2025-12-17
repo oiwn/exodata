@@ -1,4 +1,4 @@
-use crate::components::table::Table;
+use crate::components::table::{Table, build_table_query};
 use leptos::prelude::*;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
@@ -90,14 +90,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             let page = current_page.get();
             let sort_col = sort_column.get();
             let order = sort_order.get();
-
-            // TODO: this should be move into the function
-            let mut query_params = vec![format!("page={}", page)];
-            if let Some(col) = sort_col {
-                query_params.push(format!("sort={}", col));
-                query_params.push(format!("order={}", order));
-            }
-            let query_string = query_params.join("&");
+            let query_string = build_table_query(page, sort_col.as_deref(), &order);
             navigate(
                 &format!("/stellarhosts?{}", query_string),
                 Default::default(),
@@ -171,17 +164,10 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                         move |_| {
                                                             if can_go_prev() {
                                                                 set_current_page.update(|p| *p -= 1);
-                                                                // TODO: this should be removed
-                                                                // Update URL
                                                                 let page = current_page.get();
                                                                 let sort_col = sort_column.get();
                                                                 let order = sort_order.get();
-                                                                let mut query_params = vec![format!("page={}", page)];
-                                                                if let Some(col) = sort_col {
-                                                                    query_params.push(format!("sort={}", col));
-                                                                    query_params.push(format!("order={}", order));
-                                                                }
-                                                                let query_string = query_params.join("&");
+                                                                let query_string = build_table_query(page, sort_col.as_deref(), &order);
                                                                 navigate(&format!("/stellarhosts?{}", query_string), Default::default());
                                                             }
                                                         }
@@ -202,17 +188,10 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                         move |_| {
                                                             if can_go_next() {
                                                                 set_current_page.update(|p| *p += 1);
-                                                                // TODO: this is duplicated and should be removed
-                                                                // Update URL
                                                                 let page = current_page.get();
                                                                 let sort_col = sort_column.get();
                                                                 let order = sort_order.get();
-                                                                let mut query_params = vec![format!("page={}", page)];
-                                                                if let Some(col) = sort_col {
-                                                                    query_params.push(format!("sort={}", col));
-                                                                    query_params.push(format!("order={}", order));
-                                                                }
-                                                                let query_string = query_params.join("&");
+                                                                let query_string = build_table_query(page, sort_col.as_deref(), &order);
                                                                 navigate(&format!("/stellarhosts?{}", query_string), Default::default());
                                                             }
                                                         }
