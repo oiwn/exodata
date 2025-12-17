@@ -1,7 +1,7 @@
+use crate::components::table::Table;
 use leptos::prelude::*;
 use leptos_router::components::A;
-use leptos_router::hooks::{use_query_map, use_navigate};
-use crate::components::table::Table;
+use leptos_router::hooks::{use_navigate, use_query_map};
 
 // Import the server function - #[server] macro generates client stub automatically
 use crate::server::functions::get_stellarhosts_page;
@@ -19,9 +19,8 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             .unwrap_or(1)
     });
 
-    let initial_sort_column = query_map.with_untracked(|q| {
-        q.get("sort").map(|s| s.to_string())
-    });
+    let initial_sort_column =
+        query_map.with_untracked(|q| q.get("sort").map(|s| s.to_string()));
 
     let initial_sort_order = query_map.with_untracked(|q| {
         q.get("order")
@@ -60,45 +59,49 @@ pub fn StellarHostsTablePage() -> impl IntoView {
     let can_go_prev = move || current_page.get() > 1;
     let can_go_next = move || current_page.get() < total_pages();
 
-
     // Sorting handler
     let on_sort = Callback::new({
         let navigate = navigate.clone();
         move |column: String| {
-        if let Some(current) = sort_column.get() {
-            if current == column {
-                // Toggle order or clear
-                match sort_order.get().as_str() {
-                    "asc" => set_sort_order.set("desc".to_string()),
-                    "desc" => {
-                        set_sort_column.set(None);
-                        set_sort_order.set("asc".to_string());
+            if let Some(current) = sort_column.get() {
+                if current == column {
+                    // Toggle order or clear
+                    match sort_order.get().as_str() {
+                        "asc" => set_sort_order.set("desc".to_string()),
+                        "desc" => {
+                            set_sort_column.set(None);
+                            set_sort_order.set("asc".to_string());
+                        }
+                        _ => {}
                     }
-                    _ => {}
+                } else {
+                    // New column, start with asc
+                    set_sort_column.set(Some(column));
+                    set_sort_order.set("asc".to_string());
                 }
             } else {
-                // New column, start with asc
+                // No current sort, start with asc
                 set_sort_column.set(Some(column));
                 set_sort_order.set("asc".to_string());
             }
-        } else {
-            // No current sort, start with asc
-            set_sort_column.set(Some(column));
-            set_sort_order.set("asc".to_string());
-        }
-        // Reset to page 1 when sorting changes
-        set_current_page.set(1);
-        // Update URL with new state
-        let page = current_page.get();
-        let sort_col = sort_column.get();
-        let order = sort_order.get();
-        let mut query_params = vec![format!("page={}", page)];
-        if let Some(col) = sort_col {
-            query_params.push(format!("sort={}", col));
-            query_params.push(format!("order={}", order));
-        }
-        let query_string = query_params.join("&");
-        navigate(&format!("/stellarhosts?{}", query_string), Default::default());
+            // Reset to page 1 when sorting changes
+            set_current_page.set(1);
+            // Update URL with new state
+            let page = current_page.get();
+            let sort_col = sort_column.get();
+            let order = sort_order.get();
+
+            // TODO: this should be move into the function
+            let mut query_params = vec![format!("page={}", page)];
+            if let Some(col) = sort_col {
+                query_params.push(format!("sort={}", col));
+                query_params.push(format!("order={}", order));
+            }
+            let query_string = query_params.join("&");
+            navigate(
+                &format!("/stellarhosts?{}", query_string),
+                Default::default(),
+            );
         }
     });
 
@@ -168,6 +171,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                         move |_| {
                                                             if can_go_prev() {
                                                                 set_current_page.update(|p| *p -= 1);
+                                                                // TODO: this should be removed
                                                                 // Update URL
                                                                 let page = current_page.get();
                                                                 let sort_col = sort_column.get();
@@ -198,6 +202,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                         move |_| {
                                                             if can_go_next() {
                                                                 set_current_page.update(|p| *p += 1);
+                                                                // TODO: this is duplicated and should be removed
                                                                 // Update URL
                                                                 let page = current_page.get();
                                                                 let sort_col = sort_column.get();
