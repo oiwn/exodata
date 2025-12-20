@@ -5,5 +5,7 @@ Cargo.lock
 /data/*.vot
 /data/*.parquet
 
+tmp/
+
 end2end/playwright-report
 end2end/test-results
