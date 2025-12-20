@@ -1,4 +1,4 @@
-use crate::components::table::{Table, build_table_query};
+use crate::table::{Table, build_table_query};
 use leptos::prelude::*;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};

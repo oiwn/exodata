@@ -8,8 +8,7 @@ pub mod error_template;
 // The #[server] macro handles conditional compilation
 pub mod server;
 
-#[cfg(feature = "ssr")]
-pub mod tables;
+pub mod table;
 
 #[cfg(feature = "ssr")]
 pub mod stellarhosts;
