@@ -30,6 +30,7 @@ tracing = { version = "0.1", optional = true }
 http = "1"
 clap = { version = "4.5.52", features = ["derive"], optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
+exo-core = { path = "crates/exo-core", optional = true }
 votable = { version = "0.6.3", optional = true  }
 anyhow = { version = "1.0.100", optional = true }
 polars = { version = "0.52.0", features = ["lazy", "temporal", "timezones", "parquet"], optional = true }
@@ -64,6 +65,7 @@ ssr = [
     "leptos_router/ssr",
     "dep:tracing",
     # data processing
+    "dep:exo-core",
     "dep:anyhow",
     "dep:polars",
     "dep:serde_json",

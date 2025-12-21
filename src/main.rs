@@ -16,7 +16,7 @@ async fn start_server() {
     use axum::Router;
     use exoplanets_catalog::app::{shell, App};
     use exoplanets_catalog::server::{self, ApiState};
-    use exoplanets_catalog::tables::common;
+    use exo_core::tables::common;
     use leptos::prelude::{get_configuration, provide_context};
     use leptos_axum::{
         generate_route_list, handle_server_fns_with_context, LeptosRoutes,

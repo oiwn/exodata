@@ -12,7 +12,7 @@ use crate::server::common;
 #[cfg(feature = "ssr")]
 use crate::server::handlers::ApiState;
 #[cfg(feature = "ssr")]
-use crate::tables::aggregation;
+use exo_core::tables::overview as aggregation;
 
 /// Statistics data structure for the overview page
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]

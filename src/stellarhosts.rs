@@ -1,7 +1,7 @@
 //! Everything related to "stellarhosts" table,
 //! https://exoplanetarchive.ipac.caltech.edu/docs/API_STELLARHOSTS_columns.html
 
-use crate::tables::stellarhosts::load_data;
+use exo_core::tables::common::load_data;
 use leptos::prelude::*;
 use serde_json;
 
