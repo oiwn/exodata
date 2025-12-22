@@ -96,9 +96,7 @@ pub async fn get_stellarhosts_page(
         sort_by,
         order,
     )
-    .map_err(|e| {
-        ServerFnError::<leptos::server_fn::error::NoCustomError>::ServerError(e)
-    })?;
+    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
 
     // Wrap in TableData response
     Ok(TableData {

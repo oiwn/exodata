@@ -13,21 +13,24 @@
 - We need to show only 5-10 columns at a time (not all 100+)
 - Current code has hardcoded column names and formatters
 - We want ONE generic table that works for everything
+- Table component should be dumb renderer, we should be able to have all parameters for render in get request.
 
-### Data Structure (Already Perfect!)
+### Data Structure
 
 ```rust
-// This already exists and is exactly what we need
 pub struct TableData {
     pub columns: Vec<String>,                    // All column names from parquet
     pub rows: Vec<HashMap<String, Value>>,       // Generic row data
-    pub total: usize,                            // Total records (for pagination)
+    pub total: usize,                            // Filtered count (for pagination)
+    pub total_all: usize,                        // Unfiltered count (entire dataset)
     pub page: usize,
     pub limit: usize,
 }
 ```
 
-**Why this works**: HashMap<String, Value> is completely generic. No specific structs needed!
+**Why this works**:
+- HashMap<String, Value> is completely generic. No specific structs needed!
+- Two totals give full context: "Showing 10 of 500 records (2000 total in dataset)"
 
 ### Proposed Architecture
 
@@ -173,7 +176,79 @@ fn format_cell_value(value: &Value) -> String {
 
 ---
 
+### Backend Filtering Logic (Sorting with Nulls)
+
+**Problem**: When sorting by a column, many rows may have null values for that column (since datasets have 100+ optional columns).
+
+**Solution**: Filter out null rows at the **Polars query level** using predicates, not manual iteration.
+
+**Implementation** (`src/server/common.rs`):
+
+```rust
+pub fn get_stellarhosts_data(
+    df: &DataFrame,
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+) -> Result<(Vec<Value>, usize, usize, Vec<String>), String> {
+    let mut df = df.clone();
+
+    // Select columns
+    df = df.select(columns_to_select)?;
+
+    // Get unfiltered total FIRST
+    let total_all = df.height();
+
+    // Apply sorting with null filtering
+    if let Some(sort_col) = &sort_by {
+        // Filter out rows where sort column is null (Polars predicate)
+        df = df.filter(&col(sort_col).is_not_null())
+            .map_err(|e| format!("Failed to filter nulls: {}", e))?;
+
+        // Then sort
+        let descending = order.as_deref().unwrap_or("asc") == "desc";
+        let options = SortMultipleOptions::new().with_order_descending(descending);
+        df = df.sort([sort_col.as_str()], options)
+            .map_err(|e| format!("Failed to sort: {}", e))?;
+    }
+
+    // Get filtered total AFTER filtering
+    let total = df.height();
+
+    // Apply pagination...
+
+    Ok((rows, total, total_all, columns))
+}
+```
+
+**Why this approach**:
+- ✅ **Performance**: Polars can skip entire row groups where column is null
+- ✅ **Efficiency**: Don't read rows we'll discard
+- ✅ **Scalability**: Works with millions of rows
+- ✅ **Two totals**: UI can show "500 of 2000 total" context
+
+---
+
 ### Implementation Plan
+
+#### **Step 0: Update Backend Data Structures**
+
+**Files**: `src/server/functions.rs` and `src/server/common.rs`
+
+**Changes**:
+1. Update `TableData` struct to include `total_all: usize`
+2. Update `StellarHostsResult` type to return `(Vec<Value>, usize, usize, Vec<String>)`
+3. In `get_stellarhosts_data()`:
+   - Get `total_all` before filtering
+   - Add null filtering when `sort_by` is specified: `df.filter(&col(sort_col).is_not_null())`
+   - Get `total` after filtering
+   - Return both totals
+4. Update `get_stellarhosts_page()` to pass `total_all` to `TableData`
+
+**Test**: Existing tests should still pass with updated signatures
+
+---
 
 #### **Step 1: Refactor GenericTable**
 
