@@ -18,9 +18,7 @@ async fn start_server() {
     use exoplanets_catalog::server::{self, ApiState};
     use exo_core::tables::common;
     use leptos::prelude::{get_configuration, provide_context};
-    use leptos_axum::{
-        generate_route_list, handle_server_fns_with_context, LeptosRoutes,
-    };
+    use leptos_axum::{generate_route_list, LeptosRoutes};
     use std::sync::Arc;
 
     // Load dataframes at startup
@@ -57,19 +55,9 @@ async fn start_server() {
         }
     };
 
-    // Create server function handler
-    let server_fn_handler = {
-        let context_provider = provide_api_state.clone();
-        move |req: axum::extract::Request| {
-            let context_provider = context_provider.clone();
-            async move { handle_server_fns_with_context(context_provider, req).await }
-        }
-    };
-
     // build our application with a route
     let app = Router::new()
-        // Server function HTTP endpoints - must come BEFORE leptos_routes
-        .route("/api/{*fn_name}", axum::routing::get(server_fn_handler))
+        // leptos_routes_with_context handles both SSR and server functions automatically
         .leptos_routes_with_context(
             &leptos_options,
             routes,

@@ -1,3 +1,5 @@
+use crate::components::about::AboutPage;
+use crate::components::navbar::Navbar;
 use crate::components::overview::OverviewPage;
 use crate::components::stellarhosts_table::StellarHostsTablePage;
 use crate::error_template::{AppError, ErrorTemplate};
@@ -48,10 +50,13 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href="/pkg/exoplanets-catalog.css"/>
 
         // sets the document title
-        <Title text="Welcome to Leptos"/>
+        <Title text="Exoplanets Catalog"/>
 
         // content for this welcome page
         <Router>
+            // Navigation bar (must be inside Router to use location)
+            <Navbar/>
+
             <Routes fallback=|| {
                 let mut outside_errors = Errors::default();
                 outside_errors.insert_with_default_key(AppError::NotFound);
@@ -61,8 +66,8 @@ pub fn App() -> impl IntoView {
                 .into_view()
             }>
                 <Route path=StaticSegment("") view=OverviewPage/>
-                <Route path=StaticSegment("overview") view=OverviewPage/>
                 <Route path=StaticSegment("stellarhosts") view=StellarHostsTablePage/>
+                <Route path=StaticSegment("about") view=AboutPage/>
                 <Route path=StaticSegment("table") view=TableWrapper/>
             </Routes>
         </Router>

@@ -20,7 +20,7 @@ pub struct DataStats {
 }
 
 #[cfg(not(feature = "ssr"))]
-#[leptos::server]
+#[leptos::server(input = leptos::server_fn::codec::GetUrl)]
 pub async fn get_stats() -> Result<DataStats, leptos::server_fn::ServerFnError> {
     // This will be replaced by actual implementation on the server
     unreachable!()
