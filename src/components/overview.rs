@@ -1,30 +1,8 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
 
-#[cfg(feature = "ssr")]
-use crate::server::functions::DataStats;
-
-#[cfg(feature = "ssr")]
-use crate::server::functions::get_stats;
-
-// DataStats struct for client-side (must match server definition)
-#[cfg(not(feature = "ssr"))]
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
-pub struct DataStats {
-    pub stellarhosts_total: usize,
-    pub exoplanets_total: usize,
-    pub avg_stellar_temp: f64,
-    pub avg_stellar_distance: f64,
-    pub discovery_methods: Vec<(String, usize)>,
-    pub planet_size_categories: Vec<(String, usize)>,
-}
-
-#[cfg(not(feature = "ssr"))]
-#[leptos::server(input = leptos::server_fn::codec::GetUrl)]
-pub async fn get_stats() -> Result<DataStats, leptos::server_fn::ServerFnError> {
-    // This will be replaced by actual implementation on the server
-    unreachable!()
-}
+// Import server function and types - #[server] macro handles client/server compilation
+use crate::server::functions::{get_stats, DataStats};
 
 #[component]
 pub fn OverviewPage() -> impl IntoView {
