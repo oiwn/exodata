@@ -68,7 +68,8 @@ pub async fn get_stats() -> Result<DataStats, ServerFnError> {
 pub struct TableData {
     pub rows: Vec<Value>,
     pub columns: Vec<String>,
-    pub total: usize,
+    pub total: usize,        // Filtered count (for pagination)
+    pub total_all: usize,    // Unfiltered count (entire dataset)
     pub page: usize,
     pub limit: usize,
 }
@@ -89,7 +90,7 @@ pub async fn get_stellarhosts_page(
     let state = expect_context::<ApiState>();
 
     // Call the common business logic
-    let (rows, total, columns) = common::get_stellarhosts_data(
+    let (rows, total, total_all, columns) = common::get_stellarhosts_data(
         &state.stellarhosts_df,
         page,
         limit,
@@ -103,6 +104,7 @@ pub async fn get_stellarhosts_page(
         rows,
         columns,
         total,
+        total_all,
         page,
         limit,
     })

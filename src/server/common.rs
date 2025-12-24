@@ -6,7 +6,8 @@ use polars::prelude::*;
 use serde_json::{json, Value};
 
 /// Result type for stellarhosts data operations
-pub type StellarHostsResult = Result<(Vec<Value>, usize, Vec<String>), String>;
+/// Returns: (rows, filtered_total, unfiltered_total, columns)
+pub type StellarHostsResult = Result<(Vec<Value>, usize, usize, Vec<String>), String>;
 
 /// Get paginated stellar hosts data with sorting
 ///
@@ -21,7 +22,7 @@ pub type StellarHostsResult = Result<(Vec<Value>, usize, Vec<String>), String>;
 /// * `order` - Sort order ("asc" or "desc")
 ///
 /// # Returns
-/// A tuple of (rows as JSON, total count, column names)
+/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names)
 pub fn get_stellarhosts_data(
     df: &DataFrame,
     page: usize,
@@ -40,11 +41,19 @@ pub fn get_stellarhosts_data(
         .select(columns_to_select)
         .map_err(|e| format!("Failed to select columns: {}", e))?;
 
-    // Get total count before pagination
-    let total = df.height();
+    // Get unfiltered total FIRST (before any filtering)
+    let total_all = df.height();
 
-    // Apply sorting if requested
+    // Apply sorting with null filtering if requested
     if let Some(sort_col) = &sort_by {
+        // Filter out rows where sort column is null using LazyFrame
+        df = df
+            .lazy()
+            .filter(col(sort_col).is_not_null())
+            .collect()
+            .map_err(|e| format!("Failed to filter nulls: {}", e))?;
+
+        // Then sort
         let descending = order.as_deref().unwrap_or("asc") == "desc";
         let options = SortMultipleOptions::new().with_order_descending(descending);
 
@@ -52,6 +61,9 @@ pub fn get_stellarhosts_data(
             .sort([sort_col.as_str()], options)
             .map_err(|e| format!("Failed to sort: {}", e))?;
     }
+
+    // Get filtered total AFTER filtering (but before pagination)
+    let total = df.height();
 
     // Apply pagination
     let page = if page == 0 { 1 } else { page };
@@ -71,7 +83,7 @@ pub fn get_stellarhosts_data(
     // Get column names
     let columns: Vec<String> = columns_to_select.iter().map(|s| (*s).to_string()).collect();
 
-    Ok((rows, total, columns))
+    Ok((rows, total, total_all, columns))
 }
 
 /// Helper function to convert DataFrame to JSON
@@ -102,9 +114,37 @@ fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, String> {
                             .map(|f| json!(f))
                             .unwrap_or(json!(null))
                     }
+                    DataType::Float32 => {
+                        col.f32()
+                            .map_err(|e| format!("Failed to get f32 column: {}", e))?
+                            .get(row_idx)
+                            .map(|f| json!(f))
+                            .unwrap_or(json!(null))
+                    }
                     DataType::Int64 => {
                         col.i64()
                             .map_err(|e| format!("Failed to get i64 column: {}", e))?
+                            .get(row_idx)
+                            .map(|i| json!(i))
+                            .unwrap_or(json!(null))
+                    }
+                    DataType::Int32 => {
+                        col.i32()
+                            .map_err(|e| format!("Failed to get i32 column: {}", e))?
+                            .get(row_idx)
+                            .map(|i| json!(i))
+                            .unwrap_or(json!(null))
+                    }
+                    DataType::UInt32 => {
+                        col.u32()
+                            .map_err(|e| format!("Failed to get u32 column: {}", e))?
+                            .get(row_idx)
+                            .map(|i| json!(i))
+                            .unwrap_or(json!(null))
+                    }
+                    DataType::UInt64 => {
+                        col.u64()
+                            .map_err(|e| format!("Failed to get u64 column: {}", e))?
                             .get(row_idx)
                             .map(|i| json!(i))
                             .unwrap_or(json!(null))
@@ -139,19 +179,22 @@ mod tests {
         .unwrap();
 
         // Test first page
-        let (rows, total, _cols) = get_stellarhosts_data(&df, 1, 2, None, None).unwrap();
+        let (rows, total, total_all, _cols) = get_stellarhosts_data(&df, 1, 2, None, None).unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
+        assert_eq!(total_all, 5);
 
         // Test second page
-        let (rows, total, _cols) = get_stellarhosts_data(&df, 2, 2, None, None).unwrap();
+        let (rows, total, total_all, _cols) = get_stellarhosts_data(&df, 2, 2, None, None).unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
+        assert_eq!(total_all, 5);
 
         // Test last page (partial)
-        let (rows, total, _cols) = get_stellarhosts_data(&df, 3, 2, None, None).unwrap();
+        let (rows, total, total_all, _cols) = get_stellarhosts_data(&df, 3, 2, None, None).unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(total, 5);
+        assert_eq!(total_all, 5);
     }
 
     #[test]
@@ -166,13 +209,13 @@ mod tests {
         .unwrap();
 
         // Test ascending sort
-        let (rows, _, _) = get_stellarhosts_data(&df, 1, 10, Some("hostname".to_string()), Some("asc".to_string())).unwrap();
+        let (rows, _, _, _) = get_stellarhosts_data(&df, 1, 10, Some("hostname".to_string()), Some("asc".to_string())).unwrap();
         assert_eq!(rows[0]["hostname"], "Star A");
         assert_eq!(rows[1]["hostname"], "Star B");
         assert_eq!(rows[2]["hostname"], "Star C");
 
         // Test descending sort
-        let (rows, _, _) = get_stellarhosts_data(&df, 1, 10, Some("sy_dist".to_string()), Some("desc".to_string())).unwrap();
+        let (rows, _, _, _) = get_stellarhosts_data(&df, 1, 10, Some("sy_dist".to_string()), Some("desc".to_string())).unwrap();
         assert_eq!(rows[0]["sy_dist"], 20.3);
         assert_eq!(rows[1]["sy_dist"], 15.7);
         assert_eq!(rows[2]["sy_dist"], 10.5);
