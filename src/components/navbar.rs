@@ -48,6 +48,19 @@ pub fn Navbar() -> impl IntoView {
                         </A>
 
                         <A
+                            href="/exoplanets"
+                            attr:class=move || {
+                                if pathname() == "/exoplanets" {
+                                    active_class
+                                } else {
+                                    link_class
+                                }
+                            }
+                        >
+                            "Exoplanets"
+                        </A>
+
+                        <A
                             href="/about"
                             attr:class=move || {
                                 if pathname() == "/about" {

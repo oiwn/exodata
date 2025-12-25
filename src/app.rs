@@ -1,4 +1,5 @@
 use crate::components::about::AboutPage;
+use crate::components::exoplanets_table::ExoplanetsTablePage;
 use crate::components::navbar::Navbar;
 use crate::components::overview::OverviewPage;
 use crate::components::stellarhosts_table::StellarHostsTablePage;
@@ -67,6 +68,7 @@ pub fn App() -> impl IntoView {
             }>
                 <Route path=StaticSegment("") view=OverviewPage/>
                 <Route path=StaticSegment("stellarhosts") view=StellarHostsTablePage/>
+                <Route path=StaticSegment("exoplanets") view=ExoplanetsTablePage/>
                 <Route path=StaticSegment("about") view=AboutPage/>
                 <Route path=StaticSegment("table") view=TableWrapper/>
             </Routes>

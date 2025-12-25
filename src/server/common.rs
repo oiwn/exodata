@@ -9,6 +9,10 @@ use serde_json::{json, Value};
 /// Returns: (rows, filtered_total, unfiltered_total, columns)
 pub type StellarHostsResult = Result<(Vec<Value>, usize, usize, Vec<String>), String>;
 
+/// Result type for exoplanets data operations
+/// Returns: (rows, filtered_total, unfiltered_total, columns)
+pub type ExoplanetsResult = Result<(Vec<Value>, usize, usize, Vec<String>), String>;
+
 /// Get paginated stellar hosts data with sorting
 ///
 /// This is the core business logic that both server functions and REST handlers use.
@@ -35,6 +39,91 @@ pub fn get_stellarhosts_data(
 
     // Define the columns we want to display
     let columns_to_select = ["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
+
+    // Select only the columns we need
+    df = df
+        .select(columns_to_select)
+        .map_err(|e| format!("Failed to select columns: {}", e))?;
+
+    // Get unfiltered total FIRST (before any filtering)
+    let total_all = df.height();
+
+    // Apply sorting with null filtering if requested
+    if let Some(sort_col) = &sort_by {
+        // Filter out rows where sort column is null using LazyFrame
+        df = df
+            .lazy()
+            .filter(col(sort_col).is_not_null())
+            .collect()
+            .map_err(|e| format!("Failed to filter nulls: {}", e))?;
+
+        // Then sort
+        let descending = order.as_deref().unwrap_or("asc") == "desc";
+        let options = SortMultipleOptions::new().with_order_descending(descending);
+
+        df = df
+            .sort([sort_col.as_str()], options)
+            .map_err(|e| format!("Failed to sort: {}", e))?;
+    }
+
+    // Get filtered total AFTER filtering (but before pagination)
+    let total = df.height();
+
+    // Apply pagination
+    let page = if page == 0 { 1 } else { page };
+    let offset = (page - 1) * limit;
+
+    if offset < df.height() {
+        let end = std::cmp::min(offset + limit, df.height());
+        df = df.slice(offset as i64, end - offset);
+    } else {
+        // Return empty dataframe if offset is beyond data
+        df = df.slice(0, 0);
+    }
+
+    // Convert DataFrame to JSON
+    let rows = dataframe_to_json(&df)?;
+
+    // Get column names
+    let columns: Vec<String> = columns_to_select.iter().map(|s| (*s).to_string()).collect();
+
+    Ok((rows, total, total_all, columns))
+}
+
+/// Get paginated exoplanets data with sorting
+///
+/// This is the core business logic that both server functions and REST handlers use.
+/// It performs Polars operations and returns the data in a simple format.
+///
+/// # Arguments
+/// * `df` - Reference to the exoplanets DataFrame
+/// * `page` - Page number (1-indexed)
+/// * `limit` - Number of rows per page
+/// * `sort_by` - Optional column name to sort by
+/// * `order` - Sort order ("asc" or "desc")
+///
+/// # Returns
+/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names)
+pub fn get_exoplanets_data(
+    df: &DataFrame,
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+) -> ExoplanetsResult {
+    // Clone the dataframe to work with it
+    let mut df = df.clone();
+
+    // Define the columns we want to display
+    let columns_to_select = [
+        "pl_name",
+        "hostname",
+        "discoverymethod",
+        "disc_year",
+        "pl_orbper",
+        "pl_rade",
+        "pl_bmasse",
+    ];
 
     // Select only the columns we need
     df = df

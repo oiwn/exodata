@@ -109,3 +109,39 @@ pub async fn get_stellarhosts_page(
         limit,
     })
 }
+
+/// Server function to fetch paginated exoplanets data
+///
+/// This is a thin wrapper around the common business logic.
+/// It handles Leptos-specific concerns (context extraction, error mapping)
+/// and delegates the actual work to common::get_exoplanets_data.
+#[server(input = GetUrl)]
+pub async fn get_exoplanets_page(
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+) -> Result<TableData, ServerFnError> {
+    // Get ApiState from leptos context
+    let state = expect_context::<ApiState>();
+
+    // Call the common business logic
+    let (rows, total, total_all, columns) = common::get_exoplanets_data(
+        &state.exoplanets_df,
+        page,
+        limit,
+        sort_by,
+        order,
+    )
+    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+
+    // Wrap in TableData response
+    Ok(TableData {
+        rows,
+        columns,
+        total,
+        total_all,
+        page,
+        limit,
+    })
+}
