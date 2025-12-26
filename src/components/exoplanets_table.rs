@@ -141,6 +141,59 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
 
                                 leptos::either::Either::Left(view! {
                                     <div class="space-y-6">
+                                        // Pagination controls (top)
+                                        <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">
+                                            <div class="text-sm text-gray-400">
+                                                {format!("Showing {} - {} of {} records", start, end, total)}
+                                            </div>
+
+                                            <div class="flex items-center gap-4">
+                                                <button
+                                                    class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                                    disabled=move || !can_go_prev()
+                                                    on:click={
+                                                        let navigate = navigate.clone();
+                                                        move |_| {
+                                                            if can_go_prev() {
+                                                                set_current_page.update(|p| *p -= 1);
+                                                                let page = current_page.get();
+                                                                let sort_col = sort_column.get();
+                                                                let order = sort_order.get();
+                                                                let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                            }
+                                                        }
+                                                    }
+                                                >
+                                                    "Previous"
+                                                </button>
+
+                                                <div class="text-sm text-gray-300 font-mono">
+                                                    {move || format!("Page {} of {}", current_page.get(), total_pages())}
+                                                </div>
+
+                                                <button
+                                                    class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                                    disabled=move || !can_go_next()
+                                                    on:click={
+                                                        let navigate = navigate.clone();
+                                                        move |_| {
+                                                            if can_go_next() {
+                                                                set_current_page.update(|p| *p += 1);
+                                                                let page = current_page.get();
+                                                                let sort_col = sort_column.get();
+                                                                let order = sort_order.get();
+                                                                let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                            }
+                                                        }
+                                                    }
+                                                >
+                                                    "Next"
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         // Table
                                         <Table
                                             data=data
@@ -149,7 +202,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                             current_sort_order=sort_order.get()
                                         />
 
-                                        // Pagination controls
+                                        // Pagination controls (bottom)
                                         <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">
                                             <div class="text-sm text-gray-400">
                                                 {format!("Showing {} - {} of {} records", start, end, total)}

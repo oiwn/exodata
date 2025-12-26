@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use leptos::serde_json::Value;
 use crate::server::functions::TableData;
+use std::collections::HashMap;
 
 #[component]
 pub fn Table(
@@ -8,6 +9,7 @@ pub fn Table(
     on_sort: Callback<String>,
     current_sort_column: Option<String>,
     current_sort_order: String,
+    #[prop(optional)] column_descriptions: Option<HashMap<String, String>>,
 ) -> impl IntoView {
     view! {
         <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-sm">
@@ -28,6 +30,11 @@ pub fn Table(
                                 ""
                             };
 
+                            // Get description for tooltip
+                            let description = column_descriptions.as_ref()
+                                .and_then(|descs| descs.get(&col_name))
+                                .map(|s| s.clone());
+
                             let col_for_click = col_name.clone();
                             let on_click = move |_| {
                                 on_sort.run(col_for_click.clone());
@@ -35,8 +42,9 @@ pub fn Table(
 
                             view! {
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white hover:bg-slate-800/50 transition-colors select-none"
+                                    class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white hover:bg-slate-800/50 transition-colors select-none group relative"
                                     on:click=on_click
+                                    title=description.clone()
                                 >
                                     <div class="flex items-center gap-2">
                                         <span>{col_display}</span>
@@ -44,6 +52,11 @@ pub fn Table(
                                             view! { <span class="text-purple-400">{sort_indicator}</span> }.into_any()
                                         } else {
                                             view! { <span class="text-gray-600 opacity-0 group-hover:opacity-100">"↕"</span> }.into_any()
+                                        }}
+                                        {if description.is_some() {
+                                            view! { <span class="text-purple-400/60 text-xs">{"ℹ"}</span> }.into_any()
+                                        } else {
+                                            view! { <span></span> }.into_any()
                                         }}
                                     </div>
                                 </th>
