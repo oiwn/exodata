@@ -11,6 +11,9 @@ See **`architecture.md`** for workspace organization, build commands, and overal
 2. **`cli.md`** - exo-cli command-line tool (commands, usage, examples)
 3. **`web-backend.md`** - Axum server (REST API, server functions, state management)
 4. **`web-frontend.md`** - Leptos UI (components, routing, styling, reactivity)
+5. **`ideas.md`** - short notes with ideas
+6. **`data-management.md`** - how to fetch and prepare the data
+7. **`column-metadata.md`** - information about each column
 
 ## Quick Start
 
