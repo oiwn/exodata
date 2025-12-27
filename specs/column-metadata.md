@@ -17,13 +17,43 @@ Create a centralized column metadata module in `exo-core` that:
 
 ## Data Source
 
-**Official NASA Exoplanet Archive Documentation:**
-- Planetary Systems columns: https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html
-- Alternative: Extract from VOT (VOTable) files metadata
+**VOTable Files** (Recommended Approach):
+- The `.vot` files already contain complete metadata for all columns
+- Location: `data/exoplanets.vot`, `data/stellarhosts.vot`
+- Each `<FIELD>` element contains:
+  - `name` attribute: Column name (e.g., "pl_rade")
+  - `<DESCRIPTION>`: Human-readable description
+  - `unit` attribute: Unit of measurement (e.g., "Rearth", "day")
+  - `datatype` attribute: Data type (e.g., "double", "char", "int")
+
+**Example from VOTable:**
+```xml
+<FIELD ID="pl_rade" datatype="double" name="pl_rade" unit="Rearth"/>
+<FIELD ID="pl_radestr" arraysize="*" datatype="char" name="pl_radestr" unit="Rearth">
+  <DESCRIPTION><![CDATA[ Planet Radius [Earth Radius] ]]></DESCRIPTION>
+</FIELD>
+
+<FIELD ID="pl_bmasse" datatype="double" name="pl_bmasse" unit="Mearth"/>
+<FIELD ID="pl_bmassestr" arraysize="*" datatype="char" name="pl_bmassestr" unit="Mearth">
+  <DESCRIPTION><![CDATA[ Planet Mass or Mass*sin(i) [Earth Mass] ]]></DESCRIPTION>
+</FIELD>
+```
+
+**Fallback:**
+- NASA Exoplanet Archive Documentation: https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html
 
 ## Implementation Plan
 
-### 1. Create `exo-core/src/metadata.rs`
+### 1. Add XML parsing dependency
+
+Add to `exo-core/Cargo.toml`:
+```toml
+[dependencies]
+quick-xml = "0.32"
+serde = { version = "1.0", features = ["derive"] }
+```
+
+### 2. Create `exo-core/src/metadata.rs`
 
 ```rust
 use std::collections::HashMap;
@@ -32,67 +62,33 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColumnMetadata {
     pub name: String,
-    pub display_name: String,
-    pub description: String,
+    pub description: Option<String>,
     pub unit: Option<String>,
-    pub data_type: String,
+    pub datatype: String,
 }
 
-/// Get metadata for all planetary system columns
-pub fn get_planet_columns_metadata() -> HashMap<String, ColumnMetadata> {
-    // ...
+/// Parse VOTable XML and extract column metadata
+pub fn parse_votable_metadata(vot_content: &str) -> Result<HashMap<String, ColumnMetadata>, String> {
+    // Parse XML and extract FIELD elements
+    // Map name -> ColumnMetadata
 }
 
-/// Get metadata for all stellar host columns
-pub fn get_stellar_columns_metadata() -> HashMap<String, ColumnMetadata> {
-    // ...
+/// Get metadata for exoplanets columns (from exoplanets.vot)
+pub fn get_exoplanets_metadata() -> HashMap<String, ColumnMetadata> {
+    let vot_content = include_str!("../../data/exoplanets.vot");
+    parse_votable_metadata(vot_content).unwrap_or_default()
 }
 
-/// Get metadata for a specific column
-pub fn get_column_metadata(column_name: &str) -> Option<ColumnMetadata> {
-    // ...
+/// Get metadata for stellar hosts columns (from stellarhosts.vot)
+pub fn get_stellarhosts_metadata() -> HashMap<String, ColumnMetadata> {
+    let vot_content = include_str!("../../data/stellarhosts.vot");
+    parse_votable_metadata(vot_content).unwrap_or_default()
 }
 ```
 
-### 2. Key Columns to Include
+**Note**: We use `include_str!` to embed the VOTable files at compile time, so the metadata is always available without runtime file I/O.
 
-**Exoplanet Columns:**
-- `pl_name` - Planet Name
-- `hostname` - Host Star Name
-- `discoverymethod` - Discovery Method
-- `disc_year` - Discovery Year
-- `pl_orbper` - Orbital Period (days)
-- `pl_rade` - Planet Radius (Earth radii)
-- `pl_bmasse` - Planet Mass (Earth masses)
-- ... (all columns from VOT file)
-
-**Stellar Host Columns:**
-- `hostname` - Star Name
-- `sy_dist` - System Distance (parsecs)
-- `st_teff` - Stellar Temperature (Kelvin)
-- `st_mass` - Stellar Mass (Solar masses)
-- `sy_pnum` - Number of Planets
-- ... (all columns from VOT file)
-
-### 3. Column Metadata Structure
-
-From NASA Exoplanet Archive documentation:
-
-| Column | Display Name | Description | Unit |
-|--------|--------------|-------------|------|
-| pl_name | Planet Name | Planet name most commonly used in the literature | - |
-| hostname | Star Name | Stellar name most commonly used in the literature | - |
-| discoverymethod | Discovery Method | Method by which the planet was first identified | - |
-| disc_year | Discovery Year | Year the planet was discovered | - |
-| pl_orbper | Orbital Period | Time the planet takes to make a complete orbit around the host star | days |
-| pl_rade | Planet Radius | Length of a line segment from the center of the planet to its surface | R⊕ (Earth Radius) |
-| pl_bmasse | Planet Mass | Best planet mass estimate available | M⊕ (Earth Mass) |
-| sy_dist | Distance | Distance to the planetary system | parsecs (pc) |
-| st_teff | Temperature | Temperature of the star as modeled by a black body | Kelvin (K) |
-| st_mass | Stellar Mass | Amount of matter contained in the star | M☉ (Solar mass) |
-| sy_pnum | Planets | Number of confirmed planets in the planetary system | - |
-
-### 4. Integration Points
+### 3. Integration Points
 
 **exo-core:**
 - Add `pub mod metadata;` to `lib.rs`
@@ -103,12 +99,12 @@ From NASA Exoplanet Archive documentation:
 - Pass to `Table` component as `column_descriptions` prop
 - Table component renders tooltips with descriptions
 
-### 5. Future Enhancements
+### 4. Future Enhancements
 
-- Extract metadata directly from VOT XML files
-- Include more fields (precision, provenance, etc.)
-- Support for different languages/locales
-- Validation that all columns in data have metadata
+- Cache parsed metadata (use `lazy_static` or `OnceLock`)
+- Include more VOTable fields (ID, arraysize, UCD, etc.)
+- Support for error column descriptions (err1, err2, lim fields)
+- Validation that all displayed columns have metadata
 
 ## File Structure
 
@@ -116,27 +112,40 @@ From NASA Exoplanet Archive documentation:
 exo-core/
   src/
     lib.rs              # Add: pub mod metadata;
-    metadata.rs         # NEW: Column metadata module
-    metadata/
-      planets.rs        # NEW: Planet column metadata
-      stellar.rs        # NEW: Stellar column metadata
+    metadata.rs         # NEW: VOTable parser and metadata functions
+data/
+  exoplanets.vot       # Source of exoplanet metadata
+  stellarhosts.vot     # Source of stellar host metadata
 ```
 
 ## Testing
 
-- Unit tests to verify all displayed columns have metadata
-- Integration test to verify metadata matches VOT file columns
-- Frontend test to verify tooltips render correctly
+- Unit test: Verify VOTable parser extracts all fields correctly
+- Unit test: Verify all displayed columns have metadata
+- Integration test: Verify metadata is accessible from exo-core
+- Frontend test: Verify tooltips render correctly with descriptions
 
 ## Benefits
 
-1. **User Experience**: Clear descriptions on hover
-2. **Documentation**: Self-documenting data fields
-3. **Maintainability**: Single source of truth for column metadata
-4. **Extensibility**: Easy to add new columns or update descriptions
-5. **Official**: Uses NASA's official documentation
+1. **User Experience**: Clear descriptions on hover for all columns
+2. **Automatic**: Metadata comes directly from official VOTable files
+3. **Maintainability**: Single source of truth (VOTable files)
+4. **No Manual Work**: No need to manually maintain column descriptions
+5. **Always In Sync**: Metadata automatically matches the data structure
+6. **Official**: Uses NASA Exoplanet Archive's official metadata
+
+## Example Output
+
+When hovering over column headers, users will see tooltips like:
+
+- **pl_orbper**: "Orbital Period [day]"
+- **pl_rade**: "Planet Radius [Earth Radius]"
+- **pl_bmasse**: "Planet Mass or Mass*sin(i) [Earth Mass]"
+- **st_teff**: (Description from VOTable)
+- **sy_pnum**: (Description from VOTable)
 
 ## References
 
-- [NASA Exoplanet Archive Column Definitions](https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html)
 - [VOTable Format Specification](http://www.ivoa.net/documents/VOTable/)
+- [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/)
+- [NASA Exoplanet Archive Column Definitions](https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html)
