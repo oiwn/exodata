@@ -2,9 +2,8 @@ use std::path::Path;
 
 use anyhow::Error;
 use comfy_table::Table;
-use exo_core::load_data_with_limit;
 use exo_core::tables::common::{
-    create_histogram, get_numeric_stats, print_histogram,
+    create_histogram, get_numeric_stats, print_histogram, load_data_with_limit,
 };
 use polars::prelude::*;
 
@@ -19,7 +18,7 @@ pub fn view_stellarhosts_samples(
 
     // Load only rows we need (plus a small buffer for any null rows)
     let load_limit = Some(limit + 10);
-    let df = load_stellarhosts_data(path, load_limit)?;
+    let df = load_data_with_limit(path.to_str().unwrap(), load_limit)?;
     let limit = std::cmp::min(limit, df.height());
 
     // Get first few rows as a preview
@@ -186,7 +185,7 @@ pub fn view_stellarhosts_samples(
 
 /// Display summary statistics for stellarhosts data
 pub fn view_stellarhosts_stats(path: &str) -> Result<(), Error> {
-    let df = load_stellarhosts_data(path, Some(5000))?; // Load a sample for faster stats
+    let df = load_data_with_limit(path, Some(5000))?; // Load a sample for faster stats
 
     println!("Stellarhosts Data Statistics");
     println!("===========================");
@@ -243,7 +242,7 @@ pub fn view_exoplanets_samples(
 
     // Load only rows we need (plus a small buffer for any null rows)
     let load_limit = Some(limit + 10);
-    let df = load_exoplanets_data(path, load_limit)?;
+    let df = load_data_with_limit(path, load_limit)?;
     let limit = std::cmp::min(limit, df.height());
 
     // Get first few rows as a preview
@@ -389,7 +388,7 @@ pub fn view_exoplanets_samples(
 
 /// Display summary statistics for exoplanets data
 pub fn view_exoplanets_stats(path: &str) -> Result<(), Error> {
-    let df = load_exoplanets_data(path, Some(5000))?; // Load a sample for faster stats
+    let df = load_data_with_limit(path, Some(5000))?; // Load a sample for faster stats
 
     println!("Exoplanets Data Statistics");
     println!("==========================");
@@ -459,5 +458,49 @@ fn display_basic_stats(
     }
 
     println!("{}", table);
+    Ok(())
+}
+
+/// View column metadata from a VOTable file
+pub fn view_metadata(path: &str, columns: Option<&str>) -> Result<(), Error> {
+    use exo_core::metadata;
+
+    println!("Loading metadata from: {}\n", path);
+
+    let all_metadata = metadata::parse_votable_metadata(path)
+        .map_err(|e| anyhow::Error::msg(e))?;
+
+    if let Some(col_filter) = columns {
+        // Filter to specific columns
+        let column_names: Vec<&str> = col_filter.split(',').map(|s| s.trim()).collect();
+
+        println!("Showing metadata for {} specific columns:\n", column_names.len());
+
+        let mut found = 0;
+        for col_name in &column_names {
+            if let Some(meta) = all_metadata.get(*col_name) {
+                println!("Column: {}", meta.name);
+                if let Some(desc) = &meta.description {
+                    println!("  Description: {}", desc);
+                }
+                if let Some(unit) = &meta.unit {
+                    println!("  Unit: {}", unit);
+                }
+                println!("  Data Type: {}", meta.datatype);
+                println!();
+                found += 1;
+            } else {
+                println!("Warning: Column '{}' not found in metadata", col_name);
+            }
+        }
+
+        if found == 0 {
+            println!("No matching columns found.");
+        }
+    } else {
+        // Show all metadata
+        metadata::print_metadata(&all_metadata);
+    }
+
     Ok(())
 }

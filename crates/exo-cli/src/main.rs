@@ -59,6 +59,13 @@ enum Commands {
         #[arg(short, long, default_value = "data")]
         data_dir: String,
     },
+    /// View column metadata from a VOTable file
+    ViewMetadata {
+        #[arg(short, long, default_value = "data/exoplanets.vot")]
+        path: String,
+        #[arg(short, long, help = "Filter to specific columns (comma-separated)")]
+        columns: Option<String>,
+    },
 }
 
 fn main() {
@@ -73,7 +80,7 @@ fn main() {
             category,
         } => {
             let cat = category.as_ref().map(|s| s.as_str());
-            if let Err(e) = commands::view_stellarhosts_samples(&path, limit, cat) {
+            if let Err(e) = commands::view_stellarhosts_samples(Path::new(&path), limit, cat) {
                 eprintln!("Error viewing samples: {}", e);
             }
         }
@@ -100,6 +107,11 @@ fn main() {
         Commands::ConvertRawFiles { data_dir } => {
             if let Err(e) = conversion::convert_raw_files(Path::new(&data_dir)) {
                 eprintln!("Error converting VOTable files: {}", e);
+            }
+        }
+        Commands::ViewMetadata { path, columns } => {
+            if let Err(e) = commands::view_metadata(&path, columns.as_deref()) {
+                eprintln!("Error viewing metadata: {}", e);
             }
         }
     }

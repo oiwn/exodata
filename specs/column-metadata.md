@@ -42,22 +42,34 @@ Create a centralized column metadata module in `exo-core` that:
 **Fallback:**
 - NASA Exoplanet Archive Documentation: https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html
 
-## Implementation Plan
+## Implementation Status
 
-### 1. Add XML parsing dependency
+✅ **COMPLETED**: Metadata extraction from VOTable files
 
-Add to `exo-core/Cargo.toml`:
-```toml
-[dependencies]
-quick-xml = "0.32"
-serde = { version = "1.0", features = ["derive"] }
-```
+### Implementation Details
 
-### 2. Create `exo-core/src/metadata.rs`
+### 1. Created `exo-core/src/metadata.rs` ✅
+
+Implemented in `/crates/exo-core/src/metadata.rs` with the following functions:
 
 ```rust
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
+// Parse VOTable and extract all column metadata
+pub fn parse_votable_metadata(vot_path: &str) -> Result<HashMap<String, ColumnMetadata>, String>
+
+// Get metadata for exoplanets
+pub fn get_exoplanets_metadata(vot_path: &str) -> HashMap<String, ColumnMetadata>
+
+// Get metadata for stellar hosts
+pub fn get_stellarhosts_metadata(vot_path: &str) -> HashMap<String, ColumnMetadata>
+
+// Print metadata in human-readable format
+pub fn print_metadata(metadata: &HashMap<String, ColumnMetadata>)
+
+// Get metadata for specific columns only
+pub fn get_columns_metadata(
+    all_metadata: &HashMap<String, ColumnMetadata>,
+    column_names: &[&str],
+) -> HashMap<String, String>
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColumnMetadata {
@@ -86,18 +98,29 @@ pub fn get_stellarhosts_metadata() -> HashMap<String, ColumnMetadata> {
 }
 ```
 
-**Note**: We use `include_str!` to embed the VOTable files at compile time, so the metadata is always available without runtime file I/O.
+### 2. Added CLI Command ✅
 
-### 3. Integration Points
+Added `ViewMetadata` command to exo-cli (`/crates/exo-cli/src/main.rs`):
 
-**exo-core:**
-- Add `pub mod metadata;` to `lib.rs`
-- Expose metadata functions
+```bash
+# View all metadata from a VOTable file
+exo view-metadata --path data/exoplanets.vot
 
-**Frontend (exoplanets-catalog):**
-- Import metadata from `exo_core::metadata`
-- Pass to `Table` component as `column_descriptions` prop
-- Table component renders tooltips with descriptions
+# View metadata for specific columns
+exo view-metadata --path data/exoplanets.vot --columns "pl_name,pl_orbper,pl_rade"
+```
+
+### 3. Next: Frontend Integration ⏳
+
+**TODO**: Integrate metadata into frontend tables
+
+The Table component (`src/table/table.rs`) already supports `column_descriptions` prop.
+
+**Integration steps:**
+1. Import `exo_core::metadata` in frontend
+2. Load metadata for each table page
+3. Pass to `<Table column_descriptions={...} />` component
+4. Tooltips will display automatically on column headers
 
 ### 4. Future Enhancements
 

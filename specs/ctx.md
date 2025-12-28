@@ -6,12 +6,19 @@
 
 **Status**: Table component updated to support tooltips, need to implement metadata in exo-core
 
-**Tasks**:
+**Progress**:
 1. ✅ Update Table component to accept `column_descriptions` prop
 2. ✅ Research NASA Exoplanet Archive column documentation
-3. ⏳ Create `exo-core/src/metadata.rs` module
-4. ⏳ Implement column metadata for planets and stellar hosts
-5. ⏳ Integrate metadata into frontend tables
+3. ✅ **COMPLETED**: Created `exo-core/src/metadata.rs` module
+4. ✅ **COMPLETED**: Implemented VOTable metadata parser (extracts from .vot files)
+5. ✅ **COMPLETED**: Added `view-metadata` CLI command to exo-cli
+6. ⏳ **NEXT**: Integrate metadata into frontend tables
+
+**What's Working**:
+- ✅ `exo-core/src/metadata.rs` parses VOTable files and extracts column metadata
+- ✅ `exo-cli view-metadata` command prints metadata to console
+- ✅ Metadata includes: name, description, unit, datatype
+- ✅ Source: Official NASA Exoplanet Archive VOTable files
 
 **Potential future enhancements:**
 - Add search/filter functionality to tables
