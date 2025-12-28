@@ -11,6 +11,7 @@ end2end/playwright-report
 end2end/test-results
 
 # Infrastructure
+.terraform.lock.hcl
 infrastructure/tofu/.terraform/
 infrastructure/tofu/*.tfstate
 infrastructure/tofu/*.tfstate.backup

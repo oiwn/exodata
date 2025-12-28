@@ -32,7 +32,7 @@ domain              = "exoplanets.yourdomain.com"
 cloudflare_email    = "your@email.com"
 ```
 
-## Step 4: Deploy Infrastructure (10 min)
+## Step 4: Deploy Infrastructure
 
 ```bash
 cd infrastructure/tofu

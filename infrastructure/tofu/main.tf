@@ -33,7 +33,7 @@ provider "digitalocean" {
 resource "digitalocean_droplet" "app" {
   name   = "exoplanets-catalog"
   region = "nyc3"
-  size   = "s-2vcpu-4gb" # $24/month
+  size   = "s-1vcpu-2gb" # $12/month
   image  = "ubuntu-24-04-x64"
 
   ssh_keys = [var.ssh_key_fingerprint]
