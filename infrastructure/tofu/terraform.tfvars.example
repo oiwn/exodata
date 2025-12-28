@@ -1,0 +1,4 @@
+do_token            = "dop_v1_xxxxxxxxxxxxx"
+ssh_key_fingerprint = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
+domain              = "exoplanets.yourdomain.com"
+cloudflare_email    = "your@email.com"

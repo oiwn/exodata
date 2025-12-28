@@ -1,0 +1,9 @@
+target/
+.git/
+data/
+*.md
+.env
+.DS_Store
+node_modules/
+infrastructure/
+specs/

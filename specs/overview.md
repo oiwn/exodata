@@ -14,6 +14,7 @@ See **`architecture.md`** for workspace organization, build commands, and overal
 5. **`ideas.md`** - short notes with ideas
 6. **`data-management.md`** - how to fetch and prepare the data
 7. **`column-metadata.md`** - information about each column
+8. **`deployment.md`** - deployment infrastructure, CI/CD, and production setup
 
 ## Quick Start
 

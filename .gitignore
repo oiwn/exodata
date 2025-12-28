@@ -9,3 +9,9 @@ tmp/
 
 end2end/playwright-report
 end2end/test-results
+
+# Infrastructure
+infrastructure/tofu/.terraform/
+infrastructure/tofu/*.tfstate
+infrastructure/tofu/*.tfstate.backup
+infrastructure/tofu/terraform.tfvars
