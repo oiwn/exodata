@@ -114,7 +114,6 @@ mod tests {
                 description: Some("Planet Name".to_string()),
                 unit: None,
                 datatype: "char".to_string(),
-                ucd: None,
             },
         );
         all_meta.insert(
@@ -124,7 +123,6 @@ mod tests {
                 description: Some("Orbital Period".to_string()),
                 unit: Some("day".to_string()),
                 datatype: "double".to_string(),
-                ucd: None,
             },
         );
 

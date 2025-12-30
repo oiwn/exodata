@@ -79,11 +79,8 @@ fn process_votable(votable_path: &str) {
     println!("Processing: {}", votable_path);
 
     // Load the VOTable
-    let df = exoplanets_catalog::tables::votable_loader::load_votable(
-        votable_path,
-        None,
-    )
-    .expect(format!("Failed to load VOTable: {}", votable_path).as_str());
+    let df = exo_core::tables::votable_loader::load_votable(votable_path, None)
+        .expect(format!("Failed to load VOTable: {}", votable_path).as_str());
 
     let total_rows = df.height();
     println!("  Total rows: {}", total_rows);

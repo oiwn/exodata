@@ -3,10 +3,12 @@ use clap::Parser;
 use polars::lazy::dsl::{col, len};
 use polars::prelude::*;
 
-use exoplanets_catalog::tables::common::load_parquet;
+use exo_core::tables::common::load_parquet;
 
 #[derive(Parser, Debug)]
-#[command(about = "Inspect stellar hosts dataset (coverage, photometry, stellar properties)")]
+#[command(
+    about = "Inspect stellar hosts dataset (coverage, photometry, stellar properties)"
+)]
 struct Args {
     /// Parquet file to inspect
     #[arg(long, default_value = "data/stellarhosts.parquet")]
@@ -89,8 +91,14 @@ fn print_identifier_coverage(df: &DataFrame) {
 
 fn print_photometry_stats(df: &DataFrame) {
     let phot_cols = [
-        "sy_vmag", "sy_bmag", "sy_jmag", "sy_hmag", "sy_kmag", "sy_gmag",
-        "sy_gaiamag", "sy_kepmag",
+        "sy_vmag",
+        "sy_bmag",
+        "sy_jmag",
+        "sy_hmag",
+        "sy_kmag",
+        "sy_gmag",
+        "sy_gaiamag",
+        "sy_kepmag",
     ];
 
     println!("Photometric bands (non-null counts):");
@@ -208,9 +216,7 @@ fn value_counts(
         .collect()?
         .head(Some(top_n));
 
-    let values_col = counts_df
-        .column(column)?
-        .cast(&DataType::Int64)?;
+    let values_col = counts_df.column(column)?.cast(&DataType::Int64)?;
     let values = values_col.i64()?;
     let counts = counts_df.column("count")?.u32()?;
 
@@ -218,10 +224,7 @@ fn value_counts(
         .into_iter()
         .zip(counts.into_iter())
         .filter_map(|(value, count)| match (value, count) {
-            (Some(v), Some(c)) => Some(ValueCount {
-                value: v,
-                count: c,
-            }),
+            (Some(v), Some(c)) => Some(ValueCount { value: v, count: c }),
             _ => None,
         })
         .collect())

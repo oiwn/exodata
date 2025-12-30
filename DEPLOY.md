@@ -43,7 +43,7 @@ tofu apply
 
 **Copy the IP address from output!**
 
-## Step 5: DNS Setup (2 min + wait for propagation)
+## Step 5: DNS Setup
 
 In Cloudflare DNS:
 1. Go to your domain → DNS → Records
@@ -67,7 +67,7 @@ ssh root@DROPLET_IP
 # Wait for cloud-init to finish (check: tail -f /var/log/cloud-init-output.log)
 
 # Setup SSL
-certbot --nginx -d exoplanets.yourdomain.com --non-interactive --agree-tos --email your@email.com
+certbot --nginx -d exodata.space --non-interactive --agree-tos --email your@email.com
 
 # Enable auto-renewal
 systemctl enable certbot.timer
@@ -76,7 +76,7 @@ systemctl start certbot.timer
 exit
 ```
 
-## Step 7: Upload Data (5 min)
+## Step 7: Upload Data
 
 If you don't have data yet, fetch it first:
 ```bash

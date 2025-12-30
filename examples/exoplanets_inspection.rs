@@ -3,10 +3,12 @@ use clap::Parser;
 use polars::lazy::dsl::{col, len};
 use polars::prelude::*;
 
-use exoplanets_catalog::tables::common::load_parquet;
+use exo_core::tables::common::load_parquet;
 
 #[derive(Parser, Debug)]
-#[command(about = "Inspect exoplanets dataset (discovery timeline/methods, orbital/physical stats)")]
+#[command(
+    about = "Inspect exoplanets dataset (discovery timeline/methods, orbital/physical stats)"
+)]
 struct Args {
     /// Parquet file to inspect
     #[arg(long, default_value = "data/exoplanets.parquet")]
@@ -121,7 +123,7 @@ fn print_discovery_methods(df: &DataFrame) -> Result<(), Error> {
         .select_at_idx(1)
         .cloned()
         .ok_or_else(|| Error::msg("missing count column"))?;
-    
+
     let names = name_col.str()?;
     let counts = count_col.u32()?;
 
