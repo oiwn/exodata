@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::Error;
 use comfy_table::Table;
 use exo_core::tables::common::{
-    create_histogram, get_numeric_stats, print_histogram, load_data_with_limit,
+    create_histogram, get_numeric_stats, load_data_with_limit, print_histogram,
 };
 use polars::prelude::*;
 
@@ -172,7 +172,9 @@ pub fn view_stellarhosts_samples(
         println!("Available data categories:");
         println!("  basic       - Host names and identifiers");
         println!("  position    - Sky coordinates (RA, Dec, Galactic)");
-        println!("  stellar     - Stellar properties (mass, radius, temperature, etc.)");
+        println!(
+            "  stellar     - Stellar properties (mass, radius, temperature, etc.)"
+        );
         println!("  photometry  - Magnitudes in various photometric bands");
         println!();
         println!("Usage examples:");
@@ -472,9 +474,13 @@ pub fn view_metadata(path: &str, columns: Option<&str>) -> Result<(), Error> {
 
     if let Some(col_filter) = columns {
         // Filter to specific columns
-        let column_names: Vec<&str> = col_filter.split(',').map(|s| s.trim()).collect();
+        let column_names: Vec<&str> =
+            col_filter.split(',').map(|s| s.trim()).collect();
 
-        println!("Showing metadata for {} specific columns:\n", column_names.len());
+        println!(
+            "Showing metadata for {} specific columns:\n",
+            column_names.len()
+        );
 
         let mut found = 0;
         for col_name in &column_names {

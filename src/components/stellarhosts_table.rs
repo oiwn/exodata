@@ -1,4 +1,4 @@
-use crate::table::{Table, build_table_query};
+use crate::table::{build_table_query, Table};
 use leptos::prelude::*;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
@@ -90,7 +90,8 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             let page = current_page.get();
             let sort_col = sort_column.get();
             let order = sort_order.get();
-            let query_string = build_table_query(page, sort_col.as_deref(), &order);
+            let query_string =
+                build_table_query(page, sort_col.as_deref(), &order);
             navigate(
                 &format!("/stellarhosts?{}", query_string),
                 Default::default(),

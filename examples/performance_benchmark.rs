@@ -27,7 +27,9 @@ struct Args {
 fn main() -> Result<(), Error> {
     let args = Args::parse();
 
-    println!("Parquet load benchmark (comma-separate paths to test multiple files):");
+    println!(
+        "Parquet load benchmark (comma-separate paths to test multiple files):"
+    );
     if let Some(limit) = args.limit {
         println!("  Row limit: {}", limit);
     }

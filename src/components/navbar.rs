@@ -7,8 +7,10 @@ pub fn Navbar() -> impl IntoView {
     let location = use_location();
     let pathname = move || location.pathname.get();
 
-    let link_class = "px-4 py-2 rounded-lg transition-all duration-200 hover:bg-white/10";
-    let active_class = "px-4 py-2 rounded-lg bg-white/20 text-purple-300 font-semibold";
+    let link_class =
+        "px-4 py-2 rounded-lg transition-all duration-200 hover:bg-white/10";
+    let active_class =
+        "px-4 py-2 rounded-lg bg-white/20 text-purple-300 font-semibold";
 
     view! {
         <nav class="bg-slate-900/80 backdrop-blur-sm border-b border-purple-500/20 sticky top-0 z-50">

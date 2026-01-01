@@ -226,7 +226,8 @@ mod tests {
         let temp_file = temp_dir.join("test_metadata.toml");
 
         // Save metadata
-        save_metadata_toml(&metadata, &temp_file).expect("Failed to save metadata");
+        save_metadata_toml(&metadata, &temp_file)
+            .expect("Failed to save metadata");
 
         // Load metadata
         let loaded_metadata =
@@ -234,15 +235,15 @@ mod tests {
 
         // Verify
         assert_eq!(loaded_metadata.len(), 2);
-        assert_eq!(
-            loaded_metadata.get("hostname").unwrap().name,
-            "hostname"
-        );
+        assert_eq!(loaded_metadata.get("hostname").unwrap().name, "hostname");
         assert_eq!(
             loaded_metadata.get("hostname").unwrap().description,
             Some("Host Name".to_string())
         );
-        assert_eq!(loaded_metadata.get("dec").unwrap().unit, Some("deg".to_string()));
+        assert_eq!(
+            loaded_metadata.get("dec").unwrap().unit,
+            Some("deg".to_string())
+        );
 
         // Cleanup
         let _ = std::fs::remove_file(&temp_file);

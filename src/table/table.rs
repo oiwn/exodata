@@ -1,6 +1,6 @@
+use crate::server::functions::TableData;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
-use crate::server::functions::TableData;
 use std::collections::HashMap;
 
 #[component]
@@ -113,7 +113,11 @@ pub fn Table(
 ///
 /// # Returns
 /// Query string like "page=1&sort=hostname&order=asc"
-pub fn build_table_query(page: usize, sort_col: Option<&str>, order: &str) -> String {
+pub fn build_table_query(
+    page: usize,
+    sort_col: Option<&str>,
+    order: &str,
+) -> String {
     let mut query_params = vec![format!("page={}", page)];
     if let Some(col) = sort_col {
         query_params.push(format!("sort={}", col));

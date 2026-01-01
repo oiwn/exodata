@@ -14,10 +14,10 @@ pub fn main() {
 #[cfg(feature = "ssr")]
 async fn start_server() {
     use axum::Router;
-    use exoplanets_catalog::app::{shell, App};
-    use exoplanets_catalog::server::{self, ApiState};
     use exo_core::metadata;
     use exo_core::tables::common;
+    use exoplanets_catalog::app::{shell, App};
+    use exoplanets_catalog::server::{self, ApiState};
     use leptos::prelude::{get_configuration, provide_context};
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use std::path::Path;
@@ -37,16 +37,16 @@ async fn start_server() {
         };
 
     // Load metadata from TOML files
-    let stellarhosts_metadata = match metadata::load_metadata_toml(
-        Path::new("data/stellarhosts-metadata.toml")
-    ) {
+    let stellarhosts_metadata = match metadata::load_metadata_toml(Path::new(
+        "data/stellarhosts-metadata.toml",
+    )) {
         Ok(meta) => Arc::new(meta),
         Err(e) => panic!("Failed to load stellarhosts metadata: {}", e),
     };
 
-    let exoplanets_metadata = match metadata::load_metadata_toml(
-        Path::new("data/exoplanets-metadata.toml")
-    ) {
+    let exoplanets_metadata = match metadata::load_metadata_toml(Path::new(
+        "data/exoplanets-metadata.toml",
+    )) {
         Ok(meta) => Arc::new(meta),
         Err(e) => panic!("Failed to load exoplanets metadata: {}", e),
     };

@@ -1,7 +1,7 @@
 pub mod app;
-pub mod components;
 #[cfg(feature = "ssr")]
 pub mod common;
+pub mod components;
 pub mod error_template;
 
 // Server module contains server functions that need to be visible to both client and server

@@ -4,7 +4,10 @@ use anyhow::Error;
 use polars::prelude::*;
 
 /// Load a parquet file, optionally with a row limit for lightweight scans.
-pub fn load_parquet(path: &str, limit: Option<usize>) -> Result<DataFrame, Error> {
+pub fn load_parquet(
+    path: &str,
+    limit: Option<usize>,
+) -> Result<DataFrame, Error> {
     let file = File::open(path)?;
     let mut df = ParquetReader::new(file).finish()?;
     if let Some(n) = limit {

@@ -14,9 +14,7 @@ struct Cli {
 #[derive(Parser, Debug)]
 enum Commands {
     /// View fields from a VOTable file
-    ViewFields {
-        path: String,
-    },
+    ViewFields { path: String },
     /// View samples from stellarhosts parquet file
     ViewSamples {
         #[arg(short, long, default_value = "data/stellarhosts.parquet")]
@@ -63,7 +61,11 @@ enum Commands {
     ViewMetadata {
         #[arg(short, long, default_value = "data/exoplanets.vot")]
         path: String,
-        #[arg(short, long, help = "Filter to specific columns (comma-separated)")]
+        #[arg(
+            short,
+            long,
+            help = "Filter to specific columns (comma-separated)"
+        )]
         columns: Option<String>,
     },
 }
@@ -80,7 +82,9 @@ fn main() {
             category,
         } => {
             let cat = category.as_ref().map(|s| s.as_str());
-            if let Err(e) = commands::view_stellarhosts_samples(Path::new(&path), limit, cat) {
+            if let Err(e) =
+                commands::view_stellarhosts_samples(Path::new(&path), limit, cat)
+            {
                 eprintln!("Error viewing samples: {}", e);
             }
         }

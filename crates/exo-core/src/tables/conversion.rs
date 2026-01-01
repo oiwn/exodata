@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use polars::prelude::{ParquetCompression, ParquetReader, ParquetWriter, *};
 
@@ -67,7 +67,7 @@ pub fn convert_raw_files(data_dir: &Path) -> Result<(), Error> {
             None,
             Some(&row_pb),
         )
-            .with_context(|| format!("Failed to load {}", path.display()))?;
+        .with_context(|| format!("Failed to load {}", path.display()))?;
         let row_count = df.height();
         let col_count = df.width();
         let vot_size_bytes = fs::metadata(path).map(|m| m.len()).unwrap_or(0);
@@ -77,29 +77,42 @@ pub fn convert_raw_files(data_dir: &Path) -> Result<(), Error> {
         let output_path = path.with_extension("parquet");
 
         row_pb.set_message(format!("Writing {}", output_path.display()));
-        let file = File::create(&output_path)
-            .with_context(|| format!("Failed to create {}", output_path.display()))?;
+        let file = File::create(&output_path).with_context(|| {
+            format!("Failed to create {}", output_path.display())
+        })?;
         ParquetWriter::new(file)
             .with_compression(ParquetCompression::Zstd(None))
             .finish(&mut df)
-            .with_context(|| format!("Failed to write {}", output_path.display()))?;
+            .with_context(|| {
+                format!("Failed to write {}", output_path.display())
+            })?;
 
         // Extract and save metadata to TOML
         row_pb.set_message("Extracting metadata");
-        let vot_metadata = metadata::parse_votable_metadata(
-            path.to_string_lossy().as_ref()
-        ).unwrap_or_default();
+        let vot_metadata =
+            metadata::parse_votable_metadata(path.to_string_lossy().as_ref())
+                .unwrap_or_default();
 
-        let metadata_path = path.with_file_name(
-            format!("{}-metadata.toml",
-                path.file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("unknown"))
-        );
+        let metadata_path = path.with_file_name(format!(
+            "{}-metadata.toml",
+            path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+        ));
 
-        row_pb.set_message(format!("Writing metadata to {}", metadata_path.display()));
-        metadata::save_metadata_toml(&vot_metadata, &metadata_path)
-            .map_err(|e| anyhow!("Failed to save metadata to {}: {}", metadata_path.display(), e))?;
+        row_pb.set_message(format!(
+            "Writing metadata to {}",
+            metadata_path.display()
+        ));
+        metadata::save_metadata_toml(&vot_metadata, &metadata_path).map_err(
+            |e| {
+                anyhow!(
+                    "Failed to save metadata to {}: {}",
+                    metadata_path.display(),
+                    e
+                )
+            },
+        )?;
 
         row_pb.set_message(format!("Validating {}", output_path.display()));
         validate_parquet(&output_path, row_count, col_count)?;
@@ -170,12 +183,16 @@ pub fn convert_raw_files(data_dir: &Path) -> Result<(), Error> {
 }
 
 /// Basic validation to ensure the parquet file is readable and not empty.
-fn validate_parquet(path: &Path, expected_rows: usize, expected_cols: usize) -> Result<(), Error> {
+fn validate_parquet(
+    path: &Path,
+    expected_rows: usize,
+    expected_cols: usize,
+) -> Result<(), Error> {
     let file = File::open(path)
         .with_context(|| format!("Failed to open parquet {}", path.display()))?;
-    let df = ParquetReader::new(file)
-        .finish()
-        .map_err(|e| anyhow!("Parquet validation failed for {}: {}", path.display(), e))?;
+    let df = ParquetReader::new(file).finish().map_err(|e| {
+        anyhow!("Parquet validation failed for {}: {}", path.display(), e)
+    })?;
 
     if df.height() != expected_rows {
         return Err(anyhow!(

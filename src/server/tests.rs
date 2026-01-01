@@ -12,7 +12,10 @@ mod tests {
     use serde_json::Value;
     use tower::ServiceExt;
 
-    use crate::server::handlers::{ApiState, get_stellarhosts, get_exoplanets, get_stellarhosts_schema, get_exoplanets_schema};
+    use crate::server::handlers::{
+        get_exoplanets, get_exoplanets_schema, get_stellarhosts,
+        get_stellarhosts_schema, ApiState,
+    };
 
     fn create_test_state() -> ApiState {
         // Create test dataframes
@@ -47,8 +50,14 @@ mod tests {
         Router::new()
             .route("/api/stellarhosts", axum::routing::get(get_stellarhosts))
             .route("/api/exoplanets", axum::routing::get(get_exoplanets))
-            .route("/api/stellarhosts/schema", axum::routing::get(get_stellarhosts_schema))
-            .route("/api/exoplanets/schema", axum::routing::get(get_exoplanets_schema))
+            .route(
+                "/api/stellarhosts/schema",
+                axum::routing::get(get_stellarhosts_schema),
+            )
+            .route(
+                "/api/exoplanets/schema",
+                axum::routing::get(get_exoplanets_schema),
+            )
             .with_state(state)
     }
 
@@ -65,7 +74,9 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(json["data"].as_array().unwrap().len(), 3);
@@ -87,7 +98,9 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(json["data"].as_array().unwrap().len(), 1);
@@ -108,7 +121,9 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(json["data"].as_array().unwrap().len(), 2);
@@ -130,13 +145,15 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         let data = json["data"].as_array().unwrap();
         assert_eq!(data[0]["hostname"], "HD 189733"); // dist = 19.3
         assert_eq!(data[1]["hostname"], "HD 209458"); // dist = 47.9
-        assert_eq!(data[2]["hostname"], "Kepler-22");  // dist = 600.0
+        assert_eq!(data[2]["hostname"], "Kepler-22"); // dist = 600.0
     }
 
     #[tokio::test]
@@ -152,7 +169,9 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(json["data"].as_array().unwrap().len(), 3);
@@ -172,7 +191,9 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(json["data"].as_array().unwrap().len(), 1);
@@ -193,7 +214,9 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         // Should include Kepler-22 b (289.9) and HD 209458 b (3.524), but not HD 189733 b (2.218)
@@ -214,17 +237,20 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         assert!(json["columns"].is_array());
         assert_eq!(json["total_rows"], 3);
-        
+
         let columns = json["columns"].as_array().unwrap();
-        let column_names: Vec<String> = columns.iter()
+        let column_names: Vec<String> = columns
+            .iter()
             .map(|col| col["name"].as_str().unwrap().to_string())
             .collect();
-        
+
         assert!(column_names.contains(&"hostname".to_string()));
         assert!(column_names.contains(&"sy_dist".to_string()));
         assert!(column_names.contains(&"st_teff".to_string()));
@@ -243,17 +269,20 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
 
         assert!(json["columns"].is_array());
         assert_eq!(json["total_rows"], 3);
-        
+
         let columns = json["columns"].as_array().unwrap();
-        let column_names: Vec<String> = columns.iter()
+        let column_names: Vec<String> = columns
+            .iter()
             .map(|col| col["name"].as_str().unwrap().to_string())
             .collect();
-        
+
         assert!(column_names.contains(&"pl_name".to_string()));
         assert!(column_names.contains(&"hostname".to_string()));
         assert!(column_names.contains(&"pl_orbper".to_string()));

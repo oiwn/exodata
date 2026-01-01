@@ -70,11 +70,11 @@ pub async fn get_stats() -> Result<DataStats, ServerFnError> {
 pub struct TableData {
     pub rows: Vec<Value>,
     pub columns: Vec<String>,
-    pub total: usize,        // Filtered count (for pagination)
-    pub total_all: usize,    // Unfiltered count (entire dataset)
+    pub total: usize,     // Filtered count (for pagination)
+    pub total_all: usize, // Unfiltered count (entire dataset)
     pub page: usize,
     pub limit: usize,
-    pub metadata: HashMap<String, ColumnMetadata>,  // Column metadata (name, unit, description)
+    pub metadata: HashMap<String, ColumnMetadata>, // Column metadata (name, unit, description)
 }
 
 /// Server function to fetch paginated stellar hosts data
@@ -93,15 +93,18 @@ pub async fn get_stellarhosts_page(
     let state = expect_context::<ApiState>();
 
     // Call the common business logic
-    let (rows, total, total_all, columns, metadata) = common::get_stellarhosts_data(
-        &state.stellarhosts_df,
-        &state.stellarhosts_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-    )
-    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+    let (rows, total, total_all, columns, metadata) =
+        common::get_stellarhosts_data(
+            &state.stellarhosts_df,
+            &state.stellarhosts_metadata,
+            page,
+            limit,
+            sort_by,
+            order,
+        )
+        .map_err(|e: String| -> ServerFnError {
+            ServerFnError::ServerError(e)
+        })?;
 
     // Wrap in TableData response
     Ok(TableData {
@@ -131,15 +134,18 @@ pub async fn get_exoplanets_page(
     let state = expect_context::<ApiState>();
 
     // Call the common business logic
-    let (rows, total, total_all, columns, metadata) = common::get_exoplanets_data(
-        &state.exoplanets_df,
-        &state.exoplanets_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-    )
-    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+    let (rows, total, total_all, columns, metadata) =
+        common::get_exoplanets_data(
+            &state.exoplanets_df,
+            &state.exoplanets_metadata,
+            page,
+            limit,
+            sort_by,
+            order,
+        )
+        .map_err(|e: String| -> ServerFnError {
+            ServerFnError::ServerError(e)
+        })?;
 
     // Wrap in TableData response
     Ok(TableData {

@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use anyhow::{anyhow, Error};
+use anyhow::{Error, anyhow};
 use polars::prelude::*;
 use votable::data::DataElem;
 use votable::datatype::Datatype;
-use votable::impls::mem::InMemTableDataRows;
 use votable::impls::VOTableValue;
+use votable::impls::mem::InMemTableDataRows;
 use votable::table::TableElem;
 use votable::votable::VOTableWrapper;
 

@@ -13,7 +13,6 @@ use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-
 #[derive(Debug, Clone)]
 pub struct ApiState {
     pub stellarhosts_df: Arc<DataFrame>,
@@ -145,9 +144,7 @@ pub async fn get_stellarhosts_schema(
 }
 
 /// Handler for exoplanets schema information
-pub async fn get_exoplanets_schema(
-    State(state): State<ApiState>,
-) -> Json<Value> {
+pub async fn get_exoplanets_schema(State(state): State<ApiState>) -> Json<Value> {
     let df = &*state.exoplanets_df;
     let schema = dataframe_schema_to_json(df);
     Json(schema)
@@ -165,10 +162,14 @@ fn apply_stellarhosts_filters(
         if let Ok(col) = df.column("hostname") {
             if let Ok(str_col) = col.str() {
                 // Create a boolean mask for filtering
-                let mut mask = BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
+                let mut mask =
+                    BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
                 for i in 0..str_col.len() {
-                    let contains = str_col.get(i)
-                        .map(|s| s.to_lowercase().contains(&hostname.to_lowercase()))
+                    let contains = str_col
+                        .get(i)
+                        .map(|s| {
+                            s.to_lowercase().contains(&hostname.to_lowercase())
+                        })
                         .unwrap_or(false);
                     mask.append_value(contains);
                 }
@@ -230,10 +231,14 @@ fn apply_exoplanets_filters(
         if let Ok(col) = df.column("hostname") {
             if let Ok(str_col) = col.str() {
                 // Create a boolean mask for filtering
-                let mut mask = BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
+                let mut mask =
+                    BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
                 for i in 0..str_col.len() {
-                    let contains = str_col.get(i)
-                        .map(|s| s.to_lowercase().contains(&hostname.to_lowercase()))
+                    let contains = str_col
+                        .get(i)
+                        .map(|s| {
+                            s.to_lowercase().contains(&hostname.to_lowercase())
+                        })
                         .unwrap_or(false);
                     mask.append_value(contains);
                 }
@@ -247,10 +252,14 @@ fn apply_exoplanets_filters(
         if let Ok(col) = df.column("pl_name") {
             if let Ok(str_col) = col.str() {
                 // Create a boolean mask for filtering
-                let mut mask = BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
+                let mut mask =
+                    BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
                 for i in 0..str_col.len() {
-                    let contains = str_col.get(i)
-                        .map(|s| s.to_lowercase().contains(&pl_name.to_lowercase()))
+                    let contains = str_col
+                        .get(i)
+                        .map(|s| {
+                            s.to_lowercase().contains(&pl_name.to_lowercase())
+                        })
                         .unwrap_or(false);
                     mask.append_value(contains);
                 }
@@ -326,9 +335,8 @@ fn apply_sorting(
 ) -> Result<DataFrame, StatusCode> {
     let descending = order.unwrap_or("asc") == "desc";
 
-    let options = SortMultipleOptions::new()
-        .with_order_descending(descending);
-    
+    let options = SortMultipleOptions::new().with_order_descending(descending);
+
     match df.sort([sort_by], options) {
         Ok(sorted_df) => Ok(sorted_df),
         Err(_) => Err(StatusCode::BAD_REQUEST),
@@ -343,7 +351,7 @@ fn apply_pagination(
 ) -> Result<DataFrame, StatusCode> {
     let page = page.unwrap_or(1);
     let limit = limit.unwrap_or(50);
-    
+
     if page == 0 {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -354,7 +362,7 @@ fn apply_pagination(
     }
 
     let end = std::cmp::min(offset + limit, df.height());
-    
+
     Ok(df.slice(offset as i64, end - offset))
 }
 
@@ -362,47 +370,47 @@ fn apply_pagination(
 fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, StatusCode> {
     let mut rows = Vec::new();
     let columns = df.get_column_names();
-    
+
     for row_idx in 0..df.height() {
         let mut row_map = HashMap::new();
-        
+
         for col_name in &columns {
             if let Ok(col) = df.column(col_name) {
                 let value = match col.dtype() {
-                    DataType::String => {
-                        col.str().unwrap()
-                            .get(row_idx)
-                            .map(|s| json!(s))
-                            .unwrap_or(json!(null))
-                    }
-                    DataType::Float64 => {
-                        col.f64().unwrap()
-                            .get(row_idx)
-                            .map(|f| json!(f))
-                            .unwrap_or(json!(null))
-                    }
-                    DataType::Int64 => {
-                        col.i64().unwrap()
-                            .get(row_idx)
-                            .map(|i| json!(i))
-                            .unwrap_or(json!(null))
-                    }
+                    DataType::String => col
+                        .str()
+                        .unwrap()
+                        .get(row_idx)
+                        .map(|s| json!(s))
+                        .unwrap_or(json!(null)),
+                    DataType::Float64 => col
+                        .f64()
+                        .unwrap()
+                        .get(row_idx)
+                        .map(|f| json!(f))
+                        .unwrap_or(json!(null)),
+                    DataType::Int64 => col
+                        .i64()
+                        .unwrap()
+                        .get(row_idx)
+                        .map(|i| json!(i))
+                        .unwrap_or(json!(null)),
                     _ => json!(null),
                 };
                 row_map.insert(col_name.to_string(), value);
             }
         }
-        
+
         rows.push(json!(row_map));
     }
-    
+
     Ok(rows)
 }
 
 /// Convert DataFrame schema to JSON for UI column selection
 fn dataframe_schema_to_json(df: &DataFrame) -> Value {
     let mut columns = Vec::new();
-    
+
     for field in df.fields() {
         let column_info = json!({
             "name": field.name(),
@@ -410,7 +418,7 @@ fn dataframe_schema_to_json(df: &DataFrame) -> Value {
         });
         columns.push(column_info);
     }
-    
+
     json!({
         "columns": columns,
         "total_rows": df.height()
