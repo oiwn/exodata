@@ -3,6 +3,7 @@
 Cargo.lock
 /data/*.csv
 /data/*.vot
+/data/*.toml
 /data/*.parquet
 
 tmp/

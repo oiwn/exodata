@@ -1,182 +1,70 @@
 # Current Context
 
-## Implementation Plan: Metadata Integration
+## Implementation Plan: Column Selector Widget
 
-### Architecture Overview
+**Goal**: Add a column selector widget that allows users to choose which columns to display in the table, with state synchronized to URL parameters.
 
-**Current Data Flow**:
-```
-Frontend Component (ExoplanetsTablePage)
-    ↓ (Resource::new with server function)
-Server Function (get_exoplanets_page)
-    ↓ (calls common::get_exoplanets_data)
-Business Logic (src/server/common.rs)
-    ↓ (reads from Arc<DataFrame>)
-TableData Response
-    ↓ (serialized to frontend)
-Table Component (renders with column_descriptions)
-```
+### User Experience
 
-**Gap**: TableData currently doesn't include column descriptions from metadata.rs
+Users should be able to:
+1. See a list of all available columns with checkboxes
+2. Select/deselect columns to show/hide them in the table
+3. Have their selection reflected in the URL (e.g., `?columns=pl_name,hostname,pl_orbper`)
+4. Share URLs with specific column selections
+5. See column descriptions/units in the selector (from metadata)
 
-### Implementation Steps
+### Current State
 
-#### Step 1: Load Metadata at Server Startup
-**File**: `src/main.rs` (server startup)
+✅ **Available:**
+- Metadata for all columns (name, description, unit, datatype)
+- `TableData` includes metadata in API response
+- Server functions can accept query parameters
 
-**What to do**:
-- Load VOTable metadata into memory alongside DataFrames
-- Store in `ApiState` for reuse across requests
-- Parse both `data/exoplanets.vot` and `data/stellarhosts.vot`
-
-**Changes needed**:
-
-```rust
-// Add to ApiState struct
-pub struct ApiState {
-    pub exoplanets_df: Arc<DataFrame>,
-    pub stellarhosts_df: Arc<DataFrame>,
-    // NEW: Add metadata storage
-    pub exoplanets_metadata: Arc<HashMap<String, ColumnMetadata>>,
-    pub stellarhosts_metadata: Arc<HashMap<String, ColumnMetadata>>,
-}
-```
-
-**Implementation**:
-- Use `exo_core::metadata::parse_votable_metadata()` to load metadata
-- Convert `Vec<ColumnMetadata>` to `HashMap<String, ColumnMetadata>` for fast lookup
-- Wrap in `Arc<>` for cheap cloning across requests
-
-**Error handling**:
-- If VOTable file missing, log warning and use empty HashMap
-- Application should still work without metadata (graceful degradation)
+❌ **Missing:**
+- Column selector UI component
+- URL parameter handling for column selection
+- Server-side column filtering based on query parameter
+- State synchronization between UI, URL, and table
 
 ---
 
-#### Step 2: Extend TableData Structure
-**File**: `src/server/functions.rs`
+## Implementation Steps
 
-**What to do**:
-- Add `column_descriptions` field to `TableData` struct
-- Make it match the Table component's expected type
+### Step 1: Server-Side Column Filtering
 
-**Changes needed**:
+**Files to modify:**
+- `src/server/common.rs` - Add `columns` parameter to data functions
+- `src/server/functions.rs` - Pass `columns` parameter through server functions
+
+**Changes:**
+
 ```rust
-#[derive(Serialize, Deserialize, Clone)]
-pub struct TableData {
-    pub rows: Vec<serde_json::Value>,
-    pub columns: Vec<String>,
-    pub total: usize,
-    pub total_all: usize,
-    pub page: usize,
-    pub limit: usize,
-    // NEW: Add column descriptions
-    pub column_descriptions: Option<HashMap<String, String>>,
-}
-```
-
----
-
-#### Step 3: Update Business Logic to Include Metadata
-**File**: `src/server/common.rs`
-
-**What to do**:
-- Modify `get_exoplanets_data()` and `get_stellarhosts_data()` functions
-- Accept metadata as a parameter
-- Build `column_descriptions` HashMap from metadata for requested columns
-
-**Function signature changes**:
-```rust
-// OLD
-pub fn get_exoplanets_data(
-    df: Arc<DataFrame>,
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-) -> Result<(Vec<serde_json::Value>, usize, usize, Vec<String>), String>
-
-// NEW
-pub fn get_exoplanets_data(
-    df: Arc<DataFrame>,
-    metadata: Arc<HashMap<String, ColumnMetadata>>,  // NEW PARAM
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-) -> Result<(Vec<serde_json::Value>, usize, usize, Vec<String>, Option<HashMap<String, String>>), String>
-//                                                                                      ^^^^^^^^^^^^^^^^
-//                                                                                      NEW RETURN VALUE
-```
-
-**Implementation logic**:
-```rust
-// After determining which columns to return
-let columns = vec!["pl_name", "hostname", "pl_orbper", ...];
-
-// Build column descriptions from metadata
-let column_descriptions: HashMap<String, String> = columns
-    .iter()
-    .filter_map(|col_name| {
-        metadata.get(*col_name).and_then(|meta| {
-            meta.description.as_ref().map(|desc| {
-                // Optionally append unit to description
-                let full_desc = match &meta.unit {
-                    Some(unit) if !unit.is_empty() => format!("{} (Unit: {})", desc, unit),
-                    _ => desc.clone(),
-                };
-                (col_name.to_string(), full_desc)
-            })
-        })
-    })
-    .collect();
-
-let column_descriptions = if column_descriptions.is_empty() {
-    None
-} else {
-    Some(column_descriptions)
-};
-```
-
----
-
-#### Step 4: Update Server Functions
-**File**: `src/server/functions.rs`
-
-**What to do**:
-- Modify `get_exoplanets_page()` and `get_stellarhosts_page()` server functions
-- Extract metadata from `ApiState` via `use_context()`
-- Pass metadata to business logic functions
-- Include in TableData response
-
-**Changes**:
-```rust
-#[server(GetExoplanetsPage, "/api")]
+// src/server/functions.rs
+#[server(input = GetUrl)]
 pub async fn get_exoplanets_page(
     page: usize,
     limit: usize,
     sort_by: Option<String>,
     order: Option<String>,
+    columns: Option<String>,  // NEW: Comma-separated column names
 ) -> Result<TableData, ServerFnError> {
-    use crate::server::common::get_exoplanets_data;
-    use leptos::use_context;
+    let state = expect_context::<ApiState>();
 
-    let state = use_context::<ApiState>()
-        .ok_or_else(|| ServerFnError::ServerError("ApiState not found".to_string()))?;
+    // Parse columns parameter
+    let selected_columns = columns.map(|s| {
+        s.split(',').map(|col| col.trim().to_string()).collect::<Vec<_>>()
+    });
 
-    // NEW: Extract metadata from state
-    let metadata = state.exoplanets_metadata.clone();
-
-    let (rows, total, total_all, columns, column_descriptions) =
-        get_exoplanets_data(
-            state.exoplanets_df.clone(),
-            metadata,  // NEW: Pass metadata
-            page,
-            limit,
-            sort_by,
-            order,
-        )
-        .map_err(|e| ServerFnError::ServerError(e))?;
+    let (rows, total, total_all, columns, metadata) = common::get_exoplanets_data(
+        &state.exoplanets_df,
+        &state.exoplanets_metadata,
+        page,
+        limit,
+        sort_by,
+        order,
+        selected_columns,  // NEW
+    )
+    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
 
     Ok(TableData {
         rows,
@@ -185,130 +73,504 @@ pub async fn get_exoplanets_page(
         total_all,
         page,
         limit,
-        column_descriptions,  // NEW: Include in response
+        metadata,
     })
+}
+```
+
+```rust
+// src/server/common.rs
+pub fn get_exoplanets_data(
+    df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+    selected_columns: Option<Vec<String>>,  // NEW: Optional column filter
+) -> ExoplanetsResult {
+    let mut df = df.clone();
+
+    // Define default columns if none specified
+    let default_columns = vec![
+        "pl_name",
+        "hostname",
+        "discoverymethod",
+        "disc_year",
+        "pl_orbper",
+        "pl_rade",
+        "pl_bmasse",
+    ];
+
+    // Use selected columns or fall back to defaults
+    let columns_to_select: Vec<&str> = if let Some(cols) = &selected_columns {
+        // Validate that requested columns exist in dataframe
+        cols.iter()
+            .filter(|col| df.column(col).is_ok())
+            .map(|s| s.as_str())
+            .collect()
+    } else {
+        default_columns
+    };
+
+    // Ensure we have at least one column
+    if columns_to_select.is_empty() {
+        return Err("No valid columns selected".to_string());
+    }
+
+    // Select only the requested columns
+    df = df
+        .select(columns_to_select.clone())
+        .map_err(|e| format!("Failed to select columns: {}", e))?;
+
+    // ... rest of existing logic (sorting, pagination, etc.)
+}
+```
+
+**Same for `get_stellarhosts_data()`**
+
+---
+
+### Step 2: Frontend Column Selector Component
+
+**File to create**: `src/components/column_selector.rs`
+
+**Component Features:**
+- Display list of all available columns
+- Show checkboxes for selection
+- Display column descriptions from metadata
+- Group columns by category (optional)
+- "Select All" / "Deselect All" buttons
+- Search/filter column list
+
+**Component Structure:**
+
+```rust
+use leptos::prelude::*;
+use std::collections::HashMap;
+use exo_core::metadata::ColumnMetadata;
+
+#[component]
+pub fn ColumnSelector(
+    /// All available columns with their metadata
+    available_columns: HashMap<String, ColumnMetadata>,
+    /// Currently selected column names
+    selected_columns: Signal<Vec<String>>,
+    /// Callback when selection changes
+    on_change: impl Fn(Vec<String>) + 'static,
+) -> impl IntoView {
+    let (search_term, set_search_term) = signal(String::new());
+
+    // Sort columns alphabetically
+    let sorted_columns = move || {
+        let mut cols: Vec<_> = available_columns.iter().collect();
+        cols.sort_by_key(|(name, _)| *name);
+        cols
+    };
+
+    // Filter columns based on search
+    let filtered_columns = move || {
+        sorted_columns()
+            .into_iter()
+            .filter(|(name, meta)| {
+                let search = search_term.get().to_lowercase();
+                if search.is_empty() {
+                    return true;
+                }
+                name.to_lowercase().contains(&search) ||
+                meta.description.as_ref()
+                    .map(|d| d.to_lowercase().contains(&search))
+                    .unwrap_or(false)
+            })
+            .collect::<Vec<_>>()
+    };
+
+    view! {
+        <div class="column-selector">
+            <h3>"Select Columns"</h3>
+
+            // Search box
+            <input
+                type="text"
+                placeholder="Search columns..."
+                value=search_term
+                on:input=move |e| set_search_term.set(event_target_value(&e))
+            />
+
+            // Select All / Deselect All
+            <div class="selector-actions">
+                <button on:click=move |_| {
+                    let all: Vec<String> = available_columns.keys().cloned().collect();
+                    on_change(all);
+                }>
+                    "Select All"
+                </button>
+                <button on:click=move |_| on_change(vec![])>
+                    "Deselect All"
+                </button>
+            </div>
+
+            // Column list with checkboxes
+            <div class="column-list">
+                <For
+                    each=filtered_columns
+                    key=|(name, _)| name.to_string()
+                    children=move |(name, meta)| {
+                        let is_checked = move || selected_columns.get().contains(name);
+                        let name_clone = name.to_string();
+
+                        view! {
+                            <label class="column-item">
+                                <input
+                                    type="checkbox"
+                                    checked=is_checked
+                                    on:change=move |_| {
+                                        let mut current = selected_columns.get();
+                                        if current.contains(&name_clone) {
+                                            current.retain(|c| c != &name_clone);
+                                        } else {
+                                            current.push(name_clone.clone());
+                                        }
+                                        on_change(current);
+                                    }
+                                />
+                                <span class="column-name">{name}</span>
+                                {meta.description.as_ref().map(|desc| {
+                                    view! {
+                                        <span class="column-desc">{desc}</span>
+                                    }
+                                })}
+                                {meta.unit.as_ref().map(|unit| {
+                                    view! {
+                                        <span class="column-unit">"["{unit}"]"</span>
+                                    }
+                                })}
+                            </label>
+                        }
+                    }
+                />
+            </div>
+        </div>
+    }
 }
 ```
 
 ---
 
-#### Step 5: Update Frontend Components
-**Files**: `src/components/exoplanets_table.rs`, `src/components/stellarhosts_table.rs`
+### Step 3: URL Parameter Synchronization
 
-**What to do**:
-- Pass `column_descriptions` from `TableData` to `Table` component
-- No logic changes needed - just wire through the data
+**File to modify**: Table components (`src/components/exoplanets_table.rs`, `src/components/stellarhosts_table.rs`)
 
-**Changes**:
+**Approach:**
+- Use Leptos router's query parameter utilities
+- Read initial state from URL on mount
+- Update URL when selection changes
+- Listen to URL changes to update UI
+
+**Implementation:**
+
 ```rust
-// In ExoplanetsTablePage component
-<Table
-    data=data.clone()
-    on_sort=on_sort
-    column_descriptions=data.column_descriptions.clone()  // CHANGED: Use from data instead of None
-/>
+use leptos::prelude::*;
+use leptos_router::hooks::use_query_map;
+
+#[component]
+pub fn ExoplanetsTable() -> impl IntoView {
+    // Read URL parameters
+    let query_params = use_query_map();
+
+    // Parse columns from URL
+    let initial_columns = move || {
+        query_params
+            .read()
+            .get("columns")
+            .map(|s| s.split(',').map(|col| col.trim().to_string()).collect())
+            .unwrap_or_else(|| vec![
+                "pl_name".to_string(),
+                "hostname".to_string(),
+                "discoverymethod".to_string(),
+                "disc_year".to_string(),
+                "pl_orbper".to_string(),
+                "pl_rade".to_string(),
+                "pl_bmasse".to_string(),
+            ])
+    };
+
+    let (selected_columns, set_selected_columns) = signal(initial_columns());
+
+    // Update URL when columns change
+    let update_url = move |columns: Vec<String>| {
+        set_selected_columns.set(columns.clone());
+
+        // Update query parameter
+        let columns_str = columns.join(",");
+        let navigate = leptos_router::hooks::use_navigate();
+
+        // Preserve other query params while updating columns
+        let current_search = window().location().search().unwrap_or_default();
+        let mut params = current_search
+            .trim_start_matches('?')
+            .split('&')
+            .filter(|p| !p.starts_with("columns="))
+            .collect::<Vec<_>>();
+
+        if !columns.is_empty() {
+            params.push(&format!("columns={}", columns_str));
+        }
+
+        let new_search = if params.is_empty() {
+            String::new()
+        } else {
+            format!("?{}", params.join("&"))
+        };
+
+        navigate(&new_search, Default::default());
+    };
+
+    // Fetch data with selected columns
+    let columns_param = move || Some(selected_columns.get().join(","));
+
+    let data = Resource::new(
+        move || (page.get(), limit.get(), sort_by.get(), order.get(), columns_param()),
+        |(page, limit, sort_by, order, columns)| async move {
+            get_exoplanets_page(page, limit, sort_by, order, columns).await
+        },
+    );
+
+    view! {
+        <div class="exoplanets-page">
+            <ColumnSelector
+                available_columns=/* get from metadata */
+                selected_columns=selected_columns
+                on_change=update_url
+            />
+
+            <Suspense fallback=|| view! { <p>"Loading..."</p> }>
+                {move || {
+                    data.get().map(|result| match result {
+                        Ok(table_data) => view! {
+                            <Table
+                                data=table_data
+                                on_sort=/* ... */
+                            />
+                        },
+                        Err(e) => view! { <p>"Error: " {e.to_string()}</p> }
+                    })
+                }}
+            </Suspense>
+        </div>
+    }
+}
 ```
 
-**Current state**: Components already have this structure, just passing `None` currently
+---
+
+### Step 4: Styling
+
+**File to create/modify**: `style/main.scss` or component-specific styles
+
+```scss
+.column-selector {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+
+    h3 {
+        margin-top: 0;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+    }
+
+    .selector-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+
+        button {
+            padding: 0.5rem 1rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+
+            &:hover {
+                background: var(--primary-hover-color);
+            }
+        }
+    }
+
+    .column-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 0.5rem;
+
+        .column-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+
+            &:hover {
+                background: var(--hover-color);
+            }
+
+            input[type="checkbox"] {
+                cursor: pointer;
+            }
+
+            .column-name {
+                font-weight: 600;
+                font-family: monospace;
+                flex-shrink: 0;
+            }
+
+            .column-desc {
+                color: var(--text-secondary);
+                font-size: 0.9rem;
+                flex: 1;
+            }
+
+            .column-unit {
+                color: var(--text-tertiary);
+                font-size: 0.85rem;
+                font-style: italic;
+            }
+        }
+    }
+}
+```
 
 ---
 
-#### Step 6: Update REST API (Optional)
-**File**: `src/server/handlers.rs`
+### Step 5: Advanced Features (Optional)
 
-**What to do** (if REST API is still in use):
-- Add metadata field to `ApiResponse` struct
-- Update handlers to include metadata
-- Follow same pattern as server functions
+**Column Grouping:**
+- Group columns by category (planet properties, stellar properties, discovery info, etc.)
+- Collapsible sections for each group
 
-**Note**: Based on architecture analysis, Leptos server functions are the primary data access method. REST API updates are optional for consistency.
+**Presets:**
+- Save common column selections as presets
+- "Basic", "Discovery", "Orbital", "Physical" presets
+- User-defined custom presets (localStorage)
 
----
+**Column Reordering:**
+- Drag-and-drop to reorder columns
+- Order reflected in URL and table
 
-### Testing Plan
-
-1. **Unit test metadata loading**:
-   - Verify `parse_votable_metadata()` works with sample files
-   - Test HashMap conversion logic
-
-2. **Integration test server functions**:
-   - Mock ApiState with sample metadata
-   - Call `get_exoplanets_page()` and verify `column_descriptions` field
-   - Test with missing metadata (graceful degradation)
-
-3. **Manual testing**:
-   - Run server: `cargo leptos watch`
-   - Navigate to exoplanets table
-   - Hover over column headers and verify tooltips appear
-   - Verify tooltip text matches NASA descriptions
-   - Check browser console for errors
-
-4. **Performance testing**:
-   - Measure server startup time with metadata loading
-   - Verify no significant impact on page load time
-   - Metadata should be cached in memory (Arc<HashMap>)
+**Persistence:**
+- Remember user's last selection in localStorage
+- Auto-restore on next visit
 
 ---
 
-### Performance Considerations
+## Testing Strategy
 
-**Memory usage**:
-- VOTable files are large (~400MB), but we only extract metadata (small)
-- Estimated metadata size: ~200 columns × ~200 bytes = ~40KB per table
-- Total additional memory: <100KB (negligible)
+**Unit Tests:**
+- Column selector component renders correctly
+- Checkbox state updates properly
+- Search filtering works
 
-**Startup time**:
-- Parsing VOTable XML may add 1-2 seconds to server startup
-- Acceptable tradeoff for runtime performance
-- Alternative: Pre-process metadata to JSON file (future optimization)
+**Integration Tests:**
+- URL parameter parsing works
+- Server correctly filters columns
+- Table updates when columns change
+- URL updates when selection changes
 
-**Runtime performance**:
-- Metadata lookup: O(1) HashMap access
-- Building column_descriptions: O(n) where n = number of columns (~10-20)
-- Negligible impact on request latency
+**Manual Testing:**
+- Select/deselect columns and verify table updates
+- Copy URL and open in new tab - selection should persist
+- Search for columns
+- Test with empty selection (should show error or default columns)
+- Test with invalid column names in URL
 
 ---
 
-### File Dependency Map
+## File Changes Summary
+
+**New Files:**
+- `src/components/column_selector.rs`
+
+**Modified Files:**
+- `src/server/common.rs` - Add `columns` parameter to data functions
+- `src/server/functions.rs` - Add `columns` parameter to server functions
+- `src/components/exoplanets_table.rs` - Integrate column selector + URL sync
+- `src/components/stellarhosts_table.rs` - Integrate column selector + URL sync
+- `src/components/mod.rs` - Export `ColumnSelector` component
+- `style/main.scss` - Add column selector styles
+
+**Tests to Update:**
+- `src/server/common.rs` tests - Add column filtering tests
+- Component tests for column selector
+
+---
+
+## URL Parameter Format
+
+**Examples:**
 
 ```
-Metadata Loading (Server Startup):
-  src/main.rs
-    ↓ uses
-  exo-core/src/metadata.rs
-    ↓ reads
-  data/exoplanets.vot
-  data/stellarhosts.vot
+# Select specific columns
+/exoplanets?columns=pl_name,hostname,pl_orbper,pl_rade
 
-Data Flow (Request):
-  src/components/exoplanets_table.rs
-    ↓ calls
-  src/server/functions.rs::get_exoplanets_page()
-    ↓ uses context
-  ApiState (with metadata)
-    ↓ calls
-  src/server/common.rs::get_exoplanets_data()
-    ↓ combines data + metadata
-  TableData (with column_descriptions)
-    ↓ renders
-  src/table/table.rs::Table component
+# With pagination
+/exoplanets?page=2&limit=50&columns=pl_name,hostname,disc_year
+
+# With sorting and columns
+/exoplanets?sort_by=pl_orbper&order=desc&columns=pl_name,pl_orbper,pl_rade
+
+# No columns specified (use defaults)
+/exoplanets
 ```
+
+**URL Encoding:**
+- Column names should be URL-encoded if they contain special characters
+- Comma-separated list for multiple columns
+- Empty or missing = use default columns
 
 ---
 
-### Rollback Plan
+## Implementation Order
 
-If issues arise:
-1. Set `column_descriptions: None` in server functions
-2. Application will work without tooltips
-3. Fix metadata loading and redeploy
+1. ✅ **Phase 1**: Server-side column filtering
+   - Update `common.rs` functions
+   - Update server functions
+   - Add tests
 
-No database schema changes required - purely in-memory changes.
+2. ✅ **Phase 2**: Basic column selector component
+   - Create component with checkboxes
+   - Display all columns from metadata
+   - Handle selection state
 
-**Potential future enhancements:**
-- Add search/filter functionality to tables
-- Add detailed view pages for individual planets/stars
-- Add data visualizations (charts, graphs)
-- Add export functionality (CSV, JSON)
-- Add column visibility toggles
-- Add more statistical insights to overview page
+3. ✅ **Phase 3**: URL synchronization
+   - Read columns from URL parameters
+   - Update URL when selection changes
+   - Integrate with table components
+
+4. ✅ **Phase 4**: Styling and UX
+   - Add CSS styles
+   - Add search functionality
+   - Add select all/deselect all
+
+5. ⏳ **Phase 5**: Advanced features (optional)
+   - Column grouping
+   - Presets
+   - localStorage persistence
+   - Drag-and-drop reordering
+
+---
+
+## Next Steps
+
+Start with **Phase 1**: Server-side column filtering in `src/server/common.rs`.

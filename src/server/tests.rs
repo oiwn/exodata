@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::sync::Arc;
 
     use axum::{
@@ -35,6 +36,8 @@ mod tests {
         ApiState {
             stellarhosts_df: Arc::new(stellarhosts_df),
             exoplanets_df: Arc::new(exoplanets_df),
+            stellarhosts_metadata: Arc::new(HashMap::new()),
+            exoplanets_metadata: Arc::new(HashMap::new()),
         }
     }
 

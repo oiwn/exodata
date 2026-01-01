@@ -8,6 +8,7 @@ use axum::{
     routing::get,
     Router,
 };
+use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -17,6 +18,8 @@ use serde_json::{json, Value};
 pub struct ApiState {
     pub stellarhosts_df: Arc<DataFrame>,
     pub exoplanets_df: Arc<DataFrame>,
+    pub stellarhosts_metadata: Arc<HashMap<String, ColumnMetadata>>,
+    pub exoplanets_metadata: Arc<HashMap<String, ColumnMetadata>>,
 }
 
 /// Parameters for filtering, sorting, and pagination

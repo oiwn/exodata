@@ -2,16 +2,37 @@
 // This module contains pure functions that are called by both Leptos server functions
 // and Axum REST handlers. It's server-only and contains no HTTP/Leptos dependencies.
 
+use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde_json::{json, Value};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Result type for stellarhosts data operations
-/// Returns: (rows, filtered_total, unfiltered_total, columns)
-pub type StellarHostsResult = Result<(Vec<Value>, usize, usize, Vec<String>), String>;
+/// Returns: (rows, filtered_total, unfiltered_total, columns, metadata)
+pub type StellarHostsResult = Result<
+    (
+        Vec<Value>,
+        usize,
+        usize,
+        Vec<String>,
+        HashMap<String, ColumnMetadata>,
+    ),
+    String,
+>;
 
 /// Result type for exoplanets data operations
-/// Returns: (rows, filtered_total, unfiltered_total, columns)
-pub type ExoplanetsResult = Result<(Vec<Value>, usize, usize, Vec<String>), String>;
+/// Returns: (rows, filtered_total, unfiltered_total, columns, metadata)
+pub type ExoplanetsResult = Result<
+    (
+        Vec<Value>,
+        usize,
+        usize,
+        Vec<String>,
+        HashMap<String, ColumnMetadata>,
+    ),
+    String,
+>;
 
 /// Get paginated stellar hosts data with sorting
 ///
@@ -20,15 +41,17 @@ pub type ExoplanetsResult = Result<(Vec<Value>, usize, usize, Vec<String>), Stri
 ///
 /// # Arguments
 /// * `df` - Reference to the stellarhosts DataFrame
+/// * `all_metadata` - Reference to all column metadata
 /// * `page` - Page number (1-indexed)
 /// * `limit` - Number of rows per page
 /// * `sort_by` - Optional column name to sort by
 /// * `order` - Sort order ("asc" or "desc")
 ///
 /// # Returns
-/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names)
+/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names, column metadata)
 pub fn get_stellarhosts_data(
     df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
     page: usize,
     limit: usize,
     sort_by: Option<String>,
@@ -38,7 +61,8 @@ pub fn get_stellarhosts_data(
     let mut df = df.clone();
 
     // Define the columns we want to display
-    let columns_to_select = ["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
+    let columns_to_select =
+        ["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
 
     // Select only the columns we need
     df = df
@@ -59,7 +83,8 @@ pub fn get_stellarhosts_data(
 
         // Then sort
         let descending = order.as_deref().unwrap_or("asc") == "desc";
-        let options = SortMultipleOptions::new().with_order_descending(descending);
+        let options =
+            SortMultipleOptions::new().with_order_descending(descending);
 
         df = df
             .sort([sort_col.as_str()], options)
@@ -85,9 +110,20 @@ pub fn get_stellarhosts_data(
     let rows = dataframe_to_json(&df)?;
 
     // Get column names
-    let columns: Vec<String> = columns_to_select.iter().map(|s| (*s).to_string()).collect();
+    let columns: Vec<String> =
+        columns_to_select.iter().map(|s| (*s).to_string()).collect();
 
-    Ok((rows, total, total_all, columns))
+    // Build metadata for the selected columns
+    let column_metadata: HashMap<String, ColumnMetadata> = columns
+        .iter()
+        .filter_map(|col_name| {
+            all_metadata
+                .get(col_name)
+                .map(|meta| (col_name.clone(), meta.clone()))
+        })
+        .collect();
+
+    Ok((rows, total, total_all, columns, column_metadata))
 }
 
 /// Get paginated exoplanets data with sorting
@@ -97,15 +133,17 @@ pub fn get_stellarhosts_data(
 ///
 /// # Arguments
 /// * `df` - Reference to the exoplanets DataFrame
+/// * `all_metadata` - Reference to all column metadata
 /// * `page` - Page number (1-indexed)
 /// * `limit` - Number of rows per page
 /// * `sort_by` - Optional column name to sort by
 /// * `order` - Sort order ("asc" or "desc")
 ///
 /// # Returns
-/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names)
+/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names, column metadata)
 pub fn get_exoplanets_data(
     df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
     page: usize,
     limit: usize,
     sort_by: Option<String>,
@@ -144,7 +182,8 @@ pub fn get_exoplanets_data(
 
         // Then sort
         let descending = order.as_deref().unwrap_or("asc") == "desc";
-        let options = SortMultipleOptions::new().with_order_descending(descending);
+        let options =
+            SortMultipleOptions::new().with_order_descending(descending);
 
         df = df
             .sort([sort_col.as_str()], options)
@@ -170,9 +209,20 @@ pub fn get_exoplanets_data(
     let rows = dataframe_to_json(&df)?;
 
     // Get column names
-    let columns: Vec<String> = columns_to_select.iter().map(|s| (*s).to_string()).collect();
+    let columns: Vec<String> =
+        columns_to_select.iter().map(|s| (*s).to_string()).collect();
 
-    Ok((rows, total, total_all, columns))
+    // Build metadata for the selected columns
+    let column_metadata: HashMap<String, ColumnMetadata> = columns
+        .iter()
+        .filter_map(|col_name| {
+            all_metadata
+                .get(col_name)
+                .map(|meta| (col_name.clone(), meta.clone()))
+        })
+        .collect();
+
+    Ok((rows, total, total_all, columns, column_metadata))
 }
 
 /// Helper function to convert DataFrame to JSON
@@ -189,55 +239,50 @@ fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, String> {
         for col_name in &columns {
             if let Ok(col) = df.column(col_name) {
                 let value = match col.dtype() {
-                    DataType::String => {
-                        col.str()
-                            .map_err(|e| format!("Failed to get string column: {}", e))?
-                            .get(row_idx)
-                            .map(|s| json!(s))
-                            .unwrap_or(json!(null))
-                    }
-                    DataType::Float64 => {
-                        col.f64()
-                            .map_err(|e| format!("Failed to get f64 column: {}", e))?
-                            .get(row_idx)
-                            .map(|f| json!(f))
-                            .unwrap_or(json!(null))
-                    }
-                    DataType::Float32 => {
-                        col.f32()
-                            .map_err(|e| format!("Failed to get f32 column: {}", e))?
-                            .get(row_idx)
-                            .map(|f| json!(f))
-                            .unwrap_or(json!(null))
-                    }
-                    DataType::Int64 => {
-                        col.i64()
-                            .map_err(|e| format!("Failed to get i64 column: {}", e))?
-                            .get(row_idx)
-                            .map(|i| json!(i))
-                            .unwrap_or(json!(null))
-                    }
-                    DataType::Int32 => {
-                        col.i32()
-                            .map_err(|e| format!("Failed to get i32 column: {}", e))?
-                            .get(row_idx)
-                            .map(|i| json!(i))
-                            .unwrap_or(json!(null))
-                    }
-                    DataType::UInt32 => {
-                        col.u32()
-                            .map_err(|e| format!("Failed to get u32 column: {}", e))?
-                            .get(row_idx)
-                            .map(|i| json!(i))
-                            .unwrap_or(json!(null))
-                    }
-                    DataType::UInt64 => {
-                        col.u64()
-                            .map_err(|e| format!("Failed to get u64 column: {}", e))?
-                            .get(row_idx)
-                            .map(|i| json!(i))
-                            .unwrap_or(json!(null))
-                    }
+                    DataType::String => col
+                        .str()
+                        .map_err(|e| {
+                            format!("Failed to get string column: {}", e)
+                        })?
+                        .get(row_idx)
+                        .map(|s| json!(s))
+                        .unwrap_or(json!(null)),
+                    DataType::Float64 => col
+                        .f64()
+                        .map_err(|e| format!("Failed to get f64 column: {}", e))?
+                        .get(row_idx)
+                        .map(|f| json!(f))
+                        .unwrap_or(json!(null)),
+                    DataType::Float32 => col
+                        .f32()
+                        .map_err(|e| format!("Failed to get f32 column: {}", e))?
+                        .get(row_idx)
+                        .map(|f| json!(f))
+                        .unwrap_or(json!(null)),
+                    DataType::Int64 => col
+                        .i64()
+                        .map_err(|e| format!("Failed to get i64 column: {}", e))?
+                        .get(row_idx)
+                        .map(|i| json!(i))
+                        .unwrap_or(json!(null)),
+                    DataType::Int32 => col
+                        .i32()
+                        .map_err(|e| format!("Failed to get i32 column: {}", e))?
+                        .get(row_idx)
+                        .map(|i| json!(i))
+                        .unwrap_or(json!(null)),
+                    DataType::UInt32 => col
+                        .u32()
+                        .map_err(|e| format!("Failed to get u32 column: {}", e))?
+                        .get(row_idx)
+                        .map(|i| json!(i))
+                        .unwrap_or(json!(null)),
+                    DataType::UInt64 => col
+                        .u64()
+                        .map_err(|e| format!("Failed to get u64 column: {}", e))?
+                        .get(row_idx)
+                        .map(|i| json!(i))
+                        .unwrap_or(json!(null)),
                     _ => json!(null),
                 };
                 row_map.insert(col_name.to_string(), value);
@@ -267,20 +312,26 @@ mod tests {
         }
         .unwrap();
 
+        // Create empty metadata for testing
+        let metadata = Arc::new(HashMap::new());
+
         // Test first page
-        let (rows, total, total_all, _cols) = get_stellarhosts_data(&df, 1, 2, None, None).unwrap();
+        let (rows, total, total_all, _cols, _meta) =
+            get_stellarhosts_data(&df, &metadata, 1, 2, None, None).unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
 
         // Test second page
-        let (rows, total, total_all, _cols) = get_stellarhosts_data(&df, 2, 2, None, None).unwrap();
+        let (rows, total, total_all, _cols, _meta) =
+            get_stellarhosts_data(&df, &metadata, 2, 2, None, None).unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
 
         // Test last page (partial)
-        let (rows, total, total_all, _cols) = get_stellarhosts_data(&df, 3, 2, None, None).unwrap();
+        let (rows, total, total_all, _cols, _meta) =
+            get_stellarhosts_data(&df, &metadata, 3, 2, None, None).unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
@@ -297,14 +348,33 @@ mod tests {
         }
         .unwrap();
 
+        // Create empty metadata for testing
+        let metadata = Arc::new(HashMap::new());
+
         // Test ascending sort
-        let (rows, _, _, _) = get_stellarhosts_data(&df, 1, 10, Some("hostname".to_string()), Some("asc".to_string())).unwrap();
+        let (rows, _, _, _, _) = get_stellarhosts_data(
+            &df,
+            &metadata,
+            1,
+            10,
+            Some("hostname".to_string()),
+            Some("asc".to_string()),
+        )
+        .unwrap();
         assert_eq!(rows[0]["hostname"], "Star A");
         assert_eq!(rows[1]["hostname"], "Star B");
         assert_eq!(rows[2]["hostname"], "Star C");
 
         // Test descending sort
-        let (rows, _, _, _) = get_stellarhosts_data(&df, 1, 10, Some("sy_dist".to_string()), Some("desc".to_string())).unwrap();
+        let (rows, _, _, _, _) = get_stellarhosts_data(
+            &df,
+            &metadata,
+            1,
+            10,
+            Some("sy_dist".to_string()),
+            Some("desc".to_string()),
+        )
+        .unwrap();
         assert_eq!(rows[0]["sy_dist"], 20.3);
         assert_eq!(rows[1]["sy_dist"], 15.7);
         assert_eq!(rows[2]["sy_dist"], 10.5);

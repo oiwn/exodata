@@ -1,10 +1,12 @@
 // Leptos server functions for the application
 // These functions can be called from the client but execute on the server
 
+use exo_core::metadata::ColumnMetadata;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
 use leptos::server_fn::codec::GetUrl; // For GET request encoding
 use leptos::server_fn::ServerFnError; // Needed for TableData on both client and server
+use std::collections::HashMap;
 
 // Server-only imports
 #[cfg(feature = "ssr")]
@@ -72,6 +74,7 @@ pub struct TableData {
     pub total_all: usize,    // Unfiltered count (entire dataset)
     pub page: usize,
     pub limit: usize,
+    pub metadata: HashMap<String, ColumnMetadata>,  // Column metadata (name, unit, description)
 }
 
 /// Server function to fetch paginated stellar hosts data
@@ -90,8 +93,9 @@ pub async fn get_stellarhosts_page(
     let state = expect_context::<ApiState>();
 
     // Call the common business logic
-    let (rows, total, total_all, columns) = common::get_stellarhosts_data(
+    let (rows, total, total_all, columns, metadata) = common::get_stellarhosts_data(
         &state.stellarhosts_df,
+        &state.stellarhosts_metadata,
         page,
         limit,
         sort_by,
@@ -107,6 +111,7 @@ pub async fn get_stellarhosts_page(
         total_all,
         page,
         limit,
+        metadata,
     })
 }
 
@@ -126,8 +131,9 @@ pub async fn get_exoplanets_page(
     let state = expect_context::<ApiState>();
 
     // Call the common business logic
-    let (rows, total, total_all, columns) = common::get_exoplanets_data(
+    let (rows, total, total_all, columns, metadata) = common::get_exoplanets_data(
         &state.exoplanets_df,
+        &state.exoplanets_metadata,
         page,
         limit,
         sort_by,
@@ -143,5 +149,6 @@ pub async fn get_exoplanets_page(
         total_all,
         page,
         limit,
+        metadata,
     })
 }

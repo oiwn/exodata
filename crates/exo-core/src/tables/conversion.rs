@@ -7,6 +7,7 @@ use anyhow::{anyhow, Context, Error};
 use indicatif::{ProgressBar, ProgressStyle};
 use polars::prelude::{ParquetCompression, ParquetReader, ParquetWriter, *};
 
+use crate::metadata;
 use crate::tables::votable_loader::load_votable_with_progress_timed;
 
 /// Convert all `.vot` files in `data_dir` to `.parquet` in the same directory.
@@ -82,6 +83,23 @@ pub fn convert_raw_files(data_dir: &Path) -> Result<(), Error> {
             .with_compression(ParquetCompression::Zstd(None))
             .finish(&mut df)
             .with_context(|| format!("Failed to write {}", output_path.display()))?;
+
+        // Extract and save metadata to TOML
+        row_pb.set_message("Extracting metadata");
+        let vot_metadata = metadata::parse_votable_metadata(
+            path.to_string_lossy().as_ref()
+        ).unwrap_or_default();
+
+        let metadata_path = path.with_file_name(
+            format!("{}-metadata.toml",
+                path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown"))
+        );
+
+        row_pb.set_message(format!("Writing metadata to {}", metadata_path.display()));
+        metadata::save_metadata_toml(&vot_metadata, &metadata_path)
+            .map_err(|e| anyhow!("Failed to save metadata to {}: {}", metadata_path.display(), e))?;
 
         row_pb.set_message(format!("Validating {}", output_path.display()));
         validate_parquet(&output_path, row_count, col_count)?;
