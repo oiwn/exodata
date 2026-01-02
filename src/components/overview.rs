@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos_router::components::A;
 
 // Import server function and types - #[server] macro handles client/server compilation
-use crate::server::functions::{get_stats, DataStats};
+use crate::server::functions::{DataStats, get_stats};
 
 #[component]
 pub fn OverviewPage() -> impl IntoView {

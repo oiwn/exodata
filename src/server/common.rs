@@ -4,7 +4,7 @@
 
 use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -63,13 +63,8 @@ pub fn get_stellarhosts_data(
     let mut df = df.clone();
 
     // Define default columns if none specified
-    let default_columns = vec![
-        "hostname",
-        "sy_dist",
-        "st_teff",
-        "st_mass",
-        "sy_pnum",
-    ];
+    let default_columns =
+        vec!["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
 
     // Use selected columns or fall back to defaults
     let columns_to_select: Vec<&str> = if let Some(cols) = &selected_columns {
@@ -356,21 +351,24 @@ mod tests {
 
         // Test first page
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 1, 2, None, None, None).unwrap();
+            get_stellarhosts_data(&df, &metadata, 1, 2, None, None, None)
+                .unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
 
         // Test second page
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 2, 2, None, None, None).unwrap();
+            get_stellarhosts_data(&df, &metadata, 2, 2, None, None, None)
+                .unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
 
         // Test last page (partial)
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 3, 2, None, None, None).unwrap();
+            get_stellarhosts_data(&df, &metadata, 3, 2, None, None, None)
+                .unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
@@ -435,7 +433,8 @@ mod tests {
         let metadata = Arc::new(HashMap::new());
 
         // Request only specific columns
-        let selected_columns = vec!["hostname".to_string(), "sy_dist".to_string()];
+        let selected_columns =
+            vec!["hostname".to_string(), "sy_dist".to_string()];
         let (rows, _, _, columns, _) = get_stellarhosts_data(
             &df,
             &metadata,
@@ -475,7 +474,8 @@ mod tests {
         let metadata = Arc::new(HashMap::new());
 
         // Request invalid columns
-        let selected_columns = vec!["invalid_col1".to_string(), "invalid_col2".to_string()];
+        let selected_columns =
+            vec!["invalid_col1".to_string(), "invalid_col2".to_string()];
         let result = get_stellarhosts_data(
             &df,
             &metadata,

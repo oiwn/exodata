@@ -4,17 +4,17 @@ mod tests {
     use std::sync::Arc;
 
     use axum::{
+        Router,
         body::Body,
         http::{Request, StatusCode},
-        Router,
     };
     use polars::prelude::*;
     use serde_json::Value;
     use tower::ServiceExt;
 
     use crate::server::handlers::{
-        get_exoplanets, get_exoplanets_schema, get_stellarhosts,
-        get_stellarhosts_schema, ApiState,
+        ApiState, get_exoplanets, get_exoplanets_schema, get_stellarhosts,
+        get_stellarhosts_schema,
     };
 
     fn create_test_state() -> ApiState {

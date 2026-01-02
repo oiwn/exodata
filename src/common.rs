@@ -1,7 +1,7 @@
 //! Common functions!
 use std::collections::HashSet;
 use votable::iter::{TableIter, VOTableIterator};
-use votable::{datatype::Datatype, impls::VOTableValue, TableElem};
+use votable::{TableElem, datatype::Datatype, impls::VOTableValue};
 // use votable::{Field, VOTableElement};
 
 #[allow(dead_code)]

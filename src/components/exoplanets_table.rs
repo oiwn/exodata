@@ -1,6 +1,7 @@
 use crate::components::column_selector::ColumnSelector;
-use crate::table::{build_table_query, Table};
+use crate::table::{Table, build_table_query};
 use leptos::prelude::*;
+use leptos_router::NavigateOptions;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
 
@@ -55,6 +56,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let (sort_column, set_sort_column) = signal(initial_sort_column);
     let (sort_order, set_sort_order) = signal(initial_sort_order);
     let (selected_columns, set_selected_columns) = signal(initial_columns);
+    let (selector_is_open, set_selector_is_open) = signal(false);
 
     // Resource that fetches data when dependencies change
     let table_resource = Resource::new(
@@ -72,7 +74,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             } else {
                 Some(columns.join(","))
             };
-            get_exoplanets_page(page, 50, sort_col, Some(order), columns_param).await
+            get_exoplanets_page(page, 50, sort_col, Some(order), columns_param)
+                .await
         },
     );
 
@@ -169,7 +172,10 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             let query_string = query_params.join("&");
             navigate(
                 &format!("/exoplanets?{}", query_string),
-                Default::default(),
+                NavigateOptions {
+                    scroll: false,
+                    ..Default::default()
+                },
             );
         }
     });
@@ -211,6 +217,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                 available_columns=columns_signal
                                 selected_columns=selected_columns
                                 on_change=on_columns_change
+                                is_open=selector_is_open
+                                on_toggle=Callback::new(move |state| set_selector_is_open.set(state))
                             />
                         }
                     }}

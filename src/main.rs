@@ -16,10 +16,10 @@ async fn start_server() {
     use axum::Router;
     use exo_core::metadata;
     use exo_core::tables::common;
-    use exoplanets_catalog::app::{shell, App};
+    use exoplanets_catalog::app::{App, shell};
     use exoplanets_catalog::server::{self, ApiState};
     use leptos::prelude::{get_configuration, provide_context};
-    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use leptos_axum::{LeptosRoutes, generate_route_list};
     use std::path::Path;
     use std::sync::Arc;
 

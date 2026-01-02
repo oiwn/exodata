@@ -8,8 +8,8 @@ use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::components::*;
 use leptos_router::StaticSegment;
+use leptos_router::components::*;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {

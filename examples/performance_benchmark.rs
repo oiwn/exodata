@@ -64,9 +64,13 @@ fn main() -> Result<(), Error> {
     }
 
     println!("Notes:");
-    println!("  - Uses lazy scan + collect (column pruning + predicate pushdown if applied).");
+    println!(
+        "  - Uses lazy scan + collect (column pruning + predicate pushdown if applied)."
+    );
     println!("  - Pass --limit to simulate sampling reads.");
-    println!("  - Point --parquet to the converted files (e.g., data/stellarhosts.parquet,data/exoplanets.parquet).");
+    println!(
+        "  - Point --parquet to the converted files (e.g., data/stellarhosts.parquet,data/exoplanets.parquet)."
+    );
 
     Ok(())
 }

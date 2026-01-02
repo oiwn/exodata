@@ -11,9 +11,26 @@ pub fn ColumnSelector(
     selected_columns: ReadSignal<Vec<String>>,
     /// Callback when selection changes
     on_change: Callback<Vec<String>>,
+    /// External control for open/close state
+    #[prop(optional)]
+    is_open: Option<ReadSignal<bool>>,
+    /// Callback when open/close state changes
+    #[prop(optional)]
+    on_toggle: Option<Callback<bool>>,
 ) -> impl IntoView {
     let (search_term, set_search_term) = signal(String::new());
-    let (is_open, set_is_open) = signal(false);
+
+    // Use external is_open if provided, otherwise create internal state
+    let (internal_is_open, set_internal_is_open) = signal(false);
+    let is_open_signal = is_open.unwrap_or(internal_is_open);
+
+    let toggle_open = move |new_state: bool| {
+        if let Some(callback) = on_toggle {
+            callback.run(new_state);
+        } else {
+            set_internal_is_open.set(new_state);
+        }
+    };
 
     // Sort columns alphabetically
     let sorted_columns = move || {
@@ -52,8 +69,8 @@ pub fn ColumnSelector(
         on_change.run(vec![]);
     };
 
-    // Add column from the available list (auto-collapse)
-    let add_column = move |column_name: String| {
+    // Add/remove column from the available list (no auto-collapse)
+    let toggle_column = move |column_name: String| {
         let mut current = selected_columns.get();
         if current.contains(&column_name) {
             current.retain(|c| c != &column_name);
@@ -61,8 +78,6 @@ pub fn ColumnSelector(
             current.push(column_name);
         }
         on_change.run(current);
-        // Auto-collapse after adding from the list
-        set_is_open.set(false);
     };
 
     // Remove column from selected list (no auto-collapse)
@@ -107,10 +122,13 @@ pub fn ColumnSelector(
         <div class="mb-6">
             <button
                 class="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700 hover:bg-slate-800 hover:border-slate-600 transition-all flex items-center justify-between text-left"
-                on:click=move |_| set_is_open.update(|open| *open = !*open)
+                on:click=move |_| {
+                    let new_state = !is_open_signal.get();
+                    toggle_open(new_state);
+                }
             >
                 <span class="text-gray-300 font-medium">
-                    {move || if is_open.get() {
+                    {move || if is_open_signal.get() {
                         "▼ Hide Column Selector"
                     } else {
                         "▶ Select Columns"
@@ -121,7 +139,7 @@ pub fn ColumnSelector(
                 </span>
             </button>
 
-            <Show when=move || is_open.get()>
+            <Show when=move || is_open_signal.get()>
                 <div class="mt-2 p-4 rounded-lg bg-slate-800/30 border border-slate-700 backdrop-blur-sm space-y-4">
 
                     // Selected columns with reorder controls
@@ -238,7 +256,7 @@ pub fn ColumnSelector(
                                                 type="checkbox"
                                                 class="mt-1 w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 bg-slate-700 cursor-pointer"
                                                 checked=is_checked
-                                                on:change=move |_| add_column(name_for_toggle.clone())
+                                                on:change=move |_| toggle_column(name_for_toggle.clone())
                                             />
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex items-baseline gap-2 flex-wrap">

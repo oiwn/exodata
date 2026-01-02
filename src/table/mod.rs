@@ -1,3 +1,3 @@
 pub mod table;
 
-pub use table::{build_table_query, Table};
+pub use table::{Table, build_table_query};

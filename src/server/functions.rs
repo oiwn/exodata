@@ -3,8 +3,8 @@
 
 use leptos::prelude::*;
 use leptos::serde_json::Value;
-use leptos::server_fn::codec::GetUrl; // For GET request encoding
 use leptos::server_fn::ServerFnError; // Needed for TableData on both client and server
+use leptos::server_fn::codec::GetUrl; // For GET request encoding
 use std::collections::HashMap;
 
 // Server-only imports
