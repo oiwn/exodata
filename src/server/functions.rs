@@ -1,7 +1,6 @@
 // Leptos server functions for the application
 // These functions can be called from the client but execute on the server
 
-use exo_core::metadata::ColumnMetadata;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
 use leptos::server_fn::codec::GetUrl; // For GET request encoding
@@ -15,6 +14,31 @@ use crate::server::common;
 use crate::server::handlers::ApiState;
 #[cfg(feature = "ssr")]
 use exo_core::tables::overview as aggregation;
+
+// NOTE: This is a temporary duplicate of exo_core::metadata::ColumnMetadata
+// to avoid bringing exo-core dependencies into the client WASM bundle.
+// This will be resolved in the future by restructuring exo-core with feature flags
+// or extracting shared types into a separate lightweight crate.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ColumnMetadata {
+    pub name: String,
+    pub description: Option<String>,
+    pub unit: Option<String>,
+    pub datatype: String,
+}
+
+// Helper to convert from exo-core's ColumnMetadata to our local copy
+#[cfg(feature = "ssr")]
+impl From<exo_core::metadata::ColumnMetadata> for ColumnMetadata {
+    fn from(meta: exo_core::metadata::ColumnMetadata) -> Self {
+        ColumnMetadata {
+            name: meta.name,
+            description: meta.description,
+            unit: meta.unit,
+            datatype: meta.datatype,
+        }
+    }
+}
 
 /// Statistics data structure for the overview page
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -88,12 +112,20 @@ pub async fn get_stellarhosts_page(
     limit: usize,
     sort_by: Option<String>,
     order: Option<String>,
+    columns: Option<String>,
 ) -> Result<TableData, ServerFnError> {
     // Get ApiState from leptos context
     let state = expect_context::<ApiState>();
 
+    // Parse columns parameter (comma-separated column names)
+    let selected_columns = columns.map(|s| {
+        s.split(',')
+            .map(|col| col.trim().to_string())
+            .collect::<Vec<_>>()
+    });
+
     // Call the common business logic
-    let (rows, total, total_all, columns, metadata) =
+    let (rows, total, total_all, columns, exo_metadata) =
         common::get_stellarhosts_data(
             &state.stellarhosts_df,
             &state.stellarhosts_metadata,
@@ -101,10 +133,17 @@ pub async fn get_stellarhosts_page(
             limit,
             sort_by,
             order,
+            selected_columns,
         )
         .map_err(|e: String| -> ServerFnError {
             ServerFnError::ServerError(e)
         })?;
+
+    // Convert exo-core metadata to our local ColumnMetadata
+    let metadata: HashMap<String, ColumnMetadata> = exo_metadata
+        .into_iter()
+        .map(|(key, val)| (key, val.into()))
+        .collect();
 
     // Wrap in TableData response
     Ok(TableData {
@@ -129,12 +168,20 @@ pub async fn get_exoplanets_page(
     limit: usize,
     sort_by: Option<String>,
     order: Option<String>,
+    columns: Option<String>,
 ) -> Result<TableData, ServerFnError> {
     // Get ApiState from leptos context
     let state = expect_context::<ApiState>();
 
+    // Parse columns parameter (comma-separated column names)
+    let selected_columns = columns.map(|s| {
+        s.split(',')
+            .map(|col| col.trim().to_string())
+            .collect::<Vec<_>>()
+    });
+
     // Call the common business logic
-    let (rows, total, total_all, columns, metadata) =
+    let (rows, total, total_all, columns, exo_metadata) =
         common::get_exoplanets_data(
             &state.exoplanets_df,
             &state.exoplanets_metadata,
@@ -142,10 +189,17 @@ pub async fn get_exoplanets_page(
             limit,
             sort_by,
             order,
+            selected_columns,
         )
         .map_err(|e: String| -> ServerFnError {
             ServerFnError::ServerError(e)
         })?;
+
+    // Convert exo-core metadata to our local ColumnMetadata
+    let metadata: HashMap<String, ColumnMetadata> = exo_metadata
+        .into_iter()
+        .map(|(key, val)| (key, val.into()))
+        .collect();
 
     // Wrap in TableData response
     Ok(TableData {

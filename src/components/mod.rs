@@ -1,4 +1,5 @@
 pub mod about;
+pub mod column_selector;
 pub mod exoplanets_table;
 pub mod navbar;
 pub mod overview;

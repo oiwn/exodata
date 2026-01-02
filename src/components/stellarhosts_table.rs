@@ -1,3 +1,4 @@
+use crate::components::column_selector::ColumnSelector;
 use crate::table::{build_table_query, Table};
 use leptos::prelude::*;
 use leptos_router::components::A;
@@ -28,16 +29,48 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             .unwrap_or_else(|| "asc".to_string())
     });
 
-    // Reactive state for pagination and sorting
+    // Default columns for stellar hosts
+    let default_columns = vec![
+        "hostname".to_string(),
+        "sy_dist".to_string(),
+        "st_teff".to_string(),
+        "st_mass".to_string(),
+        "sy_pnum".to_string(),
+    ];
+
+    let initial_columns = query_map.with_untracked(|q| {
+        q.get("columns")
+            .map(|s| {
+                s.split(',')
+                    .map(|col| col.trim().to_string())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_else(|| default_columns.clone())
+    });
+
+    // Reactive state for pagination, sorting, and columns
     let (current_page, set_current_page) = signal(initial_page);
     let (sort_column, set_sort_column) = signal(initial_sort_column);
     let (sort_order, set_sort_order) = signal(initial_sort_order);
+    let (selected_columns, set_selected_columns) = signal(initial_columns);
 
     // Resource that fetches data when dependencies change
     let table_resource = Resource::new(
-        move || (current_page.get(), sort_column.get(), sort_order.get()),
-        move |(page, sort_col, order)| async move {
-            get_stellarhosts_page(page, 50, sort_col, Some(order)).await
+        move || {
+            (
+                current_page.get(),
+                sort_column.get(),
+                sort_order.get(),
+                selected_columns.get(),
+            )
+        },
+        move |(page, sort_col, order, columns)| async move {
+            let columns_param = if columns.is_empty() {
+                None
+            } else {
+                Some(columns.join(","))
+            };
+            get_stellarhosts_page(page, 50, sort_col, Some(order), columns_param).await
         },
     );
 
@@ -99,6 +132,55 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         }
     });
 
+    // Column selection change handler
+    let on_columns_change = Callback::new({
+        let navigate = navigate.clone();
+        move |columns: Vec<String>| {
+            set_selected_columns.set(columns.clone());
+            set_current_page.set(1); // Reset to page 1 when columns change
+
+            // Clear sort if the sorted column is no longer in selected columns
+            let current_sort = sort_column.get();
+            if let Some(ref sort_col) = current_sort {
+                if !columns.contains(sort_col) {
+                    set_sort_column.set(None);
+                }
+            }
+
+            // Update URL with new state
+            let page = current_page.get();
+            let sort_col = sort_column.get();
+            let order = sort_order.get();
+            let mut query_params = vec![format!("page={}", page)];
+
+            if let Some(col) = sort_col.as_deref() {
+                if columns.contains(&col.to_string()) {
+                    query_params.push(format!("sort={}", col));
+                    query_params.push(format!("order={}", order));
+                }
+            }
+
+            if !columns.is_empty() {
+                query_params.push(format!("columns={}", columns.join(",")));
+            }
+
+            let query_string = query_params.join("&");
+            navigate(
+                &format!("/stellarhosts?{}", query_string),
+                Default::default(),
+            );
+        }
+    });
+
+    // Get metadata from the table resource for the column selector
+    let available_columns = move || {
+        table_resource
+            .get()
+            .and_then(|res| res.ok())
+            .map(|data| data.metadata)
+            .unwrap_or_default()
+    };
+
     view! {
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             // Header
@@ -116,6 +198,21 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                         "Browse the complete database of confirmed stellar host systems"
                     </p>
                 </div>
+
+                // Column Selector
+                <Suspense fallback=|| view! { <div></div> }>
+                    {move || {
+                        let columns_map = available_columns();
+                        let (columns_signal, _) = signal(columns_map);
+                        view! {
+                            <ColumnSelector
+                                available_columns=columns_signal
+                                selected_columns=selected_columns
+                                on_change=on_columns_change
+                            />
+                        }
+                    }}
+                </Suspense>
 
                 // Main content with loading state
                 <Suspense fallback=move || {

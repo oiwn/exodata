@@ -46,6 +46,7 @@ pub type ExoplanetsResult = Result<
 /// * `limit` - Number of rows per page
 /// * `sort_by` - Optional column name to sort by
 /// * `order` - Sort order ("asc" or "desc")
+/// * `selected_columns` - Optional list of column names to display
 ///
 /// # Returns
 /// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names, column metadata)
@@ -56,39 +57,65 @@ pub fn get_stellarhosts_data(
     limit: usize,
     sort_by: Option<String>,
     order: Option<String>,
+    selected_columns: Option<Vec<String>>,
 ) -> StellarHostsResult {
     // Clone the dataframe to work with it
     let mut df = df.clone();
 
-    // Define the columns we want to display
-    let columns_to_select =
-        ["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
+    // Define default columns if none specified
+    let default_columns = vec![
+        "hostname",
+        "sy_dist",
+        "st_teff",
+        "st_mass",
+        "sy_pnum",
+    ];
+
+    // Use selected columns or fall back to defaults
+    let columns_to_select: Vec<&str> = if let Some(cols) = &selected_columns {
+        // Validate that requested columns exist in dataframe
+        cols.iter()
+            .filter(|col| df.column(col).is_ok())
+            .map(|s| s.as_str())
+            .collect()
+    } else {
+        default_columns.iter().map(|s| *s).collect()
+    };
+
+    // Ensure we have at least one column
+    if columns_to_select.is_empty() {
+        return Err("No valid columns selected".to_string());
+    }
 
     // Select only the columns we need
     df = df
-        .select(columns_to_select)
+        .select(columns_to_select.clone())
         .map_err(|e| format!("Failed to select columns: {}", e))?;
 
     // Get unfiltered total FIRST (before any filtering)
     let total_all = df.height();
 
     // Apply sorting with null filtering if requested
+    // Only sort if the sort column is actually in the selected columns
     if let Some(sort_col) = &sort_by {
-        // Filter out rows where sort column is null using LazyFrame
-        df = df
-            .lazy()
-            .filter(col(sort_col).is_not_null())
-            .collect()
-            .map_err(|e| format!("Failed to filter nulls: {}", e))?;
+        if columns_to_select.contains(&sort_col.as_str()) {
+            // Filter out rows where sort column is null using LazyFrame
+            df = df
+                .lazy()
+                .filter(col(sort_col).is_not_null())
+                .collect()
+                .map_err(|e| format!("Failed to filter nulls: {}", e))?;
 
-        // Then sort
-        let descending = order.as_deref().unwrap_or("asc") == "desc";
-        let options =
-            SortMultipleOptions::new().with_order_descending(descending);
+            // Then sort
+            let descending = order.as_deref().unwrap_or("asc") == "desc";
+            let options =
+                SortMultipleOptions::new().with_order_descending(descending);
 
-        df = df
-            .sort([sort_col.as_str()], options)
-            .map_err(|e| format!("Failed to sort: {}", e))?;
+            df = df
+                .sort([sort_col.as_str()], options)
+                .map_err(|e| format!("Failed to sort: {}", e))?;
+        }
+        // If sort column is not in selected columns, silently ignore the sort
     }
 
     // Get filtered total AFTER filtering (but before pagination)
@@ -113,17 +140,12 @@ pub fn get_stellarhosts_data(
     let columns: Vec<String> =
         columns_to_select.iter().map(|s| (*s).to_string()).collect();
 
-    // Build metadata for the selected columns
-    let column_metadata: HashMap<String, ColumnMetadata> = columns
-        .iter()
-        .filter_map(|col_name| {
-            all_metadata
-                .get(col_name)
-                .map(|meta| (col_name.clone(), meta.clone()))
-        })
-        .collect();
+    // Return ALL metadata (not just selected columns) so the column selector
+    // can show all available columns to the user
+    let all_column_metadata: HashMap<String, ColumnMetadata> =
+        all_metadata.as_ref().clone();
 
-    Ok((rows, total, total_all, columns, column_metadata))
+    Ok((rows, total, total_all, columns, all_column_metadata))
 }
 
 /// Get paginated exoplanets data with sorting
@@ -138,6 +160,7 @@ pub fn get_stellarhosts_data(
 /// * `limit` - Number of rows per page
 /// * `sort_by` - Optional column name to sort by
 /// * `order` - Sort order ("asc" or "desc")
+/// * `selected_columns` - Optional list of column names to display
 ///
 /// # Returns
 /// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names, column metadata)
@@ -148,12 +171,13 @@ pub fn get_exoplanets_data(
     limit: usize,
     sort_by: Option<String>,
     order: Option<String>,
+    selected_columns: Option<Vec<String>>,
 ) -> ExoplanetsResult {
     // Clone the dataframe to work with it
     let mut df = df.clone();
 
-    // Define the columns we want to display
-    let columns_to_select = [
+    // Define default columns if none specified
+    let default_columns = vec![
         "pl_name",
         "hostname",
         "discoverymethod",
@@ -163,31 +187,51 @@ pub fn get_exoplanets_data(
         "pl_bmasse",
     ];
 
+    // Use selected columns or fall back to defaults
+    let columns_to_select: Vec<&str> = if let Some(cols) = &selected_columns {
+        // Validate that requested columns exist in dataframe
+        cols.iter()
+            .filter(|col| df.column(col).is_ok())
+            .map(|s| s.as_str())
+            .collect()
+    } else {
+        default_columns.iter().map(|s| *s).collect()
+    };
+
+    // Ensure we have at least one column
+    if columns_to_select.is_empty() {
+        return Err("No valid columns selected".to_string());
+    }
+
     // Select only the columns we need
     df = df
-        .select(columns_to_select)
+        .select(columns_to_select.clone())
         .map_err(|e| format!("Failed to select columns: {}", e))?;
 
     // Get unfiltered total FIRST (before any filtering)
     let total_all = df.height();
 
     // Apply sorting with null filtering if requested
+    // Only sort if the sort column is actually in the selected columns
     if let Some(sort_col) = &sort_by {
-        // Filter out rows where sort column is null using LazyFrame
-        df = df
-            .lazy()
-            .filter(col(sort_col).is_not_null())
-            .collect()
-            .map_err(|e| format!("Failed to filter nulls: {}", e))?;
+        if columns_to_select.contains(&sort_col.as_str()) {
+            // Filter out rows where sort column is null using LazyFrame
+            df = df
+                .lazy()
+                .filter(col(sort_col).is_not_null())
+                .collect()
+                .map_err(|e| format!("Failed to filter nulls: {}", e))?;
 
-        // Then sort
-        let descending = order.as_deref().unwrap_or("asc") == "desc";
-        let options =
-            SortMultipleOptions::new().with_order_descending(descending);
+            // Then sort
+            let descending = order.as_deref().unwrap_or("asc") == "desc";
+            let options =
+                SortMultipleOptions::new().with_order_descending(descending);
 
-        df = df
-            .sort([sort_col.as_str()], options)
-            .map_err(|e| format!("Failed to sort: {}", e))?;
+            df = df
+                .sort([sort_col.as_str()], options)
+                .map_err(|e| format!("Failed to sort: {}", e))?;
+        }
+        // If sort column is not in selected columns, silently ignore the sort
     }
 
     // Get filtered total AFTER filtering (but before pagination)
@@ -212,17 +256,12 @@ pub fn get_exoplanets_data(
     let columns: Vec<String> =
         columns_to_select.iter().map(|s| (*s).to_string()).collect();
 
-    // Build metadata for the selected columns
-    let column_metadata: HashMap<String, ColumnMetadata> = columns
-        .iter()
-        .filter_map(|col_name| {
-            all_metadata
-                .get(col_name)
-                .map(|meta| (col_name.clone(), meta.clone()))
-        })
-        .collect();
+    // Return ALL metadata (not just selected columns) so the column selector
+    // can show all available columns to the user
+    let all_column_metadata: HashMap<String, ColumnMetadata> =
+        all_metadata.as_ref().clone();
 
-    Ok((rows, total, total_all, columns, column_metadata))
+    Ok((rows, total, total_all, columns, all_column_metadata))
 }
 
 /// Helper function to convert DataFrame to JSON
@@ -317,21 +356,21 @@ mod tests {
 
         // Test first page
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 1, 2, None, None).unwrap();
+            get_stellarhosts_data(&df, &metadata, 1, 2, None, None, None).unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
 
         // Test second page
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 2, 2, None, None).unwrap();
+            get_stellarhosts_data(&df, &metadata, 2, 2, None, None, None).unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
 
         // Test last page (partial)
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 3, 2, None, None).unwrap();
+            get_stellarhosts_data(&df, &metadata, 3, 2, None, None, None).unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
@@ -359,6 +398,7 @@ mod tests {
             10,
             Some("hostname".to_string()),
             Some("asc".to_string()),
+            None,
         )
         .unwrap();
         assert_eq!(rows[0]["hostname"], "Star A");
@@ -373,10 +413,117 @@ mod tests {
             10,
             Some("sy_dist".to_string()),
             Some("desc".to_string()),
+            None,
         )
         .unwrap();
         assert_eq!(rows[0]["sy_dist"], 20.3);
         assert_eq!(rows[1]["sy_dist"], 15.7);
         assert_eq!(rows[2]["sy_dist"], 10.5);
+    }
+
+    #[test]
+    fn test_column_filtering() {
+        let df = df! {
+            "hostname" => &["Star A", "Star B", "Star C"],
+            "sy_dist" => &[10.5, 20.3, 15.7],
+            "st_teff" => &[5778.0, 6000.0, 5500.0],
+            "st_mass" => &[1.0, 1.2, 0.9],
+            "sy_pnum" => &[1, 2, 1],
+        }
+        .unwrap();
+
+        let metadata = Arc::new(HashMap::new());
+
+        // Request only specific columns
+        let selected_columns = vec!["hostname".to_string(), "sy_dist".to_string()];
+        let (rows, _, _, columns, _) = get_stellarhosts_data(
+            &df,
+            &metadata,
+            1,
+            10,
+            None,
+            None,
+            Some(selected_columns),
+        )
+        .unwrap();
+
+        // Verify only requested columns are returned
+        assert_eq!(columns.len(), 2);
+        assert!(columns.contains(&"hostname".to_string()));
+        assert!(columns.contains(&"sy_dist".to_string()));
+
+        // Verify data contains only requested columns
+        for row in &rows {
+            assert!(row.get("hostname").is_some());
+            assert!(row.get("sy_dist").is_some());
+            assert!(row.get("st_teff").is_none());
+            assert!(row.get("st_mass").is_none());
+        }
+    }
+
+    #[test]
+    fn test_invalid_column_filtering() {
+        let df = df! {
+            "hostname" => &["Star A", "Star B"],
+            "sy_dist" => &[10.5, 20.3],
+            "st_teff" => &[5778.0, 6000.0],
+            "st_mass" => &[1.0, 1.2],
+            "sy_pnum" => &[1, 2],
+        }
+        .unwrap();
+
+        let metadata = Arc::new(HashMap::new());
+
+        // Request invalid columns
+        let selected_columns = vec!["invalid_col1".to_string(), "invalid_col2".to_string()];
+        let result = get_stellarhosts_data(
+            &df,
+            &metadata,
+            1,
+            10,
+            None,
+            None,
+            Some(selected_columns),
+        );
+
+        // Should return error for no valid columns
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "No valid columns selected");
+    }
+
+    #[test]
+    fn test_partial_valid_column_filtering() {
+        let df = df! {
+            "hostname" => &["Star A", "Star B"],
+            "sy_dist" => &[10.5, 20.3],
+            "st_teff" => &[5778.0, 6000.0],
+            "st_mass" => &[1.0, 1.2],
+            "sy_pnum" => &[1, 2],
+        }
+        .unwrap();
+
+        let metadata = Arc::new(HashMap::new());
+
+        // Request mix of valid and invalid columns
+        let selected_columns = vec![
+            "hostname".to_string(),
+            "invalid_col".to_string(),
+            "sy_dist".to_string(),
+        ];
+        let (_rows, _, _, columns, _) = get_stellarhosts_data(
+            &df,
+            &metadata,
+            1,
+            10,
+            None,
+            None,
+            Some(selected_columns),
+        )
+        .unwrap();
+
+        // Should return only valid columns
+        assert_eq!(columns.len(), 2);
+        assert!(columns.contains(&"hostname".to_string()));
+        assert!(columns.contains(&"sy_dist".to_string()));
     }
 }
