@@ -128,7 +128,7 @@ Watch the deployment:
 - Click on the running workflow
 - Wait for build to complete (~10 minutes)
 
-## Step 10: Verify! (1 min)
+## Step 10: Verify!
 
 Visit: **https://exoplanets.yourdomain.com**
 

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  exoplanets-catalog:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+    container_name: exoplanets-catalog
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /app/data:/app/data:ro
+    environment:
+      - RUST_LOG=info
+    # Uncomment to see more detailed logs
+    # environment:
+    #   - RUST_LOG=debug

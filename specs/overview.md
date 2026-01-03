@@ -1,5 +1,14 @@
 # Exoplanets Catalog: Project Documentation
 
+## Current Status
+
+**Latest Update**: Column Selector Widget completed ✅
+- Dynamic column selection with search and reordering
+- URL-synchronized column configurations
+- See `ctx.md` for implementation details
+
+---
+
 This file has been replaced by more detailed specifications. Please refer to:
 
 ## Architecture & Project Structure

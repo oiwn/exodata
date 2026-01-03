@@ -1,576 +1,416 @@
 # Current Context
 
-## Implementation Plan: Column Selector Widget
+## Task: Manual Deployment to DigitalOcean Droplet
 
-**Goal**: Add a column selector widget that allows users to choose which columns to display in the table, with state synchronized to URL parameters.
-
-### User Experience
-
-Users should be able to:
-1. See a list of all available columns with checkboxes
-2. Select/deselect columns to show/hide them in the table
-3. Have their selection reflected in the URL (e.g., `?columns=pl_name,hostname,pl_orbper`)
-4. Share URLs with specific column selections
-5. See column descriptions/units in the selector (from metadata)
+**Goal**: Deploy the Exoplanets Catalog web application to a DigitalOcean droplet that's already been provisioned.
 
 ### Current State
 
-✅ **Available:**
-- Metadata for all columns (name, description, unit, datatype)
-- `TableData` includes metadata in API response
-- Server functions can accept query parameters
+✅ **Completed:**
+- Droplet provisioned via OpenTofu
+- Parquet data files copied to server (`/app/data/exoplanets.parquet`, `/app/data/stellarhosts.parquet`)
 
-❌ **Missing:**
-- Column selector UI component
-- URL parameter handling for column selection
-- Server-side column filtering based on query parameter
-- State synchronization between UI, URL, and table
-
----
-
-## Implementation Steps
-
-### Step 1: Server-Side Column Filtering
-
-**Files to modify:**
-- `src/server/common.rs` - Add `columns` parameter to data functions
-- `src/server/functions.rs` - Pass `columns` parameter through server functions
-
-**Changes:**
-
-```rust
-// src/server/functions.rs
-#[server(input = GetUrl)]
-pub async fn get_exoplanets_page(
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-    columns: Option<String>,  // NEW: Comma-separated column names
-) -> Result<TableData, ServerFnError> {
-    let state = expect_context::<ApiState>();
-
-    // Parse columns parameter
-    let selected_columns = columns.map(|s| {
-        s.split(',').map(|col| col.trim().to_string()).collect::<Vec<_>>()
-    });
-
-    let (rows, total, total_all, columns, metadata) = common::get_exoplanets_data(
-        &state.exoplanets_df,
-        &state.exoplanets_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,  // NEW
-    )
-    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
-
-    Ok(TableData {
-        rows,
-        columns,
-        total,
-        total_all,
-        page,
-        limit,
-        metadata,
-    })
-}
-```
-
-```rust
-// src/server/common.rs
-pub fn get_exoplanets_data(
-    df: &DataFrame,
-    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-    selected_columns: Option<Vec<String>>,  // NEW: Optional column filter
-) -> ExoplanetsResult {
-    let mut df = df.clone();
-
-    // Define default columns if none specified
-    let default_columns = vec![
-        "pl_name",
-        "hostname",
-        "discoverymethod",
-        "disc_year",
-        "pl_orbper",
-        "pl_rade",
-        "pl_bmasse",
-    ];
-
-    // Use selected columns or fall back to defaults
-    let columns_to_select: Vec<&str> = if let Some(cols) = &selected_columns {
-        // Validate that requested columns exist in dataframe
-        cols.iter()
-            .filter(|col| df.column(col).is_ok())
-            .map(|s| s.as_str())
-            .collect()
-    } else {
-        default_columns
-    };
-
-    // Ensure we have at least one column
-    if columns_to_select.is_empty() {
-        return Err("No valid columns selected".to_string());
-    }
-
-    // Select only the requested columns
-    df = df
-        .select(columns_to_select.clone())
-        .map_err(|e| format!("Failed to select columns: {}", e))?;
-
-    // ... rest of existing logic (sorting, pagination, etc.)
-}
-```
-
-**Same for `get_stellarhosts_data()`**
+❌ **To Do:**
+- Clone GitHub repository on server
+- Build application (Docker or native)
+- Configure nginx reverse proxy
+- Set up systemd service or Docker Compose
+- Configure SSL with Let's Encrypt/certbot
+- Test deployment
 
 ---
 
-### Step 2: Frontend Column Selector Component
+## Application Architecture
 
-**File to create**: `src/components/column_selector.rs`
+**Tech Stack:**
+- **Frontend**: Leptos (Rust WASM framework)
+- **Backend**: Axum server with Leptos SSR
+- **Data**: Polars DataFrames loading Parquet files
+- **Build**: cargo-leptos + Tailwind CSS
 
-**Component Features:**
-- Display list of all available columns
-- Show checkboxes for selection
-- Display column descriptions from metadata
-- Group columns by category (optional)
-- "Select All" / "Deselect All" buttons
-- Search/filter column list
+**Port**: 3000 (app listens on this port)
 
-**Component Structure:**
+**Data Location**: App expects data files at `/app/data/` (or configurable via env var)
 
-```rust
-use leptos::prelude::*;
-use std::collections::HashMap;
-use exo_core::metadata::ColumnMetadata;
+---
 
-#[component]
-pub fn ColumnSelector(
-    /// All available columns with their metadata
-    available_columns: HashMap<String, ColumnMetadata>,
-    /// Currently selected column names
-    selected_columns: Signal<Vec<String>>,
-    /// Callback when selection changes
-    on_change: impl Fn(Vec<String>) + 'static,
-) -> impl IntoView {
-    let (search_term, set_search_term) = signal(String::new());
+## Deployment Options
 
-    // Sort columns alphabetically
-    let sorted_columns = move || {
-        let mut cols: Vec<_> = available_columns.iter().collect();
-        cols.sort_by_key(|(name, _)| *name);
-        cols
-    };
+### Option A: Docker Deployment (Recommended)
+**Pros:**
+- Isolated environment
+- Easy to update/rollback
+- Consistent across environments
+- Already have Dockerfile
 
-    // Filter columns based on search
-    let filtered_columns = move || {
-        sorted_columns()
-            .into_iter()
-            .filter(|(name, meta)| {
-                let search = search_term.get().to_lowercase();
-                if search.is_empty() {
-                    return true;
-                }
-                name.to_lowercase().contains(&search) ||
-                meta.description.as_ref()
-                    .map(|d| d.to_lowercase().contains(&search))
-                    .unwrap_or(false)
-            })
-            .collect::<Vec<_>>()
-    };
+**Cons:**
+- Slightly more resource overhead
+- Need Docker installed on server
 
-    view! {
-        <div class="column-selector">
-            <h3>"Select Columns"</h3>
+### Option B: Native Binary Deployment
+**Pros:**
+- Lower resource usage
+- Faster startup
+- Direct systemd integration
 
-            // Search box
-            <input
-                type="text"
-                placeholder="Search columns..."
-                value=search_term
-                on:input=move |e| set_search_term.set(event_target_value(&e))
-            />
+**Cons:**
+- Need to compile on server (slow) or cross-compile locally
+- Dependencies must be installed on server
 
-            // Select All / Deselect All
-            <div class="selector-actions">
-                <button on:click=move |_| {
-                    let all: Vec<String> = available_columns.keys().cloned().collect();
-                    on_change(all);
-                }>
-                    "Select All"
-                </button>
-                <button on:click=move |_| on_change(vec![])>
-                    "Deselect All"
-                </button>
-            </div>
+---
 
-            // Column list with checkboxes
-            <div class="column-list">
-                <For
-                    each=filtered_columns
-                    key=|(name, _)| name.to_string()
-                    children=move |(name, meta)| {
-                        let is_checked = move || selected_columns.get().contains(name);
-                        let name_clone = name.to_string();
+## Implementation Plan
 
-                        view! {
-                            <label class="column-item">
-                                <input
-                                    type="checkbox"
-                                    checked=is_checked
-                                    on:change=move |_| {
-                                        let mut current = selected_columns.get();
-                                        if current.contains(&name_clone) {
-                                            current.retain(|c| c != &name_clone);
-                                        } else {
-                                            current.push(name_clone.clone());
-                                        }
-                                        on_change(current);
-                                    }
-                                />
-                                <span class="column-name">{name}</span>
-                                {meta.description.as_ref().map(|desc| {
-                                    view! {
-                                        <span class="column-desc">{desc}</span>
-                                    }
-                                })}
-                                {meta.unit.as_ref().map(|unit| {
-                                    view! {
-                                        <span class="column-unit">"["{unit}"]"</span>
-                                    }
-                                })}
-                            </label>
-                        }
-                    }
-                />
-            </div>
-        </div>
+### Phase 1: Server Preparation (5-10 min)
+
+**SSH into droplet:**
+```bash
+ssh root@YOUR_DROPLET_IP
+```
+
+**Install dependencies:**
+```bash
+# Update system
+apt-get update && apt-get upgrade -y
+
+# Install Docker (if using Option A)
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+
+# Install nginx
+apt-get install -y nginx
+
+# Install git
+apt-get install -y git
+
+# Install certbot for SSL
+apt-get install -y certbot python3-certbot-nginx
+```
+
+**Create app directory structure:**
+```bash
+mkdir -p /app/data
+mkdir -p /app/repo
+```
+
+---
+
+### Phase 2: Clone Repository (2 min)
+
+```bash
+cd /app/repo
+git clone https://github.com/YOUR_USERNAME/exoplanets-catalog.git .
+```
+
+**Verify data files exist:**
+```bash
+ls -lh /app/data/
+# Should show: exoplanets.parquet, stellarhosts.parquet
+```
+
+---
+
+### Phase 3: Build Application
+
+#### Option A: Docker Build (20-30 min)
+
+```bash
+cd /app/repo
+
+# Build Docker image
+docker build -f infrastructure/docker/Dockerfile -t exoplanets-catalog:latest .
+
+# Verify image built
+docker images | grep exoplanets-catalog
+```
+
+**Test run:**
+```bash
+docker run -d \
+  --name exoplanets-test \
+  -p 3000:3000 \
+  -v /app/data:/app/data:ro \
+  exoplanets-catalog:latest
+
+# Check logs
+docker logs -f exoplanets-test
+
+# Test locally
+curl http://localhost:3000
+
+# Stop test container
+docker stop exoplanets-test && docker rm exoplanets-test
+```
+
+#### Option B: Native Build (40-60 min)
+
+```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+
+# Install cargo-leptos
+cargo install --locked cargo-leptos
+
+# Add WASM target
+rustup target add wasm32-unknown-unknown
+
+# Install Tailwind CSS
+curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
+chmod +x tailwindcss-linux-x64
+mv tailwindcss-linux-x64 /usr/local/bin/tailwindcss
+
+# Build application
+cd /app/repo
+cargo leptos build --release
+
+# Binary will be at: target/server/release/exoplanets-catalog
+# Static files at: target/site/
+```
+
+---
+
+### Phase 4: Configure Nginx Reverse Proxy (5 min)
+
+**Create nginx config:**
+```bash
+cat > /etc/nginx/sites-available/exoplanets <<'EOF'
+server {
+    listen 80;
+    server_name YOUR_DOMAIN.com;  # e.g., exoplanets.yourdomain.com
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+EOF
+
+# Enable site
+ln -s /etc/nginx/sites-available/exoplanets /etc/nginx/sites-enabled/
+
+# Test config
+nginx -t
+
+# Reload nginx
+systemctl reload nginx
 ```
 
 ---
 
-### Step 3: URL Parameter Synchronization
+### Phase 5: Set Up Service
 
-**File to modify**: Table components (`src/components/exoplanets_table.rs`, `src/components/stellarhosts_table.rs`)
+#### Option A: Docker Compose (Recommended)
 
-**Approach:**
-- Use Leptos router's query parameter utilities
-- Read initial state from URL on mount
-- Update URL when selection changes
-- Listen to URL changes to update UI
+**Create docker-compose.yml:**
+```bash
+cat > /app/docker-compose.yml <<'EOF'
+version: '3.8'
 
-**Implementation:**
+services:
+  exoplanets-catalog:
+    image: exoplanets-catalog:latest
+    container_name: exoplanets-catalog
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - /app/data:/app/data:ro
+    environment:
+      - RUST_LOG=info
+EOF
 
-```rust
-use leptos::prelude::*;
-use leptos_router::hooks::use_query_map;
+# Start service
+cd /app
+docker compose up -d
 
-#[component]
-pub fn ExoplanetsTable() -> impl IntoView {
-    // Read URL parameters
-    let query_params = use_query_map();
+# Check logs
+docker compose logs -f
+```
 
-    // Parse columns from URL
-    let initial_columns = move || {
-        query_params
-            .read()
-            .get("columns")
-            .map(|s| s.split(',').map(|col| col.trim().to_string()).collect())
-            .unwrap_or_else(|| vec![
-                "pl_name".to_string(),
-                "hostname".to_string(),
-                "discoverymethod".to_string(),
-                "disc_year".to_string(),
-                "pl_orbper".to_string(),
-                "pl_rade".to_string(),
-                "pl_bmasse".to_string(),
-            ])
-    };
+#### Option B: Systemd Service
 
-    let (selected_columns, set_selected_columns) = signal(initial_columns());
+```bash
+cat > /etc/systemd/system/exoplanets.service <<'EOF'
+[Unit]
+Description=Exoplanets Catalog Web Application
+After=network.target
 
-    // Update URL when columns change
-    let update_url = move |columns: Vec<String>| {
-        set_selected_columns.set(columns.clone());
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/app/repo
+ExecStart=/app/repo/target/server/release/exoplanets-catalog
+Restart=always
+RestartSec=5
+Environment=RUST_LOG=info
+Environment=LEPTOS_SITE_ROOT=/app/repo/target/site
 
-        // Update query parameter
-        let columns_str = columns.join(",");
-        let navigate = leptos_router::hooks::use_navigate();
+[Install]
+WantedBy=multi-user.target
+EOF
 
-        // Preserve other query params while updating columns
-        let current_search = window().location().search().unwrap_or_default();
-        let mut params = current_search
-            .trim_start_matches('?')
-            .split('&')
-            .filter(|p| !p.starts_with("columns="))
-            .collect::<Vec<_>>();
+# Reload systemd
+systemctl daemon-reload
 
-        if !columns.is_empty() {
-            params.push(&format!("columns={}", columns_str));
-        }
+# Enable and start service
+systemctl enable exoplanets.service
+systemctl start exoplanets.service
 
-        let new_search = if params.is_empty() {
-            String::new()
-        } else {
-            format!("?{}", params.join("&"))
-        };
+# Check status
+systemctl status exoplanets.service
 
-        navigate(&new_search, Default::default());
-    };
-
-    // Fetch data with selected columns
-    let columns_param = move || Some(selected_columns.get().join(","));
-
-    let data = Resource::new(
-        move || (page.get(), limit.get(), sort_by.get(), order.get(), columns_param()),
-        |(page, limit, sort_by, order, columns)| async move {
-            get_exoplanets_page(page, limit, sort_by, order, columns).await
-        },
-    );
-
-    view! {
-        <div class="exoplanets-page">
-            <ColumnSelector
-                available_columns=/* get from metadata */
-                selected_columns=selected_columns
-                on_change=update_url
-            />
-
-            <Suspense fallback=|| view! { <p>"Loading..."</p> }>
-                {move || {
-                    data.get().map(|result| match result {
-                        Ok(table_data) => view! {
-                            <Table
-                                data=table_data
-                                on_sort=/* ... */
-                            />
-                        },
-                        Err(e) => view! { <p>"Error: " {e.to_string()}</p> }
-                    })
-                }}
-            </Suspense>
-        </div>
-    }
-}
+# View logs
+journalctl -u exoplanets.service -f
 ```
 
 ---
 
-### Step 4: Styling
+### Phase 6: Configure SSL (5 min)
 
-**File to create/modify**: `style/main.scss` or component-specific styles
+**Set up Let's Encrypt SSL:**
+```bash
+certbot --nginx -d YOUR_DOMAIN.com --non-interactive --agree-tos --email YOUR_EMAIL
 
-```scss
-.column-selector {
-    background: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
+# Enable auto-renewal
+systemctl enable certbot.timer
+systemctl start certbot.timer
+```
 
-    h3 {
-        margin-top: 0;
-    }
-
-    input[type="text"] {
-        width: 100%;
-        padding: 0.5rem;
-        margin-bottom: 1rem;
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-    }
-
-    .selector-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-
-        button {
-            padding: 0.5rem 1rem;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-
-            &:hover {
-                background: var(--primary-hover-color);
-            }
-        }
-    }
-
-    .column-list {
-        max-height: 400px;
-        overflow-y: auto;
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-        padding: 0.5rem;
-
-        .column-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem;
-            cursor: pointer;
-            border-radius: 4px;
-
-            &:hover {
-                background: var(--hover-color);
-            }
-
-            input[type="checkbox"] {
-                cursor: pointer;
-            }
-
-            .column-name {
-                font-weight: 600;
-                font-family: monospace;
-                flex-shrink: 0;
-            }
-
-            .column-desc {
-                color: var(--text-secondary);
-                font-size: 0.9rem;
-                flex: 1;
-            }
-
-            .column-unit {
-                color: var(--text-tertiary);
-                font-size: 0.85rem;
-                font-style: italic;
-            }
-        }
-    }
-}
+**Verify SSL:**
+```bash
+curl https://YOUR_DOMAIN.com
 ```
 
 ---
 
-### Step 5: Advanced Features (Optional)
+### Phase 7: Verify Deployment (2 min)
 
-**Column Grouping:**
-- Group columns by category (planet properties, stellar properties, discovery info, etc.)
-- Collapsible sections for each group
+**Check all services:**
+```bash
+# App running (Docker)
+docker ps | grep exoplanets-catalog
 
-**Presets:**
-- Save common column selections as presets
-- "Basic", "Discovery", "Orbital", "Physical" presets
-- User-defined custom presets (localStorage)
+# OR App running (systemd)
+systemctl status exoplanets.service
 
-**Column Reordering:**
-- Drag-and-drop to reorder columns
-- Order reflected in URL and table
+# Nginx running
+systemctl status nginx
 
-**Persistence:**
-- Remember user's last selection in localStorage
-- Auto-restore on next visit
-
----
-
-## Testing Strategy
-
-**Unit Tests:**
-- Column selector component renders correctly
-- Checkbox state updates properly
-- Search filtering works
-
-**Integration Tests:**
-- URL parameter parsing works
-- Server correctly filters columns
-- Table updates when columns change
-- URL updates when selection changes
-
-**Manual Testing:**
-- Select/deselect columns and verify table updates
-- Copy URL and open in new tab - selection should persist
-- Search for columns
-- Test with empty selection (should show error or default columns)
-- Test with invalid column names in URL
-
----
-
-## File Changes Summary
-
-**New Files:**
-- `src/components/column_selector.rs`
-
-**Modified Files:**
-- `src/server/common.rs` - Add `columns` parameter to data functions
-- `src/server/functions.rs` - Add `columns` parameter to server functions
-- `src/components/exoplanets_table.rs` - Integrate column selector + URL sync
-- `src/components/stellarhosts_table.rs` - Integrate column selector + URL sync
-- `src/components/mod.rs` - Export `ColumnSelector` component
-- `style/main.scss` - Add column selector styles
-
-**Tests to Update:**
-- `src/server/common.rs` tests - Add column filtering tests
-- Component tests for column selector
-
----
-
-## URL Parameter Format
-
-**Examples:**
-
-```
-# Select specific columns
-/exoplanets?columns=pl_name,hostname,pl_orbper,pl_rade
-
-# With pagination
-/exoplanets?page=2&limit=50&columns=pl_name,hostname,disc_year
-
-# With sorting and columns
-/exoplanets?sort_by=pl_orbper&order=desc&columns=pl_name,pl_orbper,pl_rade
-
-# No columns specified (use defaults)
-/exoplanets
+# SSL cert valid
+certbot certificates
 ```
 
-**URL Encoding:**
-- Column names should be URL-encoded if they contain special characters
-- Comma-separated list for multiple columns
-- Empty or missing = use default columns
+**Test application:**
+```bash
+# Local test
+curl http://localhost:3000
+
+# Public test
+curl https://YOUR_DOMAIN.com
+```
+
+**Open in browser:**
+- Visit: `https://YOUR_DOMAIN.com`
+- Test tables load
+- Test column selector
+- Test pagination/sorting
 
 ---
 
-## Implementation Order
+## Environment Variables (Optional)
 
-1. ✅ **Phase 1**: Server-side column filtering
-   - Update `common.rs` functions
-   - Update server functions
-   - Add tests
+If app needs configuration:
 
-2. ✅ **Phase 2**: Basic column selector component
-   - Create component with checkboxes
-   - Display all columns from metadata
-   - Handle selection state
+```bash
+# For Docker Compose
+# Edit /app/docker-compose.yml, add under environment:
+environment:
+  - DATA_PATH=/app/data
+  - RUST_LOG=info
+  - LEPTOS_OUTPUT_NAME=exoplanets-catalog
 
-3. ✅ **Phase 3**: URL synchronization
-   - Read columns from URL parameters
-   - Update URL when selection changes
-   - Integrate with table components
+# For systemd
+# Edit /etc/systemd/system/exoplanets.service, add under [Service]:
+Environment=DATA_PATH=/app/data
+```
 
-4. ✅ **Phase 4**: Styling and UX
-   - Add CSS styles
-   - Add search functionality
-   - Add select all/deselect all
+---
 
-5. ⏳ **Phase 5**: Advanced features (optional)
-   - Column grouping
-   - Presets
-   - localStorage persistence
-   - Drag-and-drop reordering
+## Updating the Application
+
+**Docker deployment:**
+```bash
+cd /app/repo
+git pull origin main
+docker build -f infrastructure/docker/Dockerfile -t exoplanets-catalog:latest .
+cd /app
+docker compose down
+docker compose up -d
+```
+
+**Native deployment:**
+```bash
+cd /app/repo
+git pull origin main
+cargo leptos build --release
+systemctl restart exoplanets.service
+```
+
+---
+
+## Troubleshooting
+
+**App won't start:**
+```bash
+# Check logs (Docker)
+docker logs exoplanets-catalog
+
+# Check logs (systemd)
+journalctl -u exoplanets.service -n 100
+
+# Common issues:
+# - Data files not found: Check /app/data/
+# - Port 3000 in use: lsof -i :3000
+# - Permission issues: chown -R root:root /app
+```
+
+**Nginx errors:**
+```bash
+tail -f /var/log/nginx/error.log
+nginx -t  # Test config
+```
+
+**SSL issues:**
+```bash
+certbot renew --dry-run  # Test renewal
+certbot certificates  # Check cert status
+```
 
 ---
 
 ## Next Steps
 
-Start with **Phase 1**: Server-side column filtering in `src/server/common.rs`.
+After manual deployment works:
+1. Set up CI/CD with GitHub Actions (use DEPLOY.md as reference)
+2. Configure monitoring (uptime checks, logs)
+3. Set up automated backups for data
+4. Configure firewall rules (UFW)
+
+---
+
+## Required Information
+
+Before starting, have ready:
+- [ ] Droplet IP address
+- [ ] Domain name (DNS already pointing to droplet)
+- [ ] GitHub repository URL
+- [ ] Email for SSL certificate
+- [ ] Data files confirmed at `/app/data/`
