@@ -90,6 +90,8 @@ scp data/parquet/stellarhosts.parquet root@DROPLET_IP:/app/data/
 scp data/parquet/exoplanets.parquet root@DROPLET_IP:/app/data/
 ```
 
+^^^ need to add metadata files
+
 ## Step 8: Configure GitHub Secrets (5 min)
 
 Go to: https://github.com/YOUR_USERNAME/exoplanets-catalog/settings/secrets/actions
@@ -183,6 +185,3 @@ tofu destroy
 
 ---
 
-**Total time: ~50 minutes + waiting for DNS propagation**
-
-Good luck! 🌟
