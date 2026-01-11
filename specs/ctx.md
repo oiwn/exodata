@@ -59,6 +59,76 @@
 
 ---
 
+## Build Performance Optimization
+
+### Problem: Compilation Resource Requirements
+
+Building Rust + Leptos + WASM is resource-intensive:
+- **RAM**: 4-8GB during compilation
+- **CPU**: High usage for 10-30 minutes
+- **Issue**: Small droplets (2GB RAM) can crash during builds
+
+### Solution: Build in GitHub Actions, Deploy Pre-built Artifacts
+
+**Strategy**: Use GitHub's free runners (7GB RAM, 2-core CPU) to build, then deploy minimal runtime container.
+
+**Time Savings:**
+| Method | Time | Notes |
+|--------|------|-------|
+| `cargo install cargo-leptos` | ~5-10 min | Compiles from source |
+| `cargo binstall cargo-leptos` | ~15 sec | Downloads pre-built binary ⚡ |
+| Cached cargo-leptos binary | ~1 sec | Best for CI/CD |
+
+**Implementation:**
+
+```yaml
+# In GitHub Actions workflow
+- name: Install cargo-binstall
+  run: |
+    curl -L --proto '=https' --tlsv1.2 -sSf \
+      https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+- name: Cache cargo-leptos
+  uses: actions/cache@v4
+  with:
+    path: ~/.cargo/bin/cargo-leptos
+    key: cargo-leptos-${{ runner.os }}
+
+- name: Install cargo-leptos (fast!)
+  run: |
+    if ! command -v cargo-leptos &> /dev/null; then
+      cargo binstall --no-confirm cargo-leptos
+    fi
+
+- name: Build artifacts
+  run: cargo leptos build --release
+
+- name: Upload artifacts
+  uses: actions/upload-artifact@v4
+  with:
+    name: leptos-build
+    path: |
+      target/server/release/exoplanets-catalog
+      target/site/
+```
+
+**Multi-stage Dockerfile (already in place):**
+```dockerfile
+# Builder stage: Heavy build environment
+FROM rust:latest as builder
+RUN cargo binstall --no-confirm cargo-leptos
+# ... build everything ...
+
+# Runtime stage: Minimal deployment
+FROM debian:bookworm-slim
+COPY --from=builder /app/target/server/release/exoplanets-catalog /app/
+COPY --from=builder /app/target/site /app/site
+```
+
+**Result**: Droplet only runs `docker pull` + `docker run` (no compilation!)
+
+---
+
 ## Implementation Plan
 
 ### Phase 1: Server Preparation (5-10 min)
@@ -142,15 +212,22 @@ curl http://localhost:3000
 docker stop exoplanets-test && docker rm exoplanets-test
 ```
 
-#### Option B: Native Build (40-60 min)
+#### Option B: Native Build (40-60 min, or 20-30 min with binstall)
 
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
-# Install cargo-leptos
-cargo install --locked cargo-leptos
+# Install cargo-binstall (speeds up binary installation)
+curl -L --proto '=https' --tlsv1.2 -sSf \
+  https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+# Install cargo-leptos using binstall (15 sec instead of 5-10 min!)
+cargo binstall --no-confirm cargo-leptos
+
+# Alternative (slower): compile from source
+# cargo install --locked cargo-leptos
 
 # Add WASM target
 rustup target add wasm32-unknown-unknown

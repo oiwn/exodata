@@ -17,3 +17,5 @@ infrastructure/tofu/.terraform/
 infrastructure/tofu/*.tfstate
 infrastructure/tofu/*.tfstate.backup
 infrastructure/tofu/terraform.tfvars
+# in case...
+*.tfstate
