@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/cargo-leptos
-          key: ${{ runner.os }}-cargo-leptos-3.x
+          key: ${{ runner.os }}-cargo-leptos-latest
 
       - name: Install cargo-binstall
         if: steps.cache-cargo-leptos.outputs.cache-hit != 'true'
@@ -35,7 +35,7 @@ jobs:
 
       - name: Install cargo-leptos (fast!)
         if: steps.cache-cargo-leptos.outputs.cache-hit != 'true'
-        run: cargo binstall --no-confirm cargo-leptos@3
+        run: cargo binstall --no-confirm cargo-leptos
 
       - name: Install Tailwind CSS
         run: |
