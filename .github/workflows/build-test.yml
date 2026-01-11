@@ -46,12 +46,26 @@ jobs:
       - name: Build application
         run: cargo leptos build --release
 
+      - name: List build outputs (debug)
+        run: |
+          echo "=== Contents of target/release/ ==="
+          ls -lah target/release/ | grep exoplanets || echo "Not found in target/release/"
+          echo ""
+          echo "=== Contents of target/server/release/ ==="
+          ls -lah target/server/release/ 2>/dev/null || echo "Directory doesn't exist"
+          echo ""
+          echo "=== Contents of target/site/ ==="
+          ls -lah target/site/
+
       - name: Upload server binary
         uses: actions/upload-artifact@v4
         with:
           name: server-binary
-          path: target/server/release/exoplanets-catalog
+          path: |
+            target/release/exoplanets-catalog
+            target/server/release/exoplanets-catalog
           retention-days: 7
+          if-no-files-found: error
 
       - name: Upload site files
         uses: actions/upload-artifact@v4
