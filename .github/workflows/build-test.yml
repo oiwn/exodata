@@ -1,0 +1,71 @@
+name: Build Test (cargo-leptos)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - name: Cache cargo-leptos binary
+        id: cache-cargo-leptos
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-leptos
+          key: ${{ runner.os }}-cargo-leptos-3.x
+
+      - name: Install cargo-binstall
+        if: steps.cache-cargo-leptos.outputs.cache-hit != 'true'
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf \
+            https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+      - name: Install cargo-leptos (fast!)
+        if: steps.cache-cargo-leptos.outputs.cache-hit != 'true'
+        run: cargo binstall --no-confirm cargo-leptos@3
+
+      - name: Install Tailwind CSS
+        run: |
+          curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
+          chmod +x tailwindcss-linux-x64
+          sudo mv tailwindcss-linux-x64 /usr/local/bin/tailwindcss
+
+      - name: Build application
+        run: cargo leptos build --release
+
+      - name: Upload server binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-binary
+          path: target/server/release/exoplanets-catalog
+          retention-days: 7
+
+      - name: Upload site files
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-files
+          path: target/site/
+          retention-days: 7
+
+      - name: Build summary
+        run: |
+          echo "### Build Artifacts Generated ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server binary**: \`target/server/release/exoplanets-catalog\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Site files**: \`target/site/\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Binary size: $(du -h target/server/release/exoplanets-catalog | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "Site size: $(du -sh target/site | cut -f1)" >> $GITHUB_STEP_SUMMARY
