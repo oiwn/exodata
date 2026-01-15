@@ -18,22 +18,6 @@
 - Configure SSL with Let's Encrypt/certbot
 - Test deployment
 
----
-
-## Application Architecture
-
-**Tech Stack:**
-- **Frontend**: Leptos (Rust WASM framework)
-- **Backend**: Axum server with Leptos SSR
-- **Data**: Polars DataFrames loading Parquet files
-- **Build**: cargo-leptos + Tailwind CSS
-
-**Port**: 3000 (app listens on this port)
-
-**Data Location**: App expects data files at `/app/data/` (or configurable via env var)
-
----
-
 ## Deployment Options
 
 ### Option A: Docker Deployment (Recommended)
