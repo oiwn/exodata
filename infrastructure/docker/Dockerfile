@@ -1,13 +1,18 @@
-FROM rust:latest as builder
+FROM --platform=linux/amd64 rust:latest as builder
 
 RUN apt-get update && apt-get install -y \
     pkg-config libssl-dev curl \
-    libc6 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cargo install --locked cargo-leptos
+# Install cargo-binstall for faster installation
+RUN curl -L --proto '=https' --tlsv1.2 -sSf \
+    https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
+# Install cargo-leptos using binstall (much faster than cargo install)
+RUN cargo binstall --no-confirm cargo-leptos
 RUN rustup target add wasm32-unknown-unknown
 
+# Install Tailwind CSS
 RUN curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 \
     && chmod +x tailwindcss-linux-x64 \
     && mv tailwindcss-linux-x64 /usr/local/bin/tailwindcss
@@ -22,7 +27,15 @@ COPY tailwind.config.js ./
 
 RUN cargo leptos build --release
 
-FROM debian:bookworm-slim
+# Debug: List where files actually are
+RUN echo "=== Listing target/release ===" && \
+    ls -lah /app/target/release/ | grep exoplanets || true && \
+    echo "=== Listing target/server/release ===" && \
+    ls -lah /app/target/server/release/ 2>/dev/null || echo "Directory does not exist" && \
+    echo "=== Listing target/site ===" && \
+    ls -lah /app/target/site/
+
+FROM --platform=linux/amd64 debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
