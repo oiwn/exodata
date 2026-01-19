@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 rust:latest as builder
+FROM --platform=linux/amd64 rust:bookworm as builder
 
 RUN apt-get update && apt-get install -y \
     pkg-config libssl-dev curl \
@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y ca-certificates libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /app/target/server/release/exoplanets-catalog /app/
+COPY --from=builder /app/target/release/exoplanets-catalog /app/
 COPY --from=builder /app/target/site /app/site
 
 EXPOSE 3000
