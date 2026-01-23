@@ -1,6 +1,6 @@
 # Domain configuration
-domain: exoplanets.example.com
-admin_email: admin@example.com
+domain: exodata.space
+admin_email: alex@imscraping.ninja
 
 # Docker image
 docker_image: ghcr.io/oiwn/exoplanets-catalog
