@@ -1,0 +1,10 @@
+---
+- name: Setup Exoplanets Catalog Server
+  hosts: exoplanets
+  become: yes
+
+  roles:
+    - common
+    - docker
+    - nginx
+    - app

@@ -1,0 +1,33 @@
+---
+- name: Check if Docker is installed
+  ansible.builtin.command: docker --version
+  register: docker_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Install Docker
+  when: docker_check.rc != 0
+  block:
+    - name: Download Docker install script
+      ansible.builtin.get_url:
+        url: https://get.docker.com
+        dest: /tmp/get-docker.sh
+        mode: '0755'
+
+    - name: Run Docker install script
+      ansible.builtin.command: /tmp/get-docker.sh
+      args:
+        creates: /usr/bin/docker
+
+- name: Ensure Docker service is running
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Log in to GitHub Container Registry
+  community.docker.docker_login:
+    registry: ghcr.io
+    username: "{{ lookup('env', 'GHCR_USER') }}"
+    password: "{{ lookup('env', 'GHCR_TOKEN') }}"
+  when: lookup('env', 'GHCR_TOKEN') | length > 0

@@ -1,5 +1,51 @@
+# Data download commands
 download-stellarhosts:
     curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts" -L --max-time 2000 > data/stellarhosts.vot
 
 download-exoplanets:
     curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+ps" -L --max-time 2000 > data/exoplanets.vot
+
+# =============================================================================
+# Ansible Deployment Commands
+# =============================================================================
+# Load environment variables from .env file in ansible directory
+set dotenv-load := false
+
+# Ansible working directory
+ansible_dir := "infrastructure/ansible"
+
+# Test SSH connection to server
+ansible-ping:
+    cd {{ansible_dir}} && ansible all -m ping
+
+# Full server setup (idempotent)
+ansible-setup:
+    cd {{ansible_dir}} && ansible-playbook playbooks/setup.yml
+
+# Deploy latest Docker image
+ansible-deploy:
+    cd {{ansible_dir}} && ansible-playbook playbooks/deploy.yml
+
+# Setup SSL certificate
+ansible-ssl:
+    cd {{ansible_dir}} && ansible-playbook playbooks/ssl.yml
+
+# Upload parquet data files
+ansible-upload-data:
+    cd {{ansible_dir}} && ansible-playbook playbooks/upload-data.yml
+
+# Check server status (docker + nginx)
+ansible-status:
+    cd {{ansible_dir}} && ansible all -m shell -a "docker ps && echo '---' && systemctl status nginx --no-pager"
+
+# View application logs
+ansible-logs:
+    cd {{ansible_dir}} && ansible all -m shell -a "docker logs --tail 100 exoplanets-catalog"
+
+# SSH into server
+ansible-ssh:
+    ssh root@${DROPLET_IP}
+
+# Run arbitrary ansible command
+ansible-run cmd:
+    cd {{ansible_dir}} && ansible all -m shell -a "{{cmd}}"

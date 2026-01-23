@@ -1,0 +1,36 @@
+---
+- name: Setup SSL Certificate
+  hosts: exoplanets
+  become: yes
+
+  vars_files:
+    - ../inventory/group_vars/all.yml
+
+  tasks:
+    - name: Install certbot
+      ansible.builtin.apt:
+        name:
+          - certbot
+          - python3-certbot-nginx
+        state: present
+        update_cache: yes
+
+    - name: Check if certificate exists
+      ansible.builtin.stat:
+        path: "/etc/letsencrypt/live/{{ domain }}/fullchain.pem"
+      register: cert_file
+
+    - name: Obtain SSL certificate
+      ansible.builtin.command: >
+        certbot --nginx
+        -d {{ domain }}
+        --non-interactive
+        --agree-tos
+        --email {{ admin_email }}
+      when: not cert_file.stat.exists
+
+    - name: Enable certbot auto-renewal timer
+      ansible.builtin.systemd:
+        name: certbot.timer
+        enabled: yes
+        state: started

@@ -1,0 +1,31 @@
+---
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Deploy Nginx site configuration
+  ansible.builtin.template:
+    src: exoplanets.conf.j2
+    dest: /etc/nginx/sites-available/exoplanets
+    mode: '0644'
+  notify: Reload Nginx
+
+- name: Enable site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/exoplanets
+    dest: /etc/nginx/sites-enabled/exoplanets
+    state: link
+  notify: Reload Nginx
+
+- name: Remove default site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload Nginx
+
+- name: Ensure Nginx is running
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: yes

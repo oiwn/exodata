@@ -1,0 +1,40 @@
+---
+- name: Deploy Exoplanets Catalog
+  hosts: exoplanets
+  become: yes
+
+  vars_files:
+    - ../inventory/group_vars/all.yml
+
+  tasks:
+    - name: Pull latest Docker image
+      community.docker.docker_image:
+        name: "{{ docker_image }}"
+        tag: "{{ docker_tag }}"
+        source: pull
+        force_source: yes
+
+    - name: Stop existing container
+      community.docker.docker_container:
+        name: "{{ app_name }}"
+        state: absent
+
+    - name: Start new container
+      community.docker.docker_container:
+        name: "{{ app_name }}"
+        image: "{{ docker_image }}:{{ docker_tag }}"
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ app_port }}:3000"
+        volumes:
+          - "{{ data_path }}:/app/data:ro"
+
+    - name: Wait for application health check
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}"
+        status_code: 200
+      register: health_check
+      until: health_check.status == 200
+      retries: 30
+      delay: 2

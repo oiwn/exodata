@@ -1,0 +1,32 @@
+---
+- name: Upload Data Files
+  hosts: exoplanets
+  become: yes
+
+  vars_files:
+    - ../inventory/group_vars/all.yml
+
+  tasks:
+    - name: Ensure data directory exists
+      ansible.builtin.file:
+        path: "{{ data_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Sync parquet files
+      ansible.posix.synchronize:
+        src: "{{ local_data_path }}/"
+        dest: "{{ data_path }}/"
+        delete: no
+        recursive: yes
+      delegate_to: localhost
+
+    - name: List uploaded files
+      ansible.builtin.find:
+        paths: "{{ data_path }}"
+        patterns: "*.parquet"
+      register: data_files
+
+    - name: Display uploaded files
+      ansible.builtin.debug:
+        msg: "Uploaded {{ data_files.matched }} parquet files"

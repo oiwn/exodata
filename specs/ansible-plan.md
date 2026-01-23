@@ -640,9 +640,11 @@ This is simpler if the current deploy workflow is working well.
 
 ## Next Steps
 
+I created Justfile, it's alrady existing.
+
 1. [ ] Create the directory structure
 2. [ ] Write the actual Ansible files
-3. [ ] Create `.env.example` and `justfile`
+3. [ ] Create `.env.example`
 4. [ ] Add `.env` to `.gitignore`
 5. [ ] Create local `.env` with droplet IP
 6. [ ] Test with `just ping`
