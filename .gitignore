@@ -1,6 +1,5 @@
 /target
 /dist
-Cargo.lock
 /data/*.csv
 /data/*.vot
 /data/*.toml
