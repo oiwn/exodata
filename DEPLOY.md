@@ -1,428 +1,359 @@
 # Deployment Guide
 
-## Current State
+## Overview
 
-✅ **Completed:**
-- GitHub Actions workflow (`build-test.yml`) - builds and creates artifacts
-- Infrastructure code (OpenTofu) - ready to provision droplet
-- Docker setup - working Dockerfile for containerized deployment
+This project uses a hybrid deployment approach:
+- **GitHub Actions** - Builds Docker image and pushes to GitHub Container Registry (ghcr.io)
+- **Ansible (local)** - Deploys to DigitalOcean droplet
 
-❌ **To Do:**
-- Provision DigitalOcean droplet
-- Manual deployment testing
-- Automated deployment setup
+This avoids storing SSH keys in GitHub Secrets while keeping the build automated.
 
 ---
 
-## Deployment Approaches
-
-### Approach 1: Docker Deployment (Automated - Existing)
-Uses `.github/workflows/deploy.yml` to:
-- Build Docker image in GitHub Actions
-- Push to GitHub Container Registry (ghcr.io)
-- SSH to droplet and deploy
-
-**Status**: Workflow exists, needs droplet + GitHub secrets configured
-
-### Approach 2: Manual Binary Deployment (Testing)
-Uses `.github/workflows/build-test.yml` to:
-- Build artifacts (server binary + site files)
-- Download and manually deploy to droplet
-
-**Status**: Workflow working, manual deployment process being documented
-
----
-
-# Part 1: Infrastructure Setup
-
-## Step 1: Install OpenTofu (2 min)
+## Quick Reference
 
 ```bash
-brew install opentofu
-# or download from: https://opentofu.org/docs/intro/install/
+# After GitHub Actions builds a new image:
+just ansible-deploy
+
+# Upload data files to server:
+just ansible-upload-data
+
+# Full server setup:
+just ansible-setup
+
+# Check server status:
+just ansible-status
+
+# View logs:
+just ansible-logs
+
+# SSH into server:
+just ansible-ssh
 ```
 
-## Step 2: DigitalOcean Setup (5 min)
+---
 
-1. **Create API Token:**
+## Prerequisites
 
-Follow: "https://cloud.digitalocean.com/account/api/tokens"
+- DigitalOcean droplet provisioned (via OpenTofu)
+- Domain with DNS pointing to droplet IP
+- Ansible installed locally (`brew install ansible`)
+- `just` task runner installed (`brew install just`)
 
-2. **Get SSH Key Fingerprint:**
+---
 
-Go to : "https://cloud.digitalocean.com/account/security", copy the fingerprint (format: `aa:bb:cc:...`)
+## Part 1: Initial Setup (One-Time)
 
-## Step 3: Configure Infrastructure
+### 1.1 Provision Infrastructure
 
 ```bash
 cd infrastructure/tofu
 cp terraform.tfvars.example terraform.tfvars
-```
+# Edit terraform.tfvars with your values
 
-Edit `terraform.tfvars`:
-```hcl
-do_token            = "dop_v1_YOUR_TOKEN_HERE"
-ssh_key_fingerprint = "YOUR_FINGERPRINT_HERE"
-domain              = "exoplanets.yourdomain.com"
-cloudflare_email    = "your@email.com"
-```
-
-## Step 4: Deploy Infrastructure
-
-```bash
-cd infrastructure/tofu
 tofu init
-tofu plan
 tofu apply
 ```
 
-**Copy the IP address from output!**
+Copy the droplet IP from output.
 
-## Step 5: DNS Setup
+### 1.2 Configure Ansible
 
-In Cloudflare DNS:
-1. Go to your domain → DNS → Records
-2. Add A record:
-   - Type: `A`
-   - Name: `exoplanets` (or `@` for root domain)
-   - IPv4 address: `DROPLET_IP_FROM_STEP_4`
-   - Proxy status: DNS only (gray cloud)
-   - TTL: Auto
-
-Wait 1-2 minutes, then verify:
 ```bash
-dig exoplanets.yourdomain.com
+cd infrastructure/ansible
+cp .env.example .env
 ```
 
-## Step 6: Setup SSL (5 min)
-
+Edit `.env`:
 ```bash
-ssh root@DROPLET_IP
-
-# Wait for cloud-init to finish (check: tail -f /var/log/cloud-init-output.log)
-
-# Setup SSL
-certbot --nginx -d exodata.space --non-interactive --agree-tos --email your@email.com
-
-# Enable auto-renewal
-systemctl enable certbot.timer
-systemctl start certbot.timer
-
-exit
+DROPLET_IP=YOUR_DROPLET_IP_HERE
+# Optional (only if GHCR image is private):
+GHCR_USER=your-github-username
+GHCR_TOKEN=your-github-pat
 ```
 
-## Step 7: Upload Data
+### 1.3 Test Connection
 
-If you don't have data yet, fetch it first:
 ```bash
-# On your local machine
-./scripts/update-data.sh  # Creates data/parquet/*.parquet files
+just ansible-ping
 ```
 
-Upload to droplet:
-```bash
-scp data/parquet/stellarhosts.parquet root@DROPLET_IP:/app/data/
-scp data/parquet/exoplanets.parquet root@DROPLET_IP:/app/data/
+Expected output:
+```
+exoplanets | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
 ```
 
-^^^ need to add metadata files
-
-## Step 8: Configure GitHub Secrets (5 min)
-
-Go to: https://github.com/YOUR_USERNAME/exoplanets-catalog/settings/secrets/actions
-
-Click "New repository secret" and add:
-
-1. **SSH_KEY**
-   ```bash
-   cat ~/.ssh/id_rsa
-   # Copy entire private key including BEGIN/END lines
-   ```
-
-2. **DROPLET_IP**
-   ```
-   YOUR_DROPLET_IP
-   ```
-
-3. **DOMAIN**
-   ```
-   exoplanets.yourdomain.com
-   ```
-
-## Step 9: Deploy! (10 min build time)
+### 1.4 Setup Server
 
 ```bash
-# Bump version
-# Edit Cargo.toml, change version = "0.1.0" to "0.1.1"
+just ansible-setup
+```
 
-git add .
-git commit -m "deploy: initial deployment v0.1.1"
+This installs Docker, Nginx, and configures the server.
+
+**Note:** This will fail on the "Pull Docker image" step if no image exists yet. That's OK - proceed to build the image first.
+
+### 1.5 Configure DNS
+
+In your DNS provider (e.g., Cloudflare):
+1. Add A record pointing to your droplet IP
+2. Wait for propagation (1-5 minutes)
+
+Verify:
+```bash
+dig exodata.space
+```
+
+### 1.6 Setup SSL
+
+```bash
+just ansible-ssl
+```
+
+---
+
+## Part 2: Build & Deploy
+
+### 2.1 Trigger Docker Build
+
+The deploy workflow triggers when you bump the version in `Cargo.toml`:
+
+```bash
+# Edit Cargo.toml, increment version
+git add Cargo.toml
+git commit -m "deploy: version X.Y.Z"
 git push origin main
 ```
 
-Watch the deployment:
-- Go to: https://github.com/YOUR_USERNAME/exoplanets-catalog/actions
-- Click on the running workflow
-- Wait for build to complete (~10 minutes)
+Or manually trigger from GitHub Actions UI:
+- Go to Actions → Deploy → Run workflow
 
-## Step 10: Verify!
+Watch the build at: https://github.com/oiwn/exoplanets-catalog/actions
 
-Visit: **https://exoplanets.yourdomain.com**
+### 2.2 Upload Data Files
 
-You should see your exoplanets catalog! 🚀
+The app needs data files (parquet + metadata):
+
+```bash
+just ansible-upload-data
+```
+
+This uploads from `data/` directory:
+- `*.parquet` - Data files
+- `*.toml` - Metadata files
+
+### 2.3 Deploy
+
+After the GitHub Actions build completes:
+
+```bash
+just ansible-deploy
+```
+
+This pulls the latest image and restarts the container.
+
+### 2.4 Verify
+
+```bash
+# Check container status
+just ansible-status
+
+# View logs
+just ansible-logs
+
+# Or visit the site
+open https://exodata.space
+```
+
+---
+
+## Part 3: Subsequent Deployments
+
+For code changes:
+
+```bash
+# 1. Make your changes
+# 2. Bump version in Cargo.toml
+git add .
+git commit -m "your changes"
+git push origin main
+
+# 3. Wait for GitHub Actions to build (~15-20 min)
+
+# 4. Deploy
+just ansible-deploy
+```
+
+For data updates only:
+
+```bash
+just ansible-upload-data
+just ansible-deploy  # Restart to pick up new data
+```
+
+---
 
 ## Troubleshooting
 
-**Build fails?**
-- Check GitHub Actions logs
-- Ensure all dependencies are correct
+### Container keeps restarting
 
-**Can't access site?**
 ```bash
-ssh root@DROPLET_IP
-docker ps  # Container running?
-docker logs exoplanets-catalog  # Check logs
-systemctl status nginx  # Nginx running?
+# Check logs
+just ansible-logs
+
+# Common issues:
+# - Missing data files → just ansible-upload-data
+# - Missing config → Check app configuration
 ```
 
-**SSL not working?**
-- Ensure DNS points to correct IP: `dig exoplanets.yourdomain.com`
-- Wait for DNS propagation (can take up to 1 hour)
-- Re-run certbot: `certbot --nginx -d exoplanets.yourdomain.com`
-
-## Next Deployment
-
-To deploy updates:
-1. Make your changes
-2. Bump version in `Cargo.toml`
-3. Push to `main`
-4. GitHub Actions automatically builds and deploys!
-
-## Useful Commands
+### Can't connect to server
 
 ```bash
-# SSH to server
+# Test SSH
+just ansible-ping
+
+# Check .env has correct DROPLET_IP
+cat infrastructure/ansible/.env
+```
+
+### Build fails in GitHub Actions
+
+- Check the workflow logs
+- Ensure `Cargo.lock` is committed (not gitignored)
+- Check Dockerfile syntax
+
+### Image pull fails
+
+```bash
+# On the server, check if you can pull manually:
+docker pull ghcr.io/oiwn/exoplanets-catalog:latest
+
+# If private, you need GHCR_TOKEN in .env
+```
+
+### SSL issues
+
+```bash
+# Re-run SSL setup
+just ansible-ssl
+
+# Or manually on server:
 ssh root@DROPLET_IP
-
-# Check app logs
-docker logs -f exoplanets-catalog
-
-# Restart app
-docker restart exoplanets-catalog
-
-# Check Nginx
-tail -f /var/log/nginx/error.log
-
-# Destroy infrastructure (WARNING: deletes everything!)
-cd infrastructure/tofu
-tofu destroy
+certbot --nginx -d exodata.space
 ```
 
 ---
 
-# Part 2: Manual Deployment (Alternative Approach)
+## Architecture
 
-> **Note**: This documents manual deployment using pre-built artifacts from GitHub Actions.
-> Use this to understand the deployment process before automating it.
-
-## Prerequisites
-
-- DigitalOcean droplet provisioned (Steps 1-4 above)
-- DNS configured (Step 5 above)
-- Data files uploaded (Step 7 above)
-- Build artifacts from GitHub Actions workflow
-
-## Step 1: Download Build Artifacts
-
-After `build-test.yml` workflow runs successfully:
-
-```bash
-# Install GitHub CLI if needed
-brew install gh
-
-# Authenticate
-gh auth login
-
-# List recent workflow runs
-gh run list --repo oiwn/exoplanets-catalog
-
-# Download artifacts from latest run
-gh run download <RUN_ID> --repo oiwn/exoplanets-catalog
-
-# You'll get two directories:
-# - server-binary/exoplanets-catalog (backend)
-# - site-files/ (frontend assets)
 ```
-
-## Step 2: Prepare Droplet
-
-```bash
-# SSH into droplet
-ssh root@DROPLET_IP
-
-# Create application directory structure
-mkdir -p /app/bin
-mkdir -p /app/site
-mkdir -p /app/data
-
-# Install nginx (if not already installed)
-apt-get update && apt-get install -y nginx
-
-# Exit for now
-exit
-```
-
-## Step 3: Upload Application Files
-
-```bash
-# Upload server binary
-scp server-binary/exoplanets-catalog root@DROPLET_IP:/app/bin/
-ssh root@DROPLET_IP 'chmod +x /app/bin/exoplanets-catalog'
-
-# Upload frontend files
-scp -r site-files/* root@DROPLET_IP:/app/site/
-
-# Verify data files exist
-ssh root@DROPLET_IP 'ls -lh /app/data/'
-```
-
-## Step 4: Configure Systemd Service
-
-```bash
-ssh root@DROPLET_IP
-
-# Create systemd service
-cat > /etc/systemd/system/exoplanets.service <<'EOF'
-[Unit]
-Description=Exoplanets Catalog Web Application
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/app
-ExecStart=/app/bin/exoplanets-catalog
-Restart=always
-RestartSec=5
-Environment=RUST_LOG=info
-Environment=LEPTOS_SITE_ROOT=/app/site
-Environment=LEPTOS_SITE_ADDR=127.0.0.1:3000
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Reload systemd and start service
-systemctl daemon-reload
-systemctl enable exoplanets.service
-systemctl start exoplanets.service
-
-# Check status
-systemctl status exoplanets.service
-
-# View logs
-journalctl -u exoplanets.service -f
-```
-
-## Step 5: Configure Nginx
-
-```bash
-# Still on the droplet
-cat > /etc/nginx/sites-available/exoplanets <<'EOF'
-server {
-    listen 80;
-    server_name YOUR_DOMAIN.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-EOF
-
-# Enable site
-ln -sf /etc/nginx/sites-available/exoplanets /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-
-# Test and reload
-nginx -t
-systemctl reload nginx
-```
-
-## Step 6: Setup SSL
-
-```bash
-# Install certbot
-apt-get install -y certbot python3-certbot-nginx
-
-# Get certificate
-certbot --nginx -d YOUR_DOMAIN.com --non-interactive --agree-tos --email YOUR_EMAIL
-
-# Enable auto-renewal
-systemctl enable certbot.timer
-systemctl start certbot.timer
-
-# Verify
-certbot certificates
-
-# Exit droplet
-exit
-```
-
-## Step 7: Verify Deployment
-
-```bash
-# Test from your machine
-curl https://YOUR_DOMAIN.com
-
-# Or open in browser
-open https://YOUR_DOMAIN.com
-```
-
-## Updating the Application
-
-When you need to deploy updates:
-
-```bash
-# 1. Push changes to GitHub - triggers build-test.yml workflow
-git push origin main
-
-# 2. Download new artifacts
-gh run download <NEW_RUN_ID> --repo oiwn/exoplanets-catalog
-
-# 3. Upload to droplet
-scp server-binary/exoplanets-catalog root@DROPLET_IP:/app/bin/
-scp -r site-files/* root@DROPLET_IP:/app/site/
-
-# 4. Restart service
-ssh root@DROPLET_IP 'systemctl restart exoplanets.service'
-```
-
-## Troubleshooting Manual Deployment
-
-```bash
-# Check if app is running
-ssh root@DROPLET_IP 'systemctl status exoplanets.service'
-
-# View application logs
-ssh root@DROPLET_IP 'journalctl -u exoplanets.service -n 100'
-
-# Check if port 3000 is listening
-ssh root@DROPLET_IP 'netstat -tlnp | grep 3000'
-
-# Test app directly (bypass nginx)
-ssh root@DROPLET_IP 'curl http://localhost:3000'
-
-# Check nginx logs
-ssh root@DROPLET_IP 'tail -f /var/log/nginx/error.log'
+┌─────────────────────────────────────────────────────────────────┐
+│                        DEPLOYMENT FLOW                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Developer Machine                                             │
+│      │                                                          │
+│      │ git push (version bump)                                  │
+│      ▼                                                          │
+│   GitHub Actions                                                │
+│      │                                                          │
+│      ├──→ Build Docker image                                    │
+│      │                                                          │
+│      └──→ Push to ghcr.io/oiwn/exoplanets-catalog              │
+│                                                                 │
+│   Developer Machine                                             │
+│      │                                                          │
+│      │ just ansible-deploy                                      │
+│      ▼                                                          │
+│   Ansible (via SSH)                                             │
+│      │                                                          │
+│      └──→ DigitalOcean Droplet                                 │
+│              │                                                  │
+│              ├──→ docker pull                                   │
+│              ├──→ docker stop/rm                                │
+│              └──→ docker run                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
+## File Structure
+
+```
+infrastructure/
+├── ansible/
+│   ├── .env.example          # Template (committed)
+│   ├── .env                  # Your config (gitignored)
+│   ├── ansible.cfg
+│   ├── inventory/
+│   │   ├── hosts.yml
+│   │   └── group_vars/all.yml
+│   ├── playbooks/
+│   │   ├── setup.yml         # Full server setup
+│   │   ├── deploy.yml        # Pull & run container
+│   │   ├── ssl.yml           # SSL certificate
+│   │   └── upload-data.yml   # Upload data files
+│   └── roles/
+│       ├── common/
+│       ├── docker/
+│       ├── nginx/
+│       └── app/
+├── docker/
+│   └── Dockerfile
+└── tofu/
+    ├── main.tf
+    └── terraform.tfvars      # Your config (gitignored)
+```
+
+---
+
+## Available Just Commands
+
+| Command | Description |
+|---------|-------------|
+| `just ansible-ping` | Test SSH connection |
+| `just ansible-setup` | Full server setup (idempotent) |
+| `just ansible-deploy` | Pull latest image & restart container |
+| `just ansible-ssl` | Setup/renew SSL certificate |
+| `just ansible-upload-data` | Upload parquet & metadata files |
+| `just ansible-status` | Check Docker & Nginx status |
+| `just ansible-logs` | View container logs |
+| `just ansible-ssh` | SSH into server |
+| `just ansible-run "cmd"` | Run arbitrary command on server |
+
+---
+
+## GitHub Secrets Required
+
+Only needed if you want to restore automated SSH deploy later:
+
+| Secret | Description |
+|--------|-------------|
+| `DROPLET_IP` | Server IP address |
+| `SSH_KEY` | Private SSH key |
+| `DOMAIN` | Domain for health check |
+
+Currently, the deploy workflow only builds and pushes the image. Manual `just ansible-deploy` handles the actual deployment.
+
+---
+
+## Costs
+
+- **DigitalOcean Droplet**: ~$6-12/month
+- **GitHub Actions**: Free (2000 min/month for private repos)
+- **GitHub Container Registry**: Free (500MB)
+- **SSL (Let's Encrypt)**: Free
+
+---
+
+## TODO
+
+- [ ] Add config file handling to upload-data playbook
+- [ ] Add health check endpoint to app
+- [ ] Setup monitoring/alerting
+- [ ] Automate data refresh pipeline

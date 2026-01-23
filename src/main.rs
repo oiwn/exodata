@@ -58,10 +58,15 @@ async fn start_server() {
         exoplanets_metadata,
     };
 
-    // Setting get_configuration(Some("Cargo.toml")) means we'll be using cargo-leptos's env values
-    // For deployment these variables are:
-    // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
-    let conf = get_configuration(Some("Cargo.toml")).unwrap();
+    // Local dev: use Cargo.toml (via cargo-leptos)
+    // Production: use LEPTOS_* environment variables
+    // See: https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain
+    let conf = if std::path::Path::new("Cargo.toml").exists() {
+        get_configuration(Some("Cargo.toml"))
+    } else {
+        get_configuration(None)
+    }
+    .expect("Failed to load Leptos configuration");
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);

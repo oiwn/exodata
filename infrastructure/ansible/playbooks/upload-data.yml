@@ -13,20 +13,31 @@
         state: directory
         mode: '0755'
 
-    - name: Sync parquet files
-      ansible.posix.synchronize:
-        src: "{{ local_data_path }}/"
-        dest: "{{ data_path }}/"
-        delete: no
-        recursive: yes
+    - name: Find local data files
+      ansible.builtin.find:
+        paths: "{{ local_data_path }}"
+        patterns:
+          - "*.parquet"
+          - "*.toml"
       delegate_to: localhost
+      become: no
+      register: local_files
+
+    - name: Upload data files
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ data_path }}/{{ item.path | basename }}"
+        mode: '0644'
+      loop: "{{ local_files.files }}"
 
     - name: List uploaded files
       ansible.builtin.find:
         paths: "{{ data_path }}"
-        patterns: "*.parquet"
+        patterns:
+          - "*.parquet"
+          - "*.toml"
       register: data_files
 
     - name: Display uploaded files
       ansible.builtin.debug:
-        msg: "Uploaded {{ data_files.matched }} parquet files"
+        msg: "Uploaded {{ data_files.matched }} data files (parquet + metadata)"

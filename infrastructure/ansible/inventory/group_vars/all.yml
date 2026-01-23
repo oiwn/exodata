@@ -12,4 +12,4 @@ app_port: 3000
 data_path: /app/data
 
 # Local data path (for upload-data playbook)
-local_data_path: "{{ playbook_dir }}/../../../data/parquet"
+local_data_path: "{{ playbook_dir }}/../../../data"
