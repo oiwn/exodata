@@ -207,7 +207,23 @@ just ansible-logs
 
 # Common issues:
 # - Missing data files → just ansible-upload-data
-# - Missing config → Check app configuration
+# - Missing LEPTOS_* env vars → redeploy with `just ansible-deploy`
+```
+
+### App not accessible (connection refused)
+
+```bash
+# Check what address app is listening on
+just ansible-run "docker logs exoplanets-catalog"
+
+# Should show: listening on http://0.0.0.0:3000
+# If it shows 127.0.0.1:3000, env vars are not set
+
+# Check env vars
+just ansible-run "docker inspect exoplanets-catalog --format '{{json .Config.Env}}'"
+
+# Should include LEPTOS_SITE_ADDR=0.0.0.0:3000
+# If not, recreate container: just ansible-deploy
 ```
 
 ### Can't connect to server
@@ -328,17 +344,25 @@ infrastructure/
 
 ---
 
-## GitHub Secrets Required
+## Leptos Configuration
 
-Only needed if you want to restore automated SSH deploy later:
+The app uses environment variables for production configuration (set automatically by Ansible):
 
-| Secret | Description |
-|--------|-------------|
-| `DROPLET_IP` | Server IP address |
-| `SSH_KEY` | Private SSH key |
-| `DOMAIN` | Domain for health check |
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `LEPTOS_OUTPUT_NAME` | `exoplanets-catalog` | JS/WASM bundle name |
+| `LEPTOS_SITE_ROOT` | `site` | Static files directory |
+| `LEPTOS_SITE_PKG_DIR` | `pkg` | JS/WASM subdirectory |
+| `LEPTOS_SITE_ADDR` | `0.0.0.0:3000` | Listen address (must be 0.0.0.0 for Docker) |
+| `LEPTOS_ENV` | `PROD` | Environment mode |
 
-Currently, the deploy workflow only builds and pushes the image. Manual `just ansible-deploy` handles the actual deployment.
+In development, the app reads from `Cargo.toml` instead. See [leptos-rs/start-axum](https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain) for details.
+
+---
+
+## GitHub Actions
+
+The workflow only builds and pushes the Docker image. No GitHub Secrets are required for deployment since it's handled manually via Ansible.
 
 ---
 
@@ -353,7 +377,5 @@ Currently, the deploy workflow only builds and pushes the image. Manual `just an
 
 ## TODO
 
-- [ ] Add config file handling to upload-data playbook
-- [ ] Add health check endpoint to app
 - [ ] Setup monitoring/alerting
 - [ ] Automate data refresh pipeline

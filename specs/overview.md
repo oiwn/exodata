@@ -2,10 +2,11 @@
 
 ## Current Status
 
-**Latest Update**: Column Selector Widget completed ✅
-- Dynamic column selection with search and reordering
-- URL-synchronized column configurations
-- See `ctx.md` for implementation details
+**Latest Update**: Production deployment completed ✅
+- Live at https://exodata.space
+- GitHub Actions builds Docker image on version bump
+- Ansible deploys to DigitalOcean droplet
+- See `DEPLOY.md` in project root for deployment guide
 
 ---
 
@@ -23,7 +24,10 @@ See **`architecture.md`** for workspace organization, build commands, and overal
 5. **`ideas.md`** - short notes with ideas
 6. **`data-management.md`** - how to fetch and prepare the data
 7. **`column-metadata.md`** - information about each column
-8. **`deployment.md`** - deployment infrastructure, CI/CD, and production setup
+
+## Deployment
+
+See **`DEPLOY.md`** in project root for deployment guide (GitHub Actions, Ansible, DigitalOcean).
 
 ## Quick Start
 
@@ -37,6 +41,13 @@ cargo leptos build --release    # Production
 ```bash
 cargo run --package exo-cli -- --help
 cargo run --package exo-cli -- view-stats
+```
+
+**Deployment:**
+```bash
+just ansible-deploy      # Deploy after image build
+just ansible-status      # Check server status
+just ansible-logs        # View container logs
 ```
 
 For complete documentation, see the specification files listed above.

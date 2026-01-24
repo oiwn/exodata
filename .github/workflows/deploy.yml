@@ -56,29 +56,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [check, build]
-    if: needs.check.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
-    steps:
-      - run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.DROPLET_IP }} >> ~/.ssh/known_hosts
-
-      - run: |
-          ssh -i ~/.ssh/id_rsa root@${{ secrets.DROPLET_IP }} << 'EOF'
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            docker stop exoplanets-catalog || true
-            docker rm exoplanets-catalog || true
-            docker run -d \
-              --name exoplanets-catalog \
-              --restart unless-stopped \
-              -p 3000:3000 \
-              -v /app/data:/app/data \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            docker image prune -f
-          EOF
-
-      - run: sleep 10 && curl -f https://${{ secrets.DOMAIN }} || exit 1
+  # Deploy is handled manually via Ansible from local machine:
+  # just ansible-deploy

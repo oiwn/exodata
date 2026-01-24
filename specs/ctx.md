@@ -1,477 +1,111 @@
 # Current Context
 
-## Task: Manual Deployment to DigitalOcean Droplet
+## TODO
 
-**Goal**: Deploy the Exoplanets Catalog web application to a DigitalOcean droplet that's already been provisioned.
+### Responsive Navigation Menu
 
-### Current State
+**Problem**: On mobile (< 640px), the navigation menu is broken:
+- Logo text "Exoplanets" overlaps with nav items
+- Nav items get cut off (third item shows "Exo..." truncated)
+- Items wrap awkwardly in two lines
 
-✅ **Completed:**
-- Droplet provisioned via OpenTofu
-- Parquet data files copied to server (`/app/data/exoplanets.parquet`, `/app/data/stellarhosts.parquet`)
+**Solution**: Implement hamburger menu for mobile
 
-❌ **To Do:**
-- Clone GitHub repository on server
-- Build application (Docker or native)
-- Configure nginx reverse proxy
-- Set up systemd service or Docker Compose
-- Configure SSL with Let's Encrypt/certbot
-- Test deployment
+**Requirements**:
+- Desktop (>= 768px): Keep current horizontal nav layout
+- Mobile (< 768px):
+  - Show hamburger icon (3 horizontal lines) instead of nav items
+  - Logo stays visible, can be smaller/icon-only
+  - Tapping hamburger opens full-screen or slide-in menu overlay
+  - Menu shows: Overview, Stellar Hosts, Exoplanets (vertical list)
+  - Tap outside or X button closes menu
 
-## Deployment Options
-
-### Option A: Docker Deployment (Recommended)
-**Pros:**
-- Isolated environment
-- Easy to update/rollback
-- Consistent across environments
-- Already have Dockerfile
-
-**Cons:**
-- Slightly more resource overhead
-- Need Docker installed on server
-
-### Option B: Native Binary Deployment
-**Pros:**
-- Lower resource usage
-- Faster startup
-- Direct systemd integration
-
-**Cons:**
-- Need to compile on server (slow) or cross-compile locally
-- Dependencies must be installed on server
+**Implementation approach**:
+- Add mobile menu state (open/closed) with Leptos signal
+- Use Tailwind responsive classes (`md:hidden`, `md:flex`)
+- Hamburger button visible on mobile only
+- Overlay/drawer component for mobile menu
+- No JS framework needed - pure Leptos + Tailwind
 
 ---
 
-## Build Performance Optimization
+### Google Analytics Integration
 
-### Problem: Compilation Resource Requirements
+**Goal**: Track page views and user interactions
 
-Building Rust + Leptos + WASM is resource-intensive:
-- **RAM**: 4-8GB during compilation
-- **CPU**: High usage for 10-30 minutes
-- **Issue**: Small droplets (2GB RAM) can crash during builds
+**Requirements**:
+- Add GA4 tracking script to page head
+- Track page views for: Overview, Stellar Hosts, Exoplanets
+- Store GA measurement ID in environment variable or config
+- Respect user privacy (consider cookie consent if needed)
 
-### Solution: Build in GitHub Actions, Deploy Pre-built Artifacts
-
-**Strategy**: Use GitHub's free runners (7GB RAM, 2-core CPU) to build, then deploy minimal runtime container.
-
-**Time Savings:**
-| Method | Time | Notes |
-|--------|------|-------|
-| `cargo install cargo-leptos` | ~5-10 min | Compiles from source |
-| `cargo binstall cargo-leptos` | ~15 sec | Downloads pre-built binary ⚡ |
-| Cached cargo-leptos binary | ~1 sec | Best for CI/CD |
-
-**Implementation:**
-
-```yaml
-# In GitHub Actions workflow
-- name: Install cargo-binstall
-  run: |
-    curl -L --proto '=https' --tlsv1.2 -sSf \
-      https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-
-- name: Cache cargo-leptos
-  uses: actions/cache@v4
-  with:
-    path: ~/.cargo/bin/cargo-leptos
-    key: cargo-leptos-${{ runner.os }}
-
-- name: Install cargo-leptos (fast!)
-  run: |
-    if ! command -v cargo-leptos &> /dev/null; then
-      cargo binstall --no-confirm cargo-leptos
-    fi
-
-- name: Build artifacts
-  run: cargo leptos build --release
-
-- name: Upload artifacts
-  uses: actions/upload-artifact@v4
-  with:
-    name: leptos-build
-    path: |
-      target/server/release/exoplanets-catalog
-      target/site/
-```
-
-**Multi-stage Dockerfile (already in place):**
-```dockerfile
-# Builder stage: Heavy build environment
-FROM rust:latest as builder
-RUN cargo binstall --no-confirm cargo-leptos
-# ... build everything ...
-
-# Runtime stage: Minimal deployment
-FROM debian:bookworm-slim
-COPY --from=builder /app/target/server/release/exoplanets-catalog /app/
-COPY --from=builder /app/target/site /app/site
-```
-
-**Result**: Droplet only runs `docker pull` + `docker run` (no compilation!)
+**Implementation**:
+- Add GA script in `shell()` function or layout component
+- Use `LEPTOS_GA_ID` env var or hardcode measurement ID
 
 ---
 
-## Implementation Plan
+### Swagger & SQL API
 
-### Phase 1: Server Preparation (5-10 min)
+**Goal**: Provide REST API with SQL query support and OpenAPI documentation
 
-**SSH into droplet:**
-```bash
-ssh root@YOUR_DROPLET_IP
-```
+**Requirements**:
+- Swagger UI at `/api/docs` or `/swagger`
+- Endpoints:
+  - `GET /api/query?sql=...` - execute SQL query against parquet data
+  - `GET /api/tables` - list available tables
+  - `GET /api/schema/{table}` - get table schema
+- Rate limiting and query validation (prevent destructive queries)
+- Return JSON results with pagination
 
-**Install dependencies:**
-```bash
-# Update system
-apt-get update && apt-get upgrade -y
-
-# Install Docker (if using Option A)
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-
-# Install nginx
-apt-get install -y nginx
-
-# Install git
-apt-get install -y git
-
-# Install certbot for SSL
-apt-get install -y certbot python3-certbot-nginx
-```
-
-**Create app directory structure:**
-```bash
-mkdir -p /app/data
-mkdir -p /app/repo
-```
+**Implementation**:
+- Use `utoipa` crate for OpenAPI generation
+- Use `datafusion` or polars SQL interface for queries
+- Add to existing Axum `/rest` router
+^^^ really? or let's split leptos server functions from REST api?
 
 ---
 
-### Phase 2: Clone Repository (2 min)
+### Discovery Timeline / Diff View
 
-```bash
-cd /app/repo
-git clone https://github.com/YOUR_USERNAME/exoplanets-catalog.git .
-```
+**Goal**: Visualize exoplanet discoveries over time
+^^^ No, need to check if discovery date available.
 
-**Verify data files exist:**
-```bash
-ls -lh /app/data/
-# Should show: exoplanets.parquet, stellarhosts.parquet
-```
+**Requirements**:
+- Use `disc_year` (discovery year) field from exoplanets data
+- Show:
+  - Timeline chart of discoveries per year
+  - Filter/compare between date ranges
+  - "New discoveries since [date]" view
+- Could be a new page or section on Overview
 
----
-
-### Phase 3: Build Application
-
-#### Option A: Docker Build (20-30 min)
-
-```bash
-cd /app/repo
-
-# Build Docker image
-docker build -f infrastructure/docker/Dockerfile -t exoplanets-catalog:latest .
-
-# Verify image built
-docker images | grep exoplanets-catalog
-```
-
-**Test run:**
-```bash
-docker run -d \
-  --name exoplanets-test \
-  -p 3000:3000 \
-  -v /app/data:/app/data:ro \
-  exoplanets-catalog:latest
-
-# Check logs
-docker logs -f exoplanets-test
-
-# Test locally
-curl http://localhost:3000
-
-# Stop test container
-docker stop exoplanets-test && docker rm exoplanets-test
-```
-
-#### Option B: Native Build (40-60 min, or 20-30 min with binstall)
-
-```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-
-# Install cargo-binstall (speeds up binary installation)
-curl -L --proto '=https' --tlsv1.2 -sSf \
-  https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-
-# Install cargo-leptos using binstall (15 sec instead of 5-10 min!)
-cargo binstall --no-confirm cargo-leptos
-
-# Alternative (slower): compile from source
-# cargo install --locked cargo-leptos
-
-# Add WASM target
-rustup target add wasm32-unknown-unknown
-
-# Install Tailwind CSS
-curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
-chmod +x tailwindcss-linux-x64
-mv tailwindcss-linux-x64 /usr/local/bin/tailwindcss
-
-# Build application
-cd /app/repo
-cargo leptos build --release
-
-# Binary will be at: target/server/release/exoplanets-catalog
-# Static files at: target/site/
-```
+**Implementation**:
+- Server function to aggregate discoveries by year
+- Frontend chart component (consider lightweight charting lib or pure CSS/SVG)
+- Date range picker for comparisons
 
 ---
 
-### Phase 4: Configure Nginx Reverse Proxy (5 min)
+### Page Loading Overlay
 
-**Create nginx config:**
-```bash
-cat > /etc/nginx/sites-available/exoplanets <<'EOF'
-server {
-    listen 80;
-    server_name YOUR_DOMAIN.com;  # e.g., exoplanets.yourdomain.com
+**Goal**: Show loading indicator while initial data loads
+^^^ there is indicator already, but i would like to make it on top of the page, so content will change only at the last moment
 
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-EOF
+**Problem**: Page may appear blank or broken while SSR hydrates / data loads
 
-# Enable site
-ln -s /etc/nginx/sites-available/exoplanets /etc/nginx/sites-enabled/
+**Requirements**:
+- Full-screen overlay with spinner/animation on initial load
+- Overlay disappears when hydration complete and data ready
+- Should not flash on fast connections (delay before showing)
+- Branded loading state (logo + "Loading..." text)
 
-# Test config
-nginx -t
+**Implementation**:
+- CSS-only initial loader in HTML (no JS dependency)
+- Leptos `Suspense` or `Transition` for data loading states
+- Remove overlay on `on_mount` or when resources resolve
 
-# Reload nginx
-systemctl reload nginx
+### Integrate Buymeacoffe button
+
+```html
+  <a href="https://www.buymeacoffee.com/oiwn"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=oiwn&button_colour=BD5FFF&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" /></a>
 ```
-
----
-
-### Phase 5: Set Up Service
-
-#### Option A: Docker Compose (Recommended)
-
-**Create docker-compose.yml:**
-```bash
-cat > /app/docker-compose.yml <<'EOF'
-version: '3.8'
-
-services:
-  exoplanets-catalog:
-    image: exoplanets-catalog:latest
-    container_name: exoplanets-catalog
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - /app/data:/app/data:ro
-    environment:
-      - RUST_LOG=info
-EOF
-
-# Start service
-cd /app
-docker compose up -d
-
-# Check logs
-docker compose logs -f
-```
-
-#### Option B: Systemd Service
-
-```bash
-cat > /etc/systemd/system/exoplanets.service <<'EOF'
-[Unit]
-Description=Exoplanets Catalog Web Application
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/app/repo
-ExecStart=/app/repo/target/server/release/exoplanets-catalog
-Restart=always
-RestartSec=5
-Environment=RUST_LOG=info
-Environment=LEPTOS_SITE_ROOT=/app/repo/target/site
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Reload systemd
-systemctl daemon-reload
-
-# Enable and start service
-systemctl enable exoplanets.service
-systemctl start exoplanets.service
-
-# Check status
-systemctl status exoplanets.service
-
-# View logs
-journalctl -u exoplanets.service -f
-```
-
----
-
-### Phase 6: Configure SSL (5 min)
-
-**Set up Let's Encrypt SSL:**
-```bash
-certbot --nginx -d YOUR_DOMAIN.com --non-interactive --agree-tos --email YOUR_EMAIL
-
-# Enable auto-renewal
-systemctl enable certbot.timer
-systemctl start certbot.timer
-```
-
-**Verify SSL:**
-```bash
-curl https://YOUR_DOMAIN.com
-```
-
----
-
-### Phase 7: Verify Deployment (2 min)
-
-**Check all services:**
-```bash
-# App running (Docker)
-docker ps | grep exoplanets-catalog
-
-# OR App running (systemd)
-systemctl status exoplanets.service
-
-# Nginx running
-systemctl status nginx
-
-# SSL cert valid
-certbot certificates
-```
-
-**Test application:**
-```bash
-# Local test
-curl http://localhost:3000
-
-# Public test
-curl https://YOUR_DOMAIN.com
-```
-
-**Open in browser:**
-- Visit: `https://YOUR_DOMAIN.com`
-- Test tables load
-- Test column selector
-- Test pagination/sorting
-
----
-
-## Environment Variables (Optional)
-
-If app needs configuration:
-
-```bash
-# For Docker Compose
-# Edit /app/docker-compose.yml, add under environment:
-environment:
-  - DATA_PATH=/app/data
-  - RUST_LOG=info
-  - LEPTOS_OUTPUT_NAME=exoplanets-catalog
-
-# For systemd
-# Edit /etc/systemd/system/exoplanets.service, add under [Service]:
-Environment=DATA_PATH=/app/data
-```
-
----
-
-## Updating the Application
-
-**Docker deployment:**
-```bash
-cd /app/repo
-git pull origin main
-docker build -f infrastructure/docker/Dockerfile -t exoplanets-catalog:latest .
-cd /app
-docker compose down
-docker compose up -d
-```
-
-**Native deployment:**
-```bash
-cd /app/repo
-git pull origin main
-cargo leptos build --release
-systemctl restart exoplanets.service
-```
-
----
-
-## Troubleshooting
-
-**App won't start:**
-```bash
-# Check logs (Docker)
-docker logs exoplanets-catalog
-
-# Check logs (systemd)
-journalctl -u exoplanets.service -n 100
-
-# Common issues:
-# - Data files not found: Check /app/data/
-# - Port 3000 in use: lsof -i :3000
-# - Permission issues: chown -R root:root /app
-```
-
-**Nginx errors:**
-```bash
-tail -f /var/log/nginx/error.log
-nginx -t  # Test config
-```
-
-**SSL issues:**
-```bash
-certbot renew --dry-run  # Test renewal
-certbot certificates  # Check cert status
-```
-
----
-
-## Next Steps
-
-After manual deployment works:
-1. Set up CI/CD with GitHub Actions (use DEPLOY.md as reference)
-2. Configure monitoring (uptime checks, logs)
-3. Set up automated backups for data
-4. Configure firewall rules (UFW)
-
----
-
-## Required Information
-
-Before starting, have ready:
-- [ ] Droplet IP address
-- [ ] Domain name (DNS already pointing to droplet)
-- [ ] GitHub repository URL
-- [ ] Email for SSL certificate
-- [ ] Data files confirmed at `/app/data/`
