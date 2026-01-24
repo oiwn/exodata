@@ -79,9 +79,8 @@ async fn start_server() {
         }
     };
 
-    // build our application with a route
-    let app = Router::new()
-        // leptos_routes_with_context handles both SSR and server functions automatically
+    // Build Leptos app first, then merge REST API on top
+    let app: Router = Router::new()
         .leptos_routes_with_context(
             &leptos_options,
             routes,
@@ -91,9 +90,11 @@ async fn start_server() {
                 move || shell(leptos_options.clone())
             },
         )
-        .nest_service("/rest", server::api_routes(api_state)) // Axum REST API at /rest/* (Leptos uses /api/*)
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options);
+
+    // Merge REST API routes on top (these take priority over Leptos fallback)
+    let app = app.nest_service("/rest", server::api_routes(api_state));
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     println!("listening on http://{}", &addr);

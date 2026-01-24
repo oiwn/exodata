@@ -2,30 +2,7 @@
 
 ## TODO
 
-### Responsive Navigation Menu
-
-**Problem**: On mobile (< 640px), the navigation menu is broken:
-- Logo text "Exoplanets" overlaps with nav items
-- Nav items get cut off (third item shows "Exo..." truncated)
-- Items wrap awkwardly in two lines
-
-**Solution**: Implement hamburger menu for mobile
-
-**Requirements**:
-- Desktop (>= 768px): Keep current horizontal nav layout
-- Mobile (< 768px):
-  - Show hamburger icon (3 horizontal lines) instead of nav items
-  - Logo stays visible, can be smaller/icon-only
-  - Tapping hamburger opens full-screen or slide-in menu overlay
-  - Menu shows: Overview, Stellar Hosts, Exoplanets (vertical list)
-  - Tap outside or X button closes menu
-
-**Implementation approach**:
-- Add mobile menu state (open/closed) with Leptos signal
-- Use Tailwind responsive classes (`md:hidden`, `md:flex`)
-- Hamburger button visible on mobile only
-- Overlay/drawer component for mobile menu
-- No JS framework needed - pure Leptos + Tailwind
+- [x] responsive navigation menu (should looks good on mobile)
 
 ---
 
@@ -45,24 +22,139 @@
 
 ---
 
-### Swagger & SQL API
+### Swagger & REST API
 
-**Goal**: Provide REST API with SQL query support and OpenAPI documentation
+**Goal**: Provide comprehensive REST API with SQL query support, statistics, export formats, and OpenAPI documentation
 
-**Requirements**:
-- Swagger UI at `/api/docs` or `/swagger`
-- Endpoints:
-  - `GET /api/query?sql=...` - execute SQL query against parquet data
-  - `GET /api/tables` - list available tables
-  - `GET /api/schema/{table}` - get table schema
-- Rate limiting and query validation (prevent destructive queries)
-- Return JSON results with pagination
+#### URL Prefix Convention
 
-**Implementation**:
-- Use `utoipa` crate for OpenAPI generation
-- Use `datafusion` or polars SQL interface for queries
-- Add to existing Axum `/rest` router
-^^^ really? or let's split leptos server functions from REST api?
+- **`/api/*`** - Reserved for Leptos server functions (auto-registered by `#[server]` macro)
+- **`/rest/*`** - Public REST API + Swagger
+
+#### Current State (needs refactoring)
+
+**File**: `src/server/handlers.rs`
+
+**Problems**:
+1. Has own filtering/pagination/sorting logic - duplicates `common.rs`
+2. Hardcoded column-specific filters (`hostname`, `pl_name`, `sy_dist_min/max`, etc.)
+3. Does NOT use shared business logic from `common.rs`
+4. Frontend doesn't use it (uses Leptos server functions instead)
+
+**Current endpoints** (at `/rest`, but poorly implemented):
+| Method | Endpoint | Status |
+|--------|----------|--------|
+| GET | `/rest/stellarhosts` | Needs refactor - use common.rs |
+| GET | `/rest/exoplanets` | Needs refactor - use common.rs |
+| GET | `/rest/stellarhosts/schema` | OK, but basic |
+| GET | `/rest/exoplanets/schema` | OK, but basic |
+
+#### Implementation Steps
+
+- [x] **Step 1: Refactor handlers.rs to use common.rs**
+  - Remove duplicate filtering/pagination/sorting logic (lines 154-367)
+  - Call `common::get_stellarhosts_data()` and `common::get_exoplanets_data()`
+  - Simplify `QueryParams` to generic: `page`, `limit`, `sort_by`, `order`, `columns`
+  - Remove hardcoded column filters (`hostname`, `sy_dist_min`, etc.)
+
+- [x] **Step 2: Add utoipa annotations**
+  - Add `utoipa` and `utoipa-swagger-ui` to Cargo.toml
+  - Annotate `QueryParams`, `ApiResponse` with `#[derive(ToSchema)]`
+  - Annotate handlers with `#[utoipa::path(...)]`
+  - Create `ApiDoc` struct with `#[derive(OpenApi)]`
+
+- [x] **Step 3: Mount Swagger UI**
+  - Add `/rest/docs` route serving Swagger UI
+  - Add `/rest/openapi.json` route for OpenAPI spec
+  - Update `api_routes()` in handlers.rs
+
+- [ ] **Step 4: Add metadata endpoints**
+  - `GET /rest/tables` - list available tables with row counts
+  - `GET /rest/columns/{table}` - column names, types, units, descriptions
+  - Use existing metadata from `ApiState`
+
+- [ ] **Step 5: Add statistics endpoints**
+  - `GET /rest/stats` - reuse logic from `get_stats()` in functions.rs
+  - `GET /rest/stats/discoveries` - group by year or method
+  - Extract shared logic to `common.rs` if needed
+
+- [ ] **Step 6: Add export endpoints**
+  - `GET /rest/export/{table}` - export with format param (csv, json)
+  - Implement CSV serialization (use `polars` or manual)
+  - Add `columns` param for column selection
+  - Add `limit` param (default 1000, max 10000)
+
+- [ ] **Step 7: Add SQL query endpoint**
+  - `GET /rest/query?sql=...` - execute SQL against parquet
+  - Use `polars` SQLContext to parse and execute
+  - Validate query: only SELECT allowed
+  - Add timeout (30s) and row limit (10000)
+
+- [ ] **Step 8: Update tests**
+  - Update `src/server/tests.rs` to match new API
+  - Add tests for new endpoints (stats, export, query)
+  - Test error cases (invalid SQL, missing params)
+
+- [ ] **Step 9: Add middleware**
+  - CORS headers for external consumers
+  - Rate limiting (optional, use `tower-governor`)
+  - Request logging
+
+#### Planned Endpoints (at `/rest`)
+
+**Data Endpoints**
+```
+GET /rest/stellarhosts?columns=...&page=1&limit=50&sort_by=...&order=asc
+GET /rest/exoplanets?columns=...&page=1&limit=50&sort_by=...&order=asc
+```
+
+**SQL Query Endpoint**
+```
+GET /rest/query?sql=SELECT...&limit=100
+```
+- Execute read-only SQL against parquet data
+- Use `polars` SQLContext for SQL parsing
+- Whitelist: SELECT only
+- Block: DROP, DELETE, UPDATE, INSERT, CREATE, ALTER
+- Max result limit: 10,000 rows
+- Timeout: 30 seconds
+
+**Statistics Endpoints**
+```
+GET /rest/stats
+GET /rest/stats/discoveries?group_by=year
+GET /rest/stats/discoveries?group_by=method
+GET /rest/stats/planets?group_by=size_category
+```
+
+**Export Endpoints**
+```
+GET /rest/export/stellarhosts?format=csv&columns=hostname,sy_dist,st_teff
+GET /rest/export/exoplanets?format=json&limit=1000
+GET /rest/export/query?sql=SELECT...&format=csv
+```
+
+Formats: `csv`, `json`, `parquet`
+
+**Metadata Endpoints**
+```
+GET /rest/tables
+GET /rest/columns/{table}
+```
+
+#### OpenAPI/Swagger
+
+- Swagger UI at `/rest/docs`
+- OpenAPI JSON at `/rest/openapi.json`
+- Use `utoipa` crate with `utoipa-swagger-ui`
+
+#### Implementation Notes
+
+- Refactor `src/server/handlers.rs` to use `common.rs`
+- Reuse `ApiState` (already shared with Leptos functions)
+- Add rate limiting middleware (tower-governor)
+- CORS headers for external API consumers
+- Tests in `src/server/tests.rs` need updating after refactor
 
 ---
 
@@ -109,3 +201,17 @@
 ```html
   <a href="https://www.buymeacoffee.com/oiwn"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=oiwn&button_colour=BD5FFF&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" /></a>
 ```
+
+### Google Analytics code:
+
+```html
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MHKPES88ZJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-MHKPES88ZJ');
+</script>
+``` 

@@ -1,3 +1,6 @@
+// REST API handlers for the exoplanets catalog
+// These handlers use the shared business logic from common.rs
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -11,7 +14,11 @@ use axum::{
 use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
+use utoipa::{OpenApi, ToSchema, IntoParams};
+use utoipa_swagger_ui::SwaggerUi;
+
+use super::common;
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
@@ -21,39 +28,103 @@ pub struct ApiState {
     pub exoplanets_metadata: Arc<HashMap<String, ColumnMetadata>>,
 }
 
-/// Parameters for filtering, sorting, and pagination
-#[derive(Debug, Deserialize, Serialize)]
+/// Generic query parameters for data endpoints
+/// Column-agnostic design - works with any table
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
 pub struct QueryParams {
+    /// Page number (1-indexed, default: 1)
+    #[param(example = 1)]
     pub page: Option<usize>,
+    /// Number of rows per page (default: 50, max: 1000)
+    #[param(example = 50)]
     pub limit: Option<usize>,
+    /// Column name to sort by
+    #[param(example = "hostname")]
     pub sort_by: Option<String>,
-    pub order: Option<String>, // asc or desc
-    // Generic filter parameters
-    pub hostname: Option<String>,
-    pub pl_name: Option<String>,
-    // Numeric range filters
-    pub sy_dist_min: Option<f64>,
-    pub sy_dist_max: Option<f64>,
-    pub st_teff_min: Option<f64>,
-    pub st_teff_max: Option<f64>,
-    // Exoplanet specific filters
-    pub pl_orbper_min: Option<f64>,
-    pub pl_orbper_max: Option<f64>,
-    pub pl_rade_min: Option<f64>,
-    pub pl_rade_max: Option<f64>,
-    pub pl_masse_min: Option<f64>,
-    pub pl_masse_max: Option<f64>,
+    /// Sort order: "asc" or "desc" (default: "asc")
+    #[param(example = "asc")]
+    pub order: Option<String>,
+    /// Comma-separated list of columns to return
+    #[param(example = "hostname,sy_dist,st_teff")]
+    pub columns: Option<String>,
 }
 
 /// Response structure for paginated data
-#[derive(Debug, Serialize)]
-pub struct ApiResponse<T> {
-    pub data: Vec<T>,
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ApiResponse {
+    /// Array of row objects
+    #[schema(value_type = Vec<Object>)]
+    pub data: Vec<Value>,
+    /// Total rows matching query (after filtering, before pagination)
+    #[schema(example = 5000)]
     pub total: usize,
+    /// Total rows in entire dataset (unfiltered)
+    #[schema(example = 5000)]
+    pub total_all: usize,
+    /// Current page number
+    #[schema(example = 1)]
     pub page: usize,
+    /// Rows per page
+    #[schema(example = 50)]
     pub limit: usize,
-    pub filters: QueryParams,
+    /// Column names in the response
+    #[schema(example = json!(["hostname", "sy_dist", "st_teff"]))]
+    pub columns: Vec<String>,
 }
+
+/// Response structure for schema endpoint
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SchemaResponse {
+    /// List of columns with their metadata
+    pub columns: Vec<ColumnInfo>,
+    /// Total rows in the table
+    #[schema(example = 5000)]
+    pub total_rows: usize,
+}
+
+/// Column metadata information
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ColumnInfo {
+    /// Column name
+    #[schema(example = "hostname")]
+    pub name: String,
+    /// Data type (e.g., "String", "Float64", "Int64")
+    #[schema(example = "String")]
+    pub data_type: String,
+    /// Human-readable description of the column
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(example = "Host star name")]
+    pub description: Option<String>,
+    /// Unit of measurement (if applicable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(example = "parsec")]
+    pub unit: Option<String>,
+}
+
+/// OpenAPI documentation for the Exoplanets Catalog REST API
+#[derive(OpenApi)]
+#[openapi(
+    info(
+        title = "Exoplanets Catalog API",
+        version = "1.0.0",
+        description = "REST API for querying the NASA Exoplanet Archive data. Provides access to stellar hosts and exoplanets with pagination, sorting, and column selection.",
+        license(name = "MIT", url = "https://opensource.org/licenses/MIT"),
+    ),
+    paths(
+        get_stellarhosts,
+        get_exoplanets,
+        get_stellarhosts_schema,
+        get_exoplanets_schema,
+    ),
+    components(
+        schemas(ApiResponse, SchemaResponse, ColumnInfo)
+    ),
+    tags(
+        (name = "data", description = "Data query endpoints"),
+        (name = "schema", description = "Schema information endpoints")
+    )
+)]
+pub struct ApiDoc;
 
 pub fn api_routes(state: ApiState) -> Router {
     Router::new()
@@ -64,363 +135,178 @@ pub fn api_routes(state: ApiState) -> Router {
         .with_state(state)
 }
 
-/// Handler for stellarhosts data with filtering and pagination
+/// Returns the Swagger UI router (should be mounted at root level, not nested)
+pub fn swagger_ui() -> SwaggerUi {
+    SwaggerUi::new("/swagger-ui")
+        .url("/rest/openapi.json", ApiDoc::openapi())
+}
+
+/// Get stellar hosts data
+///
+/// Returns paginated stellar host data with optional sorting and column selection.
+/// Default columns: hostname, sy_dist, st_teff, st_mass, sy_pnum
+#[utoipa::path(
+    get,
+    path = "/rest/stellarhosts",
+    params(QueryParams),
+    responses(
+        (status = 200, description = "Stellar hosts data", body = ApiResponse),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "data"
+)]
 pub async fn get_stellarhosts(
     State(state): State<ApiState>,
     Query(params): Query<QueryParams>,
-) -> Result<Json<ApiResponse<Value>>, StatusCode> {
-    let mut df = (*state.stellarhosts_df).clone();
+) -> Result<Json<ApiResponse>, StatusCode> {
+    let page = params.page.unwrap_or(1);
+    let limit = params.limit.unwrap_or(50).min(1000); // Cap at 1000
 
-    // Apply filters
-    df = apply_stellarhosts_filters(df, &params)?;
+    // Parse columns parameter
+    let selected_columns = params.columns.map(|s| {
+        s.split(',')
+            .map(|col| col.trim().to_string())
+            .collect::<Vec<_>>()
+    });
 
-    // Get total count before pagination
-    let total = df.height();
+    // Use shared business logic from common.rs
+    let (rows, total, total_all, columns, _metadata) = common::get_stellarhosts_data(
+        &state.stellarhosts_df,
+        &state.stellarhosts_metadata,
+        page,
+        limit,
+        params.sort_by,
+        params.order,
+        selected_columns,
+    )
+    .map_err(|e| {
+        tracing::error!("Failed to get stellarhosts data: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    // Apply sorting
-    if let Some(sort_by) = &params.sort_by {
-        df = apply_sorting(df, sort_by, params.order.as_deref())?;
-    }
-
-    // Apply pagination
-    df = apply_pagination(df, params.page, params.limit)?;
-
-    // Convert to JSON
-    let data = dataframe_to_json(&df)?;
-
-    let response = ApiResponse {
-        data,
+    Ok(Json(ApiResponse {
+        data: rows,
         total,
-        page: params.page.unwrap_or(1),
-        limit: params.limit.unwrap_or(50),
-        filters: params,
-    };
-
-    Ok(Json(response))
+        total_all,
+        page,
+        limit,
+        columns,
+    }))
 }
 
-/// Handler for exoplanets data with filtering and pagination
+/// Get exoplanets data
+///
+/// Returns paginated exoplanet data with optional sorting and column selection.
+/// Default columns: pl_name, hostname, discoverymethod, disc_year, pl_orbper, pl_rade, pl_bmasse
+#[utoipa::path(
+    get,
+    path = "/rest/exoplanets",
+    params(QueryParams),
+    responses(
+        (status = 200, description = "Exoplanets data", body = ApiResponse),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "data"
+)]
 pub async fn get_exoplanets(
     State(state): State<ApiState>,
     Query(params): Query<QueryParams>,
-) -> Result<Json<ApiResponse<Value>>, StatusCode> {
-    let mut df = (*state.exoplanets_df).clone();
+) -> Result<Json<ApiResponse>, StatusCode> {
+    let page = params.page.unwrap_or(1);
+    let limit = params.limit.unwrap_or(50).min(1000); // Cap at 1000
 
-    // Apply filters
-    df = apply_exoplanets_filters(df, &params)?;
+    // Parse columns parameter
+    let selected_columns = params.columns.map(|s| {
+        s.split(',')
+            .map(|col| col.trim().to_string())
+            .collect::<Vec<_>>()
+    });
 
-    // Get total count before pagination
-    let total = df.height();
+    // Use shared business logic from common.rs
+    let (rows, total, total_all, columns, _metadata) = common::get_exoplanets_data(
+        &state.exoplanets_df,
+        &state.exoplanets_metadata,
+        page,
+        limit,
+        params.sort_by,
+        params.order,
+        selected_columns,
+    )
+    .map_err(|e| {
+        tracing::error!("Failed to get exoplanets data: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    // Apply sorting
-    if let Some(sort_by) = &params.sort_by {
-        df = apply_sorting(df, sort_by, params.order.as_deref())?;
-    }
-
-    // Apply pagination
-    df = apply_pagination(df, params.page, params.limit)?;
-
-    // Convert to JSON
-    let data = dataframe_to_json(&df)?;
-
-    let response = ApiResponse {
-        data,
+    Ok(Json(ApiResponse {
+        data: rows,
         total,
-        page: params.page.unwrap_or(1),
-        limit: params.limit.unwrap_or(50),
-        filters: params,
-    };
-
-    Ok(Json(response))
+        total_all,
+        page,
+        limit,
+        columns,
+    }))
 }
 
-/// Handler for stellarhosts schema information
-pub async fn get_stellarhosts_schema(
-    State(state): State<ApiState>,
-) -> Json<Value> {
+/// Get stellar hosts schema
+///
+/// Returns column metadata for the stellar hosts table including column names,
+/// data types, descriptions, and units.
+#[utoipa::path(
+    get,
+    path = "/rest/stellarhosts/schema",
+    responses(
+        (status = 200, description = "Stellar hosts schema", body = SchemaResponse)
+    ),
+    tag = "schema"
+)]
+pub async fn get_stellarhosts_schema(State(state): State<ApiState>) -> Json<SchemaResponse> {
     let df = &*state.stellarhosts_df;
-    let schema = dataframe_schema_to_json(df);
+    let metadata = &*state.stellarhosts_metadata;
+    let schema = build_schema_response(df, metadata);
     Json(schema)
 }
 
-/// Handler for exoplanets schema information
-pub async fn get_exoplanets_schema(State(state): State<ApiState>) -> Json<Value> {
+/// Get exoplanets schema
+///
+/// Returns column metadata for the exoplanets table including column names,
+/// data types, descriptions, and units.
+#[utoipa::path(
+    get,
+    path = "/rest/exoplanets/schema",
+    responses(
+        (status = 200, description = "Exoplanets schema", body = SchemaResponse)
+    ),
+    tag = "schema"
+)]
+pub async fn get_exoplanets_schema(State(state): State<ApiState>) -> Json<SchemaResponse> {
     let df = &*state.exoplanets_df;
-    let schema = dataframe_schema_to_json(df);
+    let metadata = &*state.exoplanets_metadata;
+    let schema = build_schema_response(df, metadata);
     Json(schema)
 }
 
-/// Apply filters specific to stellarhosts dataset
-fn apply_stellarhosts_filters(
-    df: DataFrame,
-    params: &QueryParams,
-) -> Result<DataFrame, StatusCode> {
-    let mut df = df;
-
-    // Text filters - simple string contains
-    if let Some(hostname) = &params.hostname {
-        if let Ok(col) = df.column("hostname") {
-            if let Ok(str_col) = col.str() {
-                // Create a boolean mask for filtering
-                let mut mask =
-                    BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
-                for i in 0..str_col.len() {
-                    let contains = str_col
-                        .get(i)
-                        .map(|s| {
-                            s.to_lowercase().contains(&hostname.to_lowercase())
-                        })
-                        .unwrap_or(false);
-                    mask.append_value(contains);
-                }
-                let filter_mask = mask.finish();
-                df = df.filter(&filter_mask).unwrap_or(df);
+/// Build schema response with column metadata
+fn build_schema_response(
+    df: &DataFrame,
+    metadata: &HashMap<String, ColumnMetadata>,
+) -> SchemaResponse {
+    let columns: Vec<ColumnInfo> = df
+        .fields()
+        .iter()
+        .map(|field| {
+            let name = field.name().to_string();
+            let meta = metadata.get(&name);
+            ColumnInfo {
+                name: name.clone(),
+                data_type: format!("{:?}", field.dtype()),
+                description: meta.and_then(|m| m.description.clone()),
+                unit: meta.and_then(|m| m.unit.clone()),
             }
-        }
+        })
+        .collect();
+
+    SchemaResponse {
+        columns,
+        total_rows: df.height(),
     }
-
-    // Numeric range filters
-    if let Some(min_val) = params.sy_dist_min {
-        if let Ok(col) = df.column("sy_dist") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.gt_eq(min_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(max_val) = params.sy_dist_max {
-        if let Ok(col) = df.column("sy_dist") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.lt_eq(max_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(min_val) = params.st_teff_min {
-        if let Ok(col) = df.column("st_teff") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.gt_eq(min_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(max_val) = params.st_teff_max {
-        if let Ok(col) = df.column("st_teff") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.lt_eq(max_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    Ok(df)
-}
-
-/// Apply filters specific to exoplanets dataset
-fn apply_exoplanets_filters(
-    df: DataFrame,
-    params: &QueryParams,
-) -> Result<DataFrame, StatusCode> {
-    let mut df = df;
-
-    // Text filters
-    if let Some(hostname) = &params.hostname {
-        if let Ok(col) = df.column("hostname") {
-            if let Ok(str_col) = col.str() {
-                // Create a boolean mask for filtering
-                let mut mask =
-                    BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
-                for i in 0..str_col.len() {
-                    let contains = str_col
-                        .get(i)
-                        .map(|s| {
-                            s.to_lowercase().contains(&hostname.to_lowercase())
-                        })
-                        .unwrap_or(false);
-                    mask.append_value(contains);
-                }
-                let filter_mask = mask.finish();
-                df = df.filter(&filter_mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(pl_name) = &params.pl_name {
-        if let Ok(col) = df.column("pl_name") {
-            if let Ok(str_col) = col.str() {
-                // Create a boolean mask for filtering
-                let mut mask =
-                    BooleanChunkedBuilder::new(col.name().clone(), str_col.len());
-                for i in 0..str_col.len() {
-                    let contains = str_col
-                        .get(i)
-                        .map(|s| {
-                            s.to_lowercase().contains(&pl_name.to_lowercase())
-                        })
-                        .unwrap_or(false);
-                    mask.append_value(contains);
-                }
-                let filter_mask = mask.finish();
-                df = df.filter(&filter_mask).unwrap_or(df);
-            }
-        }
-    }
-
-    // Numeric range filters
-    if let Some(min_val) = params.pl_orbper_min {
-        if let Ok(col) = df.column("pl_orbper") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.gt_eq(min_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(max_val) = params.pl_orbper_max {
-        if let Ok(col) = df.column("pl_orbper") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.lt_eq(max_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(min_val) = params.pl_rade_min {
-        if let Ok(col) = df.column("pl_rade") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.gt_eq(min_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(max_val) = params.pl_rade_max {
-        if let Ok(col) = df.column("pl_rade") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.lt_eq(max_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(min_val) = params.pl_masse_min {
-        if let Ok(col) = df.column("pl_masse") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.gt_eq(min_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    if let Some(max_val) = params.pl_masse_max {
-        if let Ok(col) = df.column("pl_masse") {
-            if let Ok(f64_col) = col.f64() {
-                let mask = f64_col.lt_eq(max_val);
-                df = df.filter(&mask).unwrap_or(df);
-            }
-        }
-    }
-
-    Ok(df)
-}
-
-/// Apply sorting to a dataframe
-fn apply_sorting(
-    df: DataFrame,
-    sort_by: &str,
-    order: Option<&str>,
-) -> Result<DataFrame, StatusCode> {
-    let descending = order.unwrap_or("asc") == "desc";
-
-    let options = SortMultipleOptions::new().with_order_descending(descending);
-
-    match df.sort([sort_by], options) {
-        Ok(sorted_df) => Ok(sorted_df),
-        Err(_) => Err(StatusCode::BAD_REQUEST),
-    }
-}
-
-/// Apply pagination to a dataframe
-fn apply_pagination(
-    df: DataFrame,
-    page: Option<usize>,
-    limit: Option<usize>,
-) -> Result<DataFrame, StatusCode> {
-    let page = page.unwrap_or(1);
-    let limit = limit.unwrap_or(50);
-
-    if page == 0 {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    let offset = (page - 1) * limit;
-    if offset >= df.height() {
-        return Ok(DataFrame::empty());
-    }
-
-    let end = std::cmp::min(offset + limit, df.height());
-
-    Ok(df.slice(offset as i64, end - offset))
-}
-
-/// Convert a DataFrame to a JSON value
-fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, StatusCode> {
-    let mut rows = Vec::new();
-    let columns = df.get_column_names();
-
-    for row_idx in 0..df.height() {
-        let mut row_map = HashMap::new();
-
-        for col_name in &columns {
-            if let Ok(col) = df.column(col_name) {
-                let value = match col.dtype() {
-                    DataType::String => col
-                        .str()
-                        .unwrap()
-                        .get(row_idx)
-                        .map(|s| json!(s))
-                        .unwrap_or(json!(null)),
-                    DataType::Float64 => col
-                        .f64()
-                        .unwrap()
-                        .get(row_idx)
-                        .map(|f| json!(f))
-                        .unwrap_or(json!(null)),
-                    DataType::Int64 => col
-                        .i64()
-                        .unwrap()
-                        .get(row_idx)
-                        .map(|i| json!(i))
-                        .unwrap_or(json!(null)),
-                    _ => json!(null),
-                };
-                row_map.insert(col_name.to_string(), value);
-            }
-        }
-
-        rows.push(json!(row_map));
-    }
-
-    Ok(rows)
-}
-
-/// Convert DataFrame schema to JSON for UI column selection
-fn dataframe_schema_to_json(df: &DataFrame) -> Value {
-    let mut columns = Vec::new();
-
-    for field in df.fields() {
-        let column_info = json!({
-            "name": field.name(),
-            "data_type": format!("{:?}", field.dtype()),
-        });
-        columns.push(column_info);
-    }
-
-    json!({
-        "columns": columns,
-        "total_rows": df.height()
-    })
 }
