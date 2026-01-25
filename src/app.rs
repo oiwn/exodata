@@ -1,5 +1,6 @@
 use crate::components::about::AboutPage;
 use crate::components::exoplanets_table::ExoplanetsTablePage;
+use crate::components::google_analytics::GoogleAnalytics;
 use crate::components::navbar::Navbar;
 use crate::components::overview::OverviewPage;
 use crate::components::stellarhosts_table::StellarHostsTablePage;
@@ -11,7 +12,10 @@ use leptos_meta::*;
 use leptos_router::StaticSegment;
 use leptos_router::components::*;
 
-pub fn shell(options: LeptosOptions) -> impl IntoView {
+pub fn shell(
+    options: LeptosOptions,
+    ga_measurement_id: Option<String>,
+) -> impl IntoView {
     view! {
         <!DOCTYPE html>
         <html lang="en">
@@ -20,6 +24,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <AutoReload options=options.clone() />
                 <HydrationScripts options=options.clone() />
+                <GoogleAnalytics measurement_id=ga_measurement_id />
                 <MetaTags/>
             </head>
             <body>

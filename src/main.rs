@@ -58,6 +58,8 @@ async fn start_server() {
         exoplanets_metadata,
     };
 
+    let ga_measurement_id = std::env::var("LEPTOS_GA_ID").ok();
+
     // Local dev: use Cargo.toml (via cargo-leptos)
     // Production: use LEPTOS_* environment variables
     // See: https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain
@@ -87,10 +89,14 @@ async fn start_server() {
             provide_api_state.clone(),
             {
                 let leptos_options = leptos_options.clone();
-                move || shell(leptos_options.clone())
+                let ga_measurement_id = ga_measurement_id.clone();
+                move || shell(leptos_options.clone(), ga_measurement_id.clone())
             },
         )
-        .fallback(leptos_axum::file_and_error_handler(shell))
+        .fallback(leptos_axum::file_and_error_handler({
+            let ga_measurement_id = ga_measurement_id.clone();
+            move |options| shell(options, ga_measurement_id.clone())
+        }))
         .with_state(leptos_options);
 
     // Merge REST API and Swagger UI on top (these take priority over Leptos fallback)

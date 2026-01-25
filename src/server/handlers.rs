@@ -16,8 +16,8 @@ use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
 use polars::sql::SQLContext;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
-use utoipa::{OpenApi, ToSchema, IntoParams};
+use serde_json::Value;
+use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
 use super::common;
@@ -107,7 +107,9 @@ pub struct ColumnInfo {
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 pub struct SqlQueryParams {
     /// SQL query to execute (SELECT only)
-    #[param(example = "SELECT pl_name, hostname, disc_year FROM exoplanets LIMIT 10")]
+    #[param(
+        example = "SELECT pl_name, hostname, disc_year FROM exoplanets LIMIT 10"
+    )]
     pub sql: String,
     /// Maximum number of rows to return (default: 1000, max: 10000)
     #[param(example = 1000)]
@@ -169,8 +171,7 @@ pub fn api_routes(state: ApiState) -> Router {
 
 /// Returns the Swagger UI router (should be mounted at root level, not nested)
 pub fn swagger_ui() -> SwaggerUi {
-    SwaggerUi::new("/swagger-ui")
-        .url("/rest/openapi.json", ApiDoc::openapi())
+    SwaggerUi::new("/swagger-ui").url("/rest/openapi.json", ApiDoc::openapi())
 }
 
 /// Get stellar hosts data
@@ -202,19 +203,20 @@ pub async fn get_stellarhosts(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns, _metadata) = common::get_stellarhosts_data(
-        &state.stellarhosts_df,
-        &state.stellarhosts_metadata,
-        page,
-        limit,
-        params.sort_by,
-        params.order,
-        selected_columns,
-    )
-    .map_err(|e| {
-        tracing::error!("Failed to get stellarhosts data: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let (rows, total, total_all, columns, _metadata) =
+        common::get_stellarhosts_data(
+            &state.stellarhosts_df,
+            &state.stellarhosts_metadata,
+            page,
+            limit,
+            params.sort_by,
+            params.order,
+            selected_columns,
+        )
+        .map_err(|e| {
+            tracing::error!("Failed to get stellarhosts data: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     Ok(Json(ApiResponse {
         data: rows,
@@ -255,19 +257,20 @@ pub async fn get_exoplanets(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns, _metadata) = common::get_exoplanets_data(
-        &state.exoplanets_df,
-        &state.exoplanets_metadata,
-        page,
-        limit,
-        params.sort_by,
-        params.order,
-        selected_columns,
-    )
-    .map_err(|e| {
-        tracing::error!("Failed to get exoplanets data: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let (rows, total, total_all, columns, _metadata) =
+        common::get_exoplanets_data(
+            &state.exoplanets_df,
+            &state.exoplanets_metadata,
+            page,
+            limit,
+            params.sort_by,
+            params.order,
+            selected_columns,
+        )
+        .map_err(|e| {
+            tracing::error!("Failed to get exoplanets data: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     Ok(Json(ApiResponse {
         data: rows,
@@ -291,7 +294,9 @@ pub async fn get_exoplanets(
     ),
     tag = "schema"
 )]
-pub async fn get_stellarhosts_schema(State(state): State<ApiState>) -> Json<SchemaResponse> {
+pub async fn get_stellarhosts_schema(
+    State(state): State<ApiState>,
+) -> Json<SchemaResponse> {
     let df = &*state.stellarhosts_df;
     let metadata = &*state.stellarhosts_metadata;
     let schema = build_schema_response(df, metadata);
@@ -310,7 +315,9 @@ pub async fn get_stellarhosts_schema(State(state): State<ApiState>) -> Json<Sche
     ),
     tag = "schema"
 )]
-pub async fn get_exoplanets_schema(State(state): State<ApiState>) -> Json<SchemaResponse> {
+pub async fn get_exoplanets_schema(
+    State(state): State<ApiState>,
+) -> Json<SchemaResponse> {
     let df = &*state.exoplanets_df;
     let metadata = &*state.exoplanets_metadata;
     let schema = build_schema_response(df, metadata);

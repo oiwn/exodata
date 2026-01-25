@@ -71,6 +71,8 @@ DROPLET_IP=YOUR_DROPLET_IP_HERE
 # Optional (only if GHCR image is private):
 GHCR_USER=your-github-username
 GHCR_TOKEN=your-github-pat
+# Optional (Google Analytics):
+LEPTOS_GA_ID=G-XXXXXXXXXX
 ```
 
 ### 1.3 Test Connection

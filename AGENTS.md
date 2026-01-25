@@ -7,6 +7,7 @@ This project is a web application and CLI tool for browsing and analyzing exopla
 1. **exoplanets-catalog** (Root) - Web application
    - Built with [Leptos](https://github.com/leptos-rs/leptos) (frontend) and [Axum](https://github.com/tokio-rs/axum) (backend)
    - Styled with [Tailwind CSS](https://tailwindcss.com/)
+   - REST API at `/rest`, Swagger UI at `/swagger-ui`, SQL query endpoint at `/rest/query`
    - Provides interactive UI for browsing exoplanet data
 
 2. **exo-core** (`crates/exo-core`) - Shared data processing library
@@ -65,7 +66,16 @@ exo convert-raw-files                       # Convert VOTable to Parquet
 
 ## Testing
 
-The project uses [Playwright](https://playwright.dev/) for end-to-end testing. The tests are located in the `end2end/tests` directory. To run the tests, use the following command:
+**Unit/Integration (Rust):**
+```bash
+cargo test                                   # All workspace tests
+cargo test -p exo-core                       # exo-core only
+cargo test -p exo-cli                        # exo-cli only
+cargo test -p exoplanets-catalog --features ssr    # server/REST tests
+```
+
+**End-to-end (Playwright):**
+The tests are located in the `end2end/tests` directory. To run the tests, use the following command:
 
 ```bash
 cargo leptos end-to-end
@@ -98,11 +108,14 @@ This will download the data into the `data/` directory.
     *   Command-line interface using exo-core
 *   **`style/`** - Tailwind CSS configuration and styles
 *   **`specs/`** - Technical specifications
-    *   `architecture.md` - Workspace overview
-    *   `data-layer.md` - exo-core library spec
+    *   `overview.md` - Project status and links
     *   `cli.md` - CLI tool spec
+    *   `data-management.md` - Data fetching and preparation
+    *   `column-metadata.md` - Column descriptions and units
     *   `web-backend.md` - Axum server spec
     *   `web-frontend.md` - Leptos UI spec
+    *   `ctx.md` - Current context / TODOs
+    *   `ideas.md` - Short notes and ideas
 
 ## Code Organization
 
@@ -125,7 +138,7 @@ This will download the data into the `data/` directory.
    - Refine through implementation feedback
    - Update with insights gained from data analysis
 
-2. **Specification Storage**: All specifications are stored in the `@specs` directory
+2. **Specification Storage**: All specifications are stored in the `specs/` directory
    - Each major task has its own specification file
    - Specifications are versioned with git history
    - Use consistent markdown format
