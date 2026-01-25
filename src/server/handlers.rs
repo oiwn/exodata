@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::{
     Router,
@@ -13,8 +14,9 @@ use axum::{
 };
 use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
+use polars::sql::SQLContext;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 use utoipa::{OpenApi, ToSchema, IntoParams};
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -101,6 +103,33 @@ pub struct ColumnInfo {
     pub unit: Option<String>,
 }
 
+/// Query parameters for SQL endpoint
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
+pub struct SqlQueryParams {
+    /// SQL query to execute (SELECT only)
+    #[param(example = "SELECT pl_name, hostname, disc_year FROM exoplanets LIMIT 10")]
+    pub sql: String,
+    /// Maximum number of rows to return (default: 1000, max: 10000)
+    #[param(example = 1000)]
+    pub limit: Option<usize>,
+}
+
+/// Response structure for SQL query
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SqlResponse {
+    /// Array of row objects
+    #[schema(value_type = Vec<Object>)]
+    pub data: Vec<Value>,
+    /// Number of rows returned
+    #[schema(example = 100)]
+    pub rows: usize,
+    /// Column names in the result
+    #[schema(example = json!(["pl_name", "hostname", "disc_year"]))]
+    pub columns: Vec<String>,
+    /// The SQL query that was executed
+    pub query: String,
+}
+
 /// OpenAPI documentation for the Exoplanets Catalog REST API
 #[derive(OpenApi)]
 #[openapi(
@@ -115,13 +144,15 @@ pub struct ColumnInfo {
         get_exoplanets,
         get_stellarhosts_schema,
         get_exoplanets_schema,
+        execute_sql,
     ),
     components(
-        schemas(ApiResponse, SchemaResponse, ColumnInfo)
+        schemas(ApiResponse, SchemaResponse, ColumnInfo, SqlResponse)
     ),
     tags(
         (name = "data", description = "Data query endpoints"),
-        (name = "schema", description = "Schema information endpoints")
+        (name = "schema", description = "Schema information endpoints"),
+        (name = "sql", description = "SQL query endpoint")
     )
 )]
 pub struct ApiDoc;
@@ -132,6 +163,7 @@ pub fn api_routes(state: ApiState) -> Router {
         .route("/exoplanets", get(get_exoplanets))
         .route("/stellarhosts/schema", get(get_stellarhosts_schema))
         .route("/exoplanets/schema", get(get_exoplanets_schema))
+        .route("/query", get(execute_sql))
         .with_state(state)
 }
 
@@ -283,6 +315,94 @@ pub async fn get_exoplanets_schema(State(state): State<ApiState>) -> Json<Schema
     let metadata = &*state.exoplanets_metadata;
     let schema = build_schema_response(df, metadata);
     Json(schema)
+}
+
+/// Execute a SQL query against the registered tables.
+///
+/// Tables: stellarhosts, exoplanets
+#[utoipa::path(
+    get,
+    path = "/rest/query",
+    params(SqlQueryParams),
+    responses(
+        (status = 200, description = "SQL query result", body = SqlResponse),
+        (status = 400, description = "Invalid SQL query"),
+        (status = 408, description = "SQL query timed out"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "sql"
+)]
+pub async fn execute_sql(
+    State(state): State<ApiState>,
+    Query(params): Query<SqlQueryParams>,
+) -> Result<Json<SqlResponse>, StatusCode> {
+    let query = params.sql.trim().to_string();
+    if query.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let upper = query.to_uppercase();
+    if !upper.starts_with("SELECT") {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let blocked = ["DROP", "DELETE", "UPDATE", "INSERT", "CREATE", "ALTER"];
+    if blocked.iter().any(|keyword| upper.contains(keyword)) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let limit = params.limit.unwrap_or(1000).min(10000);
+    let query_for_exec = query.clone();
+    let stellarhosts_df = state.stellarhosts_df.clone();
+    let exoplanets_df = state.exoplanets_df.clone();
+
+    let handle = tokio::task::spawn_blocking(move || {
+        let mut ctx = SQLContext::new();
+        ctx.register("stellarhosts", stellarhosts_df.as_ref().clone().lazy());
+        ctx.register("exoplanets", exoplanets_df.as_ref().clone().lazy());
+
+        let lazy = ctx
+            .execute(&query_for_exec)
+            .map_err(|e| format!("SQL execution error: {}", e))?;
+        let df = lazy
+            .limit(limit as IdxSize)
+            .collect()
+            .map_err(|e| format!("Failed to collect SQL result: {}", e))?;
+
+        let rows = df.height();
+        let columns = df
+            .get_column_names()
+            .iter()
+            .map(|name| (*name).to_string())
+            .collect::<Vec<_>>();
+        let data = common::dataframe_to_json(&df)?;
+
+        Ok::<_, String>((data, columns, rows))
+    });
+
+    let result = tokio::time::timeout(Duration::from_secs(30), handle).await;
+    match result {
+        Err(_) => {
+            tracing::warn!("SQL query timed out");
+            Err(StatusCode::REQUEST_TIMEOUT)
+        }
+        Ok(join_result) => match join_result {
+            Err(err) => {
+                tracing::error!("SQL query join error: {}", err);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+            Ok(Err(err)) => {
+                tracing::warn!("SQL query failed: {}", err);
+                Err(StatusCode::BAD_REQUEST)
+            }
+            Ok(Ok((data, columns, rows))) => Ok(Json(SqlResponse {
+                data,
+                rows,
+                columns,
+                query,
+            })),
+        },
+    }
 }
 
 /// Build schema response with column metadata

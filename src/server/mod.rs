@@ -16,8 +16,15 @@ mod tests;
 use axum::Router;
 #[cfg(feature = "ssr")]
 pub use handlers::ApiState;
+#[cfg(feature = "ssr")]
+pub use utoipa_swagger_ui::SwaggerUi;
 
 #[cfg(feature = "ssr")]
 pub fn api_routes(state: ApiState) -> Router {
     handlers::api_routes(state)
+}
+
+#[cfg(feature = "ssr")]
+pub fn swagger_ui() -> SwaggerUi {
+    handlers::swagger_ui()
 }

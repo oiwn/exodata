@@ -79,7 +79,7 @@ async fn start_server() {
         }
     };
 
-    // Build Leptos app first, then merge REST API on top
+    // Build Leptos app first
     let app: Router = Router::new()
         .leptos_routes_with_context(
             &leptos_options,
@@ -93,8 +93,10 @@ async fn start_server() {
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options);
 
-    // Merge REST API routes on top (these take priority over Leptos fallback)
-    let app = app.nest_service("/rest", server::api_routes(api_state));
+    // Merge REST API and Swagger UI on top (these take priority over Leptos fallback)
+    let app = app
+        .merge(server::swagger_ui())  // Swagger UI at /swagger-ui
+        .nest_service("/rest", server::api_routes(api_state));  // REST API at /rest/*
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     println!("listening on http://{}", &addr);

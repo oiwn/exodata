@@ -29,25 +29,19 @@
 #### URL Prefix Convention
 
 - **`/api/*`** - Reserved for Leptos server functions (auto-registered by `#[server]` macro)
-- **`/rest/*`** - Public REST API + Swagger
+- **`/rest/*`** - Public REST API
+- **`/swagger-ui`** - Swagger UI (mounted at root level)
 
-#### Current State (needs refactoring)
+#### Current Endpoints (working)
 
-**File**: `src/server/handlers.rs`
-
-**Problems**:
-1. Has own filtering/pagination/sorting logic - duplicates `common.rs`
-2. Hardcoded column-specific filters (`hostname`, `pl_name`, `sy_dist_min/max`, etc.)
-3. Does NOT use shared business logic from `common.rs`
-4. Frontend doesn't use it (uses Leptos server functions instead)
-
-**Current endpoints** (at `/rest`, but poorly implemented):
-| Method | Endpoint | Status |
-|--------|----------|--------|
-| GET | `/rest/stellarhosts` | Needs refactor - use common.rs |
-| GET | `/rest/exoplanets` | Needs refactor - use common.rs |
-| GET | `/rest/stellarhosts/schema` | OK, but basic |
-| GET | `/rest/exoplanets/schema` | OK, but basic |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/rest/stellarhosts` | Paginated stellar hosts with sorting & column selection |
+| GET | `/rest/exoplanets` | Paginated exoplanets with sorting & column selection |
+| GET | `/rest/stellarhosts/schema` | Column metadata with descriptions & units |
+| GET | `/rest/exoplanets/schema` | Column metadata with descriptions & units |
+| GET | `/rest/openapi.json` | OpenAPI 3.1 specification |
+| GET | `/swagger-ui` | Interactive API documentation |
 
 #### Implementation Steps
 
@@ -64,14 +58,14 @@
   - Create `ApiDoc` struct with `#[derive(OpenApi)]`
 
 - [x] **Step 3: Mount Swagger UI**
-  - Add `/rest/docs` route serving Swagger UI
-  - Add `/rest/openapi.json` route for OpenAPI spec
-  - Update `api_routes()` in handlers.rs
+  - Swagger UI at `/swagger-ui` (root level, not nested under /rest)
+  - OpenAPI JSON at `/rest/openapi.json`
+  - Added "API" link to navbar (desktop & mobile)
 
-- [ ] **Step 4: Add metadata endpoints**
-  - `GET /rest/tables` - list available tables with row counts
-  - `GET /rest/columns/{table}` - column names, types, units, descriptions
-  - Use existing metadata from `ApiState`
+- [x] **Step 4: Add metadata endpoints** (already done via schema endpoints)
+  - `/rest/stellarhosts/schema` - column metadata with types, descriptions, units
+  - `/rest/exoplanets/schema` - same for exoplanets
+  - `/rest/tables` not needed (only 2 tables)
 
 - [ ] **Step 5: Add statistics endpoints**
   - `GET /rest/stats` - reuse logic from `get_stats()` in functions.rs
@@ -142,19 +136,19 @@ GET /rest/tables
 GET /rest/columns/{table}
 ```
 
-#### OpenAPI/Swagger
+#### OpenAPI/Swagger (done)
 
-- Swagger UI at `/rest/docs`
+- Swagger UI at `/swagger-ui`
 - OpenAPI JSON at `/rest/openapi.json`
-- Use `utoipa` crate with `utoipa-swagger-ui`
+- Using `utoipa` v5.4 + `utoipa-swagger-ui` v9.0
+- "API" link in navbar opens Swagger UI
 
 #### Implementation Notes
 
-- Refactor `src/server/handlers.rs` to use `common.rs`
-- Reuse `ApiState` (already shared with Leptos functions)
-- Add rate limiting middleware (tower-governor)
-- CORS headers for external API consumers
-- Tests in `src/server/tests.rs` need updating after refactor
+- `src/server/handlers.rs` - refactored, uses `common.rs`
+- `ApiState` shared with Leptos functions
+- Tests updated in `src/server/tests.rs`
+- Still TODO: CORS, rate limiting, additional endpoints
 
 ---
 

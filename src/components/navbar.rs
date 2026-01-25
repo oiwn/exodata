@@ -92,6 +92,14 @@ pub fn Navbar() -> impl IntoView {
                         >
                             "About"
                         </A>
+
+                        <a
+                            href="/swagger-ui"
+                            class=link_class
+                            target="_blank"
+                        >
+                            "API"
+                        </a>
                     </div>
 
                     // Hamburger Button (visible on mobile only)
@@ -177,6 +185,14 @@ pub fn Navbar() -> impl IntoView {
                         >
                             "About"
                         </A>
+
+                        <a
+                            href="/swagger-ui"
+                            class=mobile_link_class
+                            target="_blank"
+                        >
+                            "API"
+                        </a>
                     </div>
                 </div>
             </div>

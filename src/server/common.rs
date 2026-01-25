@@ -263,7 +263,7 @@ pub fn get_exoplanets_data(
 ///
 /// Converts each row of the DataFrame into a JSON object, handling different data types
 /// and null values appropriately.
-fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, String> {
+pub fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, String> {
     let mut rows = Vec::new();
     let columns = df.get_column_names();
 

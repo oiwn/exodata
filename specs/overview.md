@@ -2,7 +2,12 @@
 
 ## Current Status
 
-**Latest Update**: Production deployment completed ✅
+**Latest Update**: REST API SQL query endpoint + Swagger UI ✅
+- SQL endpoint: `GET /rest/query?sql=SELECT...`
+- OpenAPI JSON: `GET /rest/openapi.json`
+- Swagger UI: `GET /swagger-ui`
+
+**Deployment Status**: Production deployment completed ✅
 - Live at https://exodata.space
 - GitHub Actions builds Docker image on version bump
 - Ansible deploys to DigitalOcean droplet
