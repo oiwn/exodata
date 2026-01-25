@@ -26,3 +26,4 @@ infrastructure/ansible/**/*.retry
 infrastructure/ansible/.vault_pass
 infrastructure/ansible/inventory/*.local.yml
 infrastructure/ansible/inventory/group_vars/*.local.yml
+infrastructure/ansible/inventory/group_vars/leptos_env.yml

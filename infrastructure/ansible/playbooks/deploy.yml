@@ -5,6 +5,7 @@
 
   vars_files:
     - ../inventory/group_vars/all.yml
+    - ../inventory/group_vars/leptos_env.yml
 
   tasks:
     - name: Pull latest Docker image
@@ -29,12 +30,7 @@
           - "{{ app_port }}:3000"
         volumes:
           - "{{ data_path }}:/app/data:ro"
-        env:
-          LEPTOS_OUTPUT_NAME: "exoplanets-catalog"
-          LEPTOS_SITE_ROOT: "site"
-          LEPTOS_SITE_PKG_DIR: "pkg"
-          LEPTOS_SITE_ADDR: "0.0.0.0:3000"
-          LEPTOS_ENV: "PROD"
+        env: "{{ leptos_env }}"
 
     - name: Wait for application health check
       ansible.builtin.uri:
