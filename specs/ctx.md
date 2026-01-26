@@ -3,10 +3,10 @@
 ## Checklist before release
 
 – [x] fix header layout on mobile
-– [ ] add counter from google analytics 
+– [x] add counter from google analytics 
 – [x] swagger & basic api with sql support
 – [ ] if it possible to show diff between dates (planet discovery date field available)
-– [ ] load of page should be overlay!
+– [x] load of page should be overlay!
 – [ ] add proper about page
 – [ ] buy me a coffee button
 – [x] add favicon
@@ -33,17 +33,5 @@
 
 - Discovery timeline view (needs `disc_year` confirmation)
 - Full-page loading overlay (replace current inline indicator)
-- Google Analytics (env-based GA4)
 - Buymeacoffee button
 
-```html
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-MHKPES88ZJ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-MHKPES88ZJ');
-</script>
-``` 

@@ -1,12 +1,11 @@
 use crate::components::column_selector::ColumnSelector;
-use crate::table::{Table, build_table_query};
+use crate::components::loading_overlay::LoadingOverlay;
+use crate::server::functions::get_exoplanets_page;
+use crate::table::{build_table_query, Table};
 use leptos::prelude::*;
-use leptos_router::NavigateOptions;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
-
-// Import the server function - #[server] macro generates client stub automatically
-use crate::server::functions::get_exoplanets_page;
+use leptos_router::NavigateOptions;
 
 #[component]
 pub fn ExoplanetsTablePage() -> impl IntoView {
@@ -58,6 +57,11 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let (selected_columns, set_selected_columns) = signal(initial_columns);
     let (selector_is_open, set_selector_is_open) = signal(false);
 
+    // Signal to track loading state for overlay
+    let (is_pending, set_is_pending) = signal(false);
+    // Track if we've loaded data at least once (to avoid showing overlay on initial load)
+    let (has_loaded, set_has_loaded) = signal(false);
+
     // Resource that fetches data when dependencies change
     let table_resource = Resource::new(
         move || {
@@ -74,10 +78,19 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             } else {
                 Some(columns.join(","))
             };
-            get_exoplanets_page(page, 50, sort_col, Some(order), columns_param)
-                .await
+            get_exoplanets_page(page, 50, sort_col, Some(order), columns_param).await
         },
     );
+
+    // Update has_loaded when resource first completes successfully
+    Effect::new(move |_| {
+        if table_resource.get().is_some() && !has_loaded.get() {
+            set_has_loaded.set(true);
+        }
+    });
+
+    // Only show overlay when reloading (not on initial load)
+    let show_overlay = Signal::derive(move || is_pending.get() && has_loaded.get());
 
     // Derived signals for pagination
     let total_pages = move || {
@@ -128,8 +141,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             let page = current_page.get();
             let sort_col = sort_column.get();
             let order = sort_order.get();
-            let query_string =
-                build_table_query(page, sort_col.as_deref(), &order);
+            let query_string = build_table_query(page, sort_col.as_deref(), &order);
             navigate(
                 &format!("/exoplanets?{}", query_string),
                 Default::default(),
@@ -224,164 +236,170 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                     }}
                 </Suspense>
 
-                // Main content with loading state
-                <Suspense fallback=move || {
-                    view! {
-                        <div class="flex flex-col justify-center items-center py-20">
-                            <div class="relative">
-                                <div class="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-purple-500"></div>
-                                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl">
-                                    "🪐"
+                // Main content with Transition (keeps old content visible while loading)
+                <div class="relative">
+                    <LoadingOverlay loading=show_overlay />
+                    <Transition
+                        fallback=move || {
+                            view! {
+                                <div class="flex flex-col justify-center items-center py-20">
+                                    <div class="relative">
+                                        <div class="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-purple-500"></div>
+                                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-4xl">
+                                            "🪐"
+                                        </div>
+                                    </div>
+                                    <span class="mt-6 text-lg text-gray-300 animate-pulse">"Loading data..."</span>
                                 </div>
-                            </div>
-                            <span class="mt-6 text-lg text-gray-300 animate-pulse">"Loading data..."</span>
-                        </div>
-                    }
-                }>
-                    {move || {
-                        table_resource.get().map(|result| match result {
-                            Ok(data) => {
-                                let total = data.total;
-                                let page = data.page;
-                                let limit = data.limit;
-                                let start = (page - 1) * limit + 1;
-                                let end = std::cmp::min(page * limit, total);
+                            }
+                        }
+                        set_pending=set_is_pending
+                    >
+                        {move || {
+                            table_resource.get().map(|result| match result {
+                                Ok(data) => {
+                                    let total = data.total;
+                                    let page = data.page;
+                                    let limit = data.limit;
+                                    let start = (page - 1) * limit + 1;
+                                    let end = std::cmp::min(page * limit, total);
 
-                                leptos::either::Either::Left(view! {
-                                    <div class="space-y-6">
-                                        // Pagination controls (top)
-                                        <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">
-                                            <div class="text-sm text-gray-400">
-                                                {format!("Showing {} - {} of {} records", start, end, total)}
-                                            </div>
-
-                                            <div class="flex items-center gap-4">
-                                                <button
-                                                    class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                                    disabled=move || !can_go_prev()
-                                                    on:click={
-                                                        let navigate = navigate.clone();
-                                                        move |_| {
-                                                            if can_go_prev() {
-                                                                set_current_page.update(|p| *p -= 1);
-                                                                let page = current_page.get();
-                                                                let sort_col = sort_column.get();
-                                                                let order = sort_order.get();
-                                                                let query_string = build_table_query(page, sort_col.as_deref(), &order);
-                                                                navigate(&format!("/exoplanets?{}", query_string), Default::default());
-                                                            }
-                                                        }
-                                                    }
-                                                >
-                                                    "Previous"
-                                                </button>
-
-                                                <div class="text-sm text-gray-300 font-mono">
-                                                    {move || format!("Page {} of {}", current_page.get(), total_pages())}
+                                    leptos::either::Either::Left(view! {
+                                        <div class="space-y-6">
+                                            // Pagination controls (top)
+                                            <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">
+                                                <div class="text-sm text-gray-400">
+                                                    {format!("Showing {} - {} of {} records", start, end, total)}
                                                 </div>
 
-                                                <button
-                                                    class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                                    disabled=move || !can_go_next()
-                                                    on:click={
-                                                        let navigate = navigate.clone();
-                                                        move |_| {
-                                                            if can_go_next() {
-                                                                set_current_page.update(|p| *p += 1);
-                                                                let page = current_page.get();
-                                                                let sort_col = sort_column.get();
-                                                                let order = sort_order.get();
-                                                                let query_string = build_table_query(page, sort_col.as_deref(), &order);
-                                                                navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                <div class="flex items-center gap-4">
+                                                    <button
+                                                        class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                                        disabled=move || !can_go_prev()
+                                                        on:click={
+                                                            let navigate = navigate.clone();
+                                                            move |_| {
+                                                                if can_go_prev() {
+                                                                    set_current_page.update(|p| *p -= 1);
+                                                                    let page = current_page.get();
+                                                                    let sort_col = sort_column.get();
+                                                                    let order = sort_order.get();
+                                                                    let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                    navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                >
-                                                    "Next"
-                                                </button>
-                                            </div>
-                                        </div>
+                                                    >
+                                                        "Previous"
+                                                    </button>
 
-                                        // Table
-                                        <Table
-                                            data=data
-                                            on_sort=on_sort
-                                            current_sort_column=sort_column.get()
-                                            current_sort_order=sort_order.get()
-                                        />
+                                                    <div class="text-sm text-gray-300 font-mono">
+                                                        {move || format!("Page {} of {}", current_page.get(), total_pages())}
+                                                    </div>
 
-                                        // Pagination controls (bottom)
-                                        <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">
-                                            <div class="text-sm text-gray-400">
-                                                {format!("Showing {} - {} of {} records", start, end, total)}
-                                            </div>
-
-                                            <div class="flex items-center gap-4">
-                                                <button
-                                                    class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                                    disabled=move || !can_go_prev()
-                                                    on:click={
-                                                        let navigate = navigate.clone();
-                                                        move |_| {
-                                                            if can_go_prev() {
-                                                                set_current_page.update(|p| *p -= 1);
-                                                                let page = current_page.get();
-                                                                let sort_col = sort_column.get();
-                                                                let order = sort_order.get();
-                                                                let query_string = build_table_query(page, sort_col.as_deref(), &order);
-                                                                navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                    <button
+                                                        class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                                        disabled=move || !can_go_next()
+                                                        on:click={
+                                                            let navigate = navigate.clone();
+                                                            move |_| {
+                                                                if can_go_next() {
+                                                                    set_current_page.update(|p| *p += 1);
+                                                                    let page = current_page.get();
+                                                                    let sort_col = sort_column.get();
+                                                                    let order = sort_order.get();
+                                                                    let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                    navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                >
-                                                    "Previous"
-                                                </button>
+                                                    >
+                                                        "Next"
+                                                    </button>
+                                                </div>
+                                            </div>
 
-                                                <div class="text-sm text-gray-300 font-mono">
-                                                    {move || format!("Page {} of {}", current_page.get(), total_pages())}
+                                            // Table
+                                            <Table
+                                                data=data
+                                                on_sort=on_sort
+                                                current_sort_column=sort_column.get()
+                                                current_sort_order=sort_order.get()
+                                            />
+
+                                            // Pagination controls (bottom)
+                                            <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">
+                                                <div class="text-sm text-gray-400">
+                                                    {format!("Showing {} - {} of {} records", start, end, total)}
                                                 </div>
 
-                                                <button
-                                                    class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                                    disabled=move || !can_go_next()
-                                                    on:click={
-                                                        let navigate = navigate.clone();
-                                                        move |_| {
-                                                            if can_go_next() {
-                                                                set_current_page.update(|p| *p += 1);
-                                                                let page = current_page.get();
-                                                                let sort_col = sort_column.get();
-                                                                let order = sort_order.get();
-                                                                let query_string = build_table_query(page, sort_col.as_deref(), &order);
-                                                                navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                <div class="flex items-center gap-4">
+                                                    <button
+                                                        class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                                        disabled=move || !can_go_prev()
+                                                        on:click={
+                                                            let navigate = navigate.clone();
+                                                            move |_| {
+                                                                if can_go_prev() {
+                                                                    set_current_page.update(|p| *p -= 1);
+                                                                    let page = current_page.get();
+                                                                    let sort_col = sort_column.get();
+                                                                    let order = sort_order.get();
+                                                                    let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                    navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                >
-                                                    "Next"
-                                                </button>
+                                                    >
+                                                        "Previous"
+                                                    </button>
+
+                                                    <div class="text-sm text-gray-300 font-mono">
+                                                        {move || format!("Page {} of {}", current_page.get(), total_pages())}
+                                                    </div>
+
+                                                    <button
+                                                        class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                                        disabled=move || !can_go_next()
+                                                        on:click={
+                                                            let navigate = navigate.clone();
+                                                            move |_| {
+                                                                if can_go_next() {
+                                                                    set_current_page.update(|p| *p += 1);
+                                                                    let page = current_page.get();
+                                                                    let sort_col = sort_column.get();
+                                                                    let order = sort_order.get();
+                                                                    let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                    navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                                }
+                                                            }
+                                                        }
+                                                    >
+                                                        "Next"
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                })
-                            }
-                            Err(err) => {
-                                let error_msg = format!("Error loading data: {}", err);
-                                leptos::either::Either::Right(view! {
-                                    <div class="max-w-2xl mx-auto mt-10 bg-red-900/50 border-2 border-red-500 text-red-100 px-6 py-4 rounded-xl backdrop-blur-sm">
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-2xl">"⚠️"</span>
-                                            <div>
-                                                <h3 class="font-semibold text-lg">"Connection Error"</h3>
-                                                <p class="text-sm text-red-200">{error_msg}</p>
+                                    })
+                                }
+                                Err(err) => {
+                                    let error_msg = format!("Error loading data: {}", err);
+                                    leptos::either::Either::Right(view! {
+                                        <div class="max-w-2xl mx-auto mt-10 bg-red-900/50 border-2 border-red-500 text-red-100 px-6 py-4 rounded-xl backdrop-blur-sm">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-2xl">"⚠️"</span>
+                                                <div>
+                                                    <h3 class="font-semibold text-lg">"Connection Error"</h3>
+                                                    <p class="text-sm text-red-200">{error_msg}</p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                })
-                            }
-                        })
-                    }}
-                </Suspense>
+                                    })
+                                }
+                            })
+                        }}
+                    </Transition>
+                </div>
             </div>
         </div>
     }

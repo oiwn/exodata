@@ -24,7 +24,7 @@ pub fn shell(
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <AutoReload options=options.clone() />
                 <HydrationScripts options=options.clone() />
-                <GoogleAnalytics measurement_id=ga_measurement_id />
+                {ga_measurement_id.map(|id| view! { <GoogleAnalytics measurement_id=id /> })}
                 <MetaTags/>
             </head>
             <body>

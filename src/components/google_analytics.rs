@@ -3,7 +3,7 @@ use leptos::prelude::*;
 #[component]
 pub fn GoogleAnalytics(
     /// GA4 measurement ID (e.g., "G-XXXXXXX"). When None/empty, renders nothing.
-    #[prop(optional, into)]
+    #[prop(optional)]
     measurement_id: Option<String>,
 ) -> impl IntoView {
     let measurement_id = measurement_id.and_then(|id| {
@@ -35,7 +35,8 @@ gtag('config', '{}');",
                 <script>{inline}</script>
             </>
         }
+        .into_any()
     } else {
-        view! { <></> }
+        view! { <></> }.into_any()
     }
 }
