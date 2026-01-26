@@ -1,4 +1,5 @@
 pub mod about;
+pub mod buy_me_coffee;
 pub mod column_selector;
 pub mod exoplanets_table;
 pub mod google_analytics;

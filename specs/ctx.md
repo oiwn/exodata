@@ -32,6 +32,5 @@
 ## UI / Misc TODO
 
 - Discovery timeline view (needs `disc_year` confirmation)
-- Full-page loading overlay (replace current inline indicator)
 - Buymeacoffee button
 
