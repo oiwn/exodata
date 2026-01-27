@@ -42,6 +42,9 @@ indicatif = { version = "0.18", optional = true }
 utoipa = { version = "5.4.0", features = ["axum_extras"], optional = true }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"], optional = true }
 
+[build-dependencies]
+markdown = "1.0.0-alpha"
+
 [dev-dependencies]
 clap = { version = "4.5.52", features = ["derive"] }
 comfy-table = "7.2.1"

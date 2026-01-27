@@ -5,12 +5,13 @@
 – [x] fix header layout on mobile
 – [x] add counter from google analytics 
 – [x] swagger & basic api with sql support
-– [ ] if it possible to show diff between dates (planet discovery date field available)
 – [x] load of page should be overlay!
-– [ ] add proper about page
-– [ ] buy me a coffee button
+– [x] add proper about page
+– [x] buy me a coffee button
 – [x] add favicon
-– [ ]  link to the stellar system page (with planets if available)
+– [ ] link to the stellar system page (with planets if available)
+- [ ] planet page
+- [ ] when table pages fetch new data, "Select Columns" dissapearing, which looks strange
 
 ## REST API (current)
 

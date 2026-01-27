@@ -16,7 +16,7 @@ fn test_exoplanets_loader() -> Result<(), Error> {
 
 #[test]
 fn test_stellarhosts_loader() -> Result<(), Error> {
-    use exo_core::tables::common::{load_data, load_data_with_limit};
+    use exo_core::tables::common::load_data;
 
     let df = load_data("tests/fixtures/stellarhosts.fixture")?;
     assert!(df.height() > 0);
