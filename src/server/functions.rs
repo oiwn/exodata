@@ -101,6 +101,23 @@ pub struct TableData {
     pub metadata: HashMap<String, ColumnMetadata>, // Column metadata (name, unit, description)
 }
 
+/// Stellar host detail data structure
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct StellarHostDetail {
+    pub hostname: String,
+    pub properties: HashMap<String, Value>,
+    pub metadata: HashMap<String, ColumnMetadata>,
+}
+
+/// Planets for a stellar host
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct HostPlanets {
+    pub hostname: String,
+    pub planets: Vec<Value>,
+    pub columns: Vec<String>,
+    pub metadata: HashMap<String, ColumnMetadata>,
+}
+
 /// Server function to fetch paginated stellar hosts data
 ///
 /// This is a thin wrapper around the common business logic.
@@ -209,6 +226,66 @@ pub async fn get_exoplanets_page(
         total_all,
         page,
         limit,
+        metadata,
+    })
+}
+
+/// Server function to fetch a single stellar host's details
+#[server(input = GetUrl)]
+pub async fn get_stellar_host_detail(
+    hostname: String,
+) -> Result<StellarHostDetail, ServerFnError> {
+    let state = expect_context::<ApiState>();
+
+    let (properties, exo_metadata): (
+        HashMap<String, Value>,
+        HashMap<String, exo_core::metadata::ColumnMetadata>,
+    ) = common::get_stellar_host_by_name(
+        &state.stellarhosts_df,
+        &state.stellarhosts_metadata,
+        &hostname,
+    )
+    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+
+    let metadata: HashMap<String, ColumnMetadata> = exo_metadata
+        .into_iter()
+        .map(|(key, val): (String, exo_core::metadata::ColumnMetadata)| (key, val.into()))
+        .collect();
+
+    Ok(StellarHostDetail {
+        hostname,
+        properties,
+        metadata,
+    })
+}
+
+/// Server function to fetch planets for a given stellar host
+#[server(input = GetUrl)]
+pub async fn get_planets_for_host(
+    hostname: String,
+) -> Result<HostPlanets, ServerFnError> {
+    let state = expect_context::<ApiState>();
+
+    let (planets, columns, exo_metadata): (
+        Vec<Value>,
+        Vec<String>,
+        HashMap<String, exo_core::metadata::ColumnMetadata>,
+    ) = common::get_planets_by_hostname(
+        &state.exoplanets_df,
+        &state.exoplanets_metadata,
+        &hostname,
+    )
+    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+
+    let metadata: HashMap<String, ColumnMetadata> = exo_metadata
+        .into_iter()
+        .map(|(key, val): (String, exo_core::metadata::ColumnMetadata)| (key, val.into()))
+        .collect();
+
+    Ok(HostPlanets {
+        hostname,
+        planets,
+        columns,
         metadata,
     })
 }

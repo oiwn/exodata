@@ -6,4 +6,5 @@ pub mod google_analytics;
 pub mod loading_overlay;
 pub mod navbar;
 pub mod overview;
+pub mod stellarhost_detail;
 pub mod stellarhosts_table;

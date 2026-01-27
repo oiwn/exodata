@@ -323,6 +323,8 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                 on_sort=on_sort
                                                 current_sort_column=sort_column.get()
                                                 current_sort_order=sort_order.get()
+                                                link_column="hostname".to_string()
+                                                link_base="/stellarhosts/".to_string()
                                             />
 
                                             // Pagination controls (bottom)

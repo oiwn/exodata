@@ -259,6 +259,86 @@ pub fn get_exoplanets_data(
     Ok((rows, total, total_all, columns, all_column_metadata))
 }
 
+/// Get a single stellar host by hostname
+///
+/// Returns all columns for the matching stellar host.
+pub fn get_stellar_host_by_name(
+    df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    hostname: &str,
+) -> Result<(HashMap<String, Value>, HashMap<String, ColumnMetadata>), String> {
+    // Filter by hostname
+    let filtered = df
+        .clone()
+        .lazy()
+        .filter(col("hostname").eq(lit(hostname)))
+        .collect()
+        .map_err(|e| format!("Failed to filter by hostname: {}", e))?;
+
+    if filtered.height() == 0 {
+        return Err(format!("Stellar host '{}' not found", hostname));
+    }
+
+    // Convert the single row to a map of properties
+    let rows = dataframe_to_json(&filtered)?;
+    let properties = rows
+        .into_iter()
+        .next()
+        .and_then(|v| v.as_object().cloned())
+        .map(|m| m.into_iter().collect::<HashMap<String, Value>>())
+        .unwrap_or_default();
+
+    Ok((properties, all_metadata.as_ref().clone()))
+}
+
+/// Get planets for a given hostname
+///
+/// Returns planets with selected columns for display.
+pub fn get_planets_by_hostname(
+    df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    hostname: &str,
+) -> Result<(Vec<Value>, Vec<String>, HashMap<String, ColumnMetadata>), String> {
+    // Columns to show for planets in detail view
+    let columns = vec![
+        "pl_name",
+        "discoverymethod",
+        "disc_year",
+        "pl_orbper",
+        "pl_rade",
+        "pl_bmasse",
+        "pl_eqt",
+    ];
+
+    // Filter columns that exist in the dataframe
+    let valid_columns: Vec<&str> = columns
+        .iter()
+        .filter(|c| df.column(c).is_ok())
+        .copied()
+        .collect();
+
+    // Filter by hostname and select columns
+    let filtered = df
+        .clone()
+        .lazy()
+        .filter(col("hostname").eq(lit(hostname)))
+        .select(valid_columns.iter().map(|c| col(*c)).collect::<Vec<_>>())
+        .collect()
+        .map_err(|e| format!("Failed to filter planets: {}", e))?;
+
+    let rows = dataframe_to_json(&filtered)?;
+    let column_names: Vec<String> = valid_columns.iter().map(|s| s.to_string()).collect();
+
+    // Filter metadata to only include relevant columns
+    let filtered_metadata: HashMap<String, ColumnMetadata> = all_metadata
+        .iter()
+        .filter(|(k, _)| valid_columns.contains(&k.as_str()))
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+
+    Ok((rows, column_names, filtered_metadata))
+}
+
 /// Helper function to convert DataFrame to JSON
 ///
 /// Converts each row of the DataFrame into a JSON object, handling different data types

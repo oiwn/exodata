@@ -1,6 +1,7 @@
 use crate::server::functions::TableData;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
+use leptos_router::components::A;
 use std::collections::HashMap;
 
 #[component]
@@ -10,6 +11,10 @@ pub fn Table(
     current_sort_column: Option<String>,
     current_sort_order: String,
     #[prop(optional)] column_descriptions: Option<HashMap<String, String>>,
+    /// Column name to render as a link (e.g., "hostname")
+    #[prop(optional)] link_column: Option<String>,
+    /// Base URL for the link (e.g., "/stellarhosts/") - column value will be appended
+    #[prop(optional)] link_base: Option<String>,
 ) -> impl IntoView {
     view! {
         <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-sm">
@@ -72,16 +77,40 @@ pub fn Table(
                             "bg-slate-800/10"
                         };
 
+                        let link_col = link_column.clone();
+                        let link_url_base = link_base.clone();
+
                         view! {
                             <tr class=format!("{} hover:bg-slate-700/50 transition-colors", row_class)>
                                 {data.columns.iter().map(|col| {
                                     let value = row.get(col).unwrap_or(&Value::Null);
                                     let formatted_value = format_cell_value(value);
+                                    let is_link_column = link_col.as_ref() == Some(col);
 
-                                    view! {
-                                        <td class="px-6 py-4 text-sm text-gray-300 font-mono">
-                                            {formatted_value}
-                                        </td>
+                                    if is_link_column {
+                                        let link_value = value.as_str().unwrap_or("");
+                                        // Simple URL encoding for the most common cases
+                                        let encoded = link_value.replace(' ', "%20").replace('#', "%23");
+                                        let href = link_url_base.as_ref()
+                                            .map(|base| format!("{}{}", base, encoded))
+                                            .unwrap_or_default();
+
+                                        view! {
+                                            <td class="px-6 py-4 text-sm font-mono">
+                                                <A
+                                                    href=href
+                                                    attr:class="text-purple-400 hover:text-purple-300 hover:underline transition-colors"
+                                                >
+                                                    {formatted_value}
+                                                </A>
+                                            </td>
+                                        }.into_any()
+                                    } else {
+                                        view! {
+                                            <td class="px-6 py-4 text-sm text-gray-300 font-mono">
+                                                {formatted_value}
+                                            </td>
+                                        }.into_any()
                                     }
                                 }).collect::<Vec<_>>()}
                             </tr>

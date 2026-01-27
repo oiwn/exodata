@@ -3,12 +3,14 @@ use crate::components::exoplanets_table::ExoplanetsTablePage;
 use crate::components::google_analytics::GoogleAnalytics;
 use crate::components::navbar::Navbar;
 use crate::components::overview::OverviewPage;
+use crate::components::stellarhost_detail::StellarHostDetailPage;
 use crate::components::stellarhosts_table::StellarHostsTablePage;
 use crate::error_template::{AppError, ErrorTemplate};
 use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos::prelude::*;
 use leptos_meta::*;
+use leptos_router::path;
 use leptos_router::StaticSegment;
 use leptos_router::components::*;
 
@@ -73,6 +75,7 @@ pub fn App() -> impl IntoView {
             }>
                 <Route path=StaticSegment("") view=OverviewPage/>
                 <Route path=StaticSegment("stellarhosts") view=StellarHostsTablePage/>
+                <Route path=path!("/stellarhosts/:hostname") view=StellarHostDetailPage/>
                 <Route path=StaticSegment("exoplanets") view=ExoplanetsTablePage/>
                 <Route path=StaticSegment("about") view=AboutPage/>
                 <Route path=StaticSegment("table") view=TableWrapper/>
