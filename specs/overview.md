@@ -15,20 +15,15 @@
 
 ---
 
-This file has been replaced by more detailed specifications. Please refer to:
+## Specifications
 
-## Architecture & Project Structure
-See **`architecture.md`** for workspace organization, build commands, and overall system design.
-
-## Component Specifications
-
-1. **`data-layer.md`** - exo-core library (data processing, VOTable, Parquet, aggregations)
-2. **`cli.md`** - exo-cli command-line tool (commands, usage, examples)
-3. **`web-backend.md`** - Axum server (REST API, server functions, state management)
-4. **`web-frontend.md`** - Leptos UI (components, routing, styling, reactivity)
-5. **`ideas.md`** - short notes with ideas
-6. **`data-management.md`** - how to fetch and prepare the data
-7. **`column-metadata.md`** - information about each column
+1. **`web-backend.md`** - Axum server (REST API, server functions, state management)
+2. **`web-frontend.md`** - Leptos UI (components, routing, styling, reactivity)
+3. **`cli.md`** - exo-cli command-line tool (commands, usage, examples)
+4. **`data-management.md`** - how to fetch and prepare the data
+5. **`column-metadata.md`** - information about each column
+6. **`ideas.md`** - short notes with ideas
+7. **`problems.md`** - known issues and edge cases
 
 ## Deployment
 
