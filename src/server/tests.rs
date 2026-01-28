@@ -89,10 +89,8 @@ mod tests {
 
         // Check that default columns are returned
         let columns = json["columns"].as_array().unwrap();
-        let column_names: Vec<&str> = columns
-            .iter()
-            .filter_map(|c| c.as_str())
-            .collect();
+        let column_names: Vec<&str> =
+            columns.iter().filter_map(|c| c.as_str()).collect();
         assert!(column_names.contains(&"hostname"));
         assert!(column_names.contains(&"sy_dist"));
     }
@@ -119,10 +117,8 @@ mod tests {
         let columns = json["columns"].as_array().unwrap();
         assert_eq!(columns.len(), 2);
 
-        let column_names: Vec<&str> = columns
-            .iter()
-            .filter_map(|c| c.as_str())
-            .collect();
+        let column_names: Vec<&str> =
+            columns.iter().filter_map(|c| c.as_str()).collect();
         assert!(column_names.contains(&"hostname"));
         assert!(column_names.contains(&"st_teff"));
         assert!(!column_names.contains(&"sy_dist"));
@@ -201,10 +197,8 @@ mod tests {
 
         // Check that default columns are returned
         let columns = json["columns"].as_array().unwrap();
-        let column_names: Vec<&str> = columns
-            .iter()
-            .filter_map(|c| c.as_str())
-            .collect();
+        let column_names: Vec<&str> =
+            columns.iter().filter_map(|c| c.as_str()).collect();
         assert!(column_names.contains(&"pl_name"));
         assert!(column_names.contains(&"hostname"));
     }
@@ -231,10 +225,8 @@ mod tests {
         let columns = json["columns"].as_array().unwrap();
         assert_eq!(columns.len(), 2);
 
-        let column_names: Vec<&str> = columns
-            .iter()
-            .filter_map(|c| c.as_str())
-            .collect();
+        let column_names: Vec<&str> =
+            columns.iter().filter_map(|c| c.as_str()).collect();
         assert!(column_names.contains(&"pl_name"));
         assert!(column_names.contains(&"disc_year"));
     }

@@ -10,9 +10,9 @@ use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::path;
 use leptos_router::StaticSegment;
 use leptos_router::components::*;
+use leptos_router::path;
 
 pub fn shell(
     options: LeptosOptions,

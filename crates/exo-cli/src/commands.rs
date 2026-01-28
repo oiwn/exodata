@@ -3,9 +3,11 @@ use std::path::Path;
 use anyhow::Error;
 use comfy_table::Table;
 use exo_core::tables::common::{
-    create_histogram, get_numeric_stats, load_data_with_limit, print_histogram,
+    create_histogram, get_numeric_stats, load_data_with_limit, load_parquet,
+    print_histogram,
 };
 use polars::prelude::*;
+use polars::sql::SQLContext;
 
 /// Display sample data from stellarhosts table
 pub fn view_stellarhosts_samples(
@@ -460,6 +462,34 @@ fn display_basic_stats(
     }
 
     println!("{}", table);
+    Ok(())
+}
+
+/// Execute SQL query against parquet files
+pub fn execute_sql(query: &str, data_dir: &str) -> Result<(), Error> {
+    let stellarhosts_path = format!("{}/stellarhosts.parquet", data_dir);
+    let exoplanets_path = format!("{}/exoplanets.parquet", data_dir);
+
+    let mut ctx = SQLContext::new();
+
+    if Path::new(&stellarhosts_path).exists() {
+        let df = load_parquet(&stellarhosts_path, None)?;
+        ctx.register("stellarhosts", df.lazy());
+    }
+
+    if Path::new(&exoplanets_path).exists() {
+        let df = load_parquet(&exoplanets_path, None)?;
+        ctx.register("exoplanets", df.lazy());
+    }
+
+    let result = ctx
+        .execute(query)
+        .map_err(|e| anyhow::anyhow!("SQL error: {}", e))?
+        .collect()
+        .map_err(|e| anyhow::anyhow!("Failed to collect result: {}", e))?;
+
+    println!("{}", result);
+
     Ok(())
 }
 

@@ -24,10 +24,8 @@ pub fn Navbar() -> impl IntoView {
         "px-4 py-2 rounded-lg bg-white/20 text-purple-300 font-semibold";
 
     // Mobile link styles
-    let mobile_link_class =
-        "text-xl font-medium text-gray-300 hover:text-purple-400 py-3 px-6 rounded-lg hover:bg-white/5 w-full text-center transition-colors";
-    let mobile_active_class =
-        "text-xl font-medium text-purple-300 bg-white/10 py-3 px-6 rounded-lg w-full text-center";
+    let mobile_link_class = "text-xl font-medium text-gray-300 hover:text-purple-400 py-3 px-6 rounded-lg hover:bg-white/5 w-full text-center transition-colors";
+    let mobile_active_class = "text-xl font-medium text-purple-300 bg-white/10 py-3 px-6 rounded-lg w-full text-center";
 
     view! {
         <nav class="bg-slate-900/80 backdrop-blur-sm border-b border-purple-500/20 sticky top-0 z-50">

@@ -12,9 +12,11 @@ pub fn Table(
     current_sort_order: String,
     #[prop(optional)] column_descriptions: Option<HashMap<String, String>>,
     /// Column name to render as a link (e.g., "hostname")
-    #[prop(optional)] link_column: Option<String>,
+    #[prop(optional)]
+    link_column: Option<String>,
     /// Base URL for the link (e.g., "/stellarhosts/") - column value will be appended
-    #[prop(optional)] link_base: Option<String>,
+    #[prop(optional)]
+    link_base: Option<String>,
 ) -> impl IntoView {
     view! {
         <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-sm">

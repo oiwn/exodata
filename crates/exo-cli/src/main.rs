@@ -68,6 +68,13 @@ enum Commands {
         )]
         columns: Option<String>,
     },
+    /// Execute SQL query against parquet files
+    Sql {
+        /// SQL query to execute (tables: stellarhosts, exoplanets)
+        query: String,
+        #[arg(long, default_value = "data")]
+        data_dir: String,
+    },
 }
 
 fn main() {
@@ -116,6 +123,11 @@ fn main() {
         Commands::ViewMetadata { path, columns } => {
             if let Err(e) = commands::view_metadata(&path, columns.as_deref()) {
                 eprintln!("Error viewing metadata: {}", e);
+            }
+        }
+        Commands::Sql { query, data_dir } => {
+            if let Err(e) = commands::execute_sql(&query, &data_dir) {
+                eprintln!("Error executing SQL: {}", e);
             }
         }
     }

@@ -1,11 +1,11 @@
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
 use crate::server::functions::get_stellarhosts_page;
-use crate::table::{build_table_query, Table};
+use crate::table::{Table, build_table_query};
 use leptos::prelude::*;
+use leptos_router::NavigateOptions;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
-use leptos_router::NavigateOptions;
 
 #[component]
 pub fn StellarHostsTablePage() -> impl IntoView {
@@ -55,10 +55,16 @@ pub fn StellarHostsTablePage() -> impl IntoView {
     let (selected_columns, set_selected_columns) = signal(initial_columns);
     let (selector_is_open, set_selector_is_open) = signal(false);
 
-    // Signal to track loading state for overlay
-    let (is_pending, set_is_pending) = signal(false);
+    // Signal to track loading state for overlay (managed manually to avoid Transition disposal panic)
+    let (is_loading, set_is_loading) = signal(false);
     // Track if we've loaded data at least once (to avoid showing overlay on initial load)
     let (has_loaded, set_has_loaded) = signal(false);
+    // Cached metadata for column selector (persists while new data loads)
+    let (cached_metadata, set_cached_metadata) =
+        signal(std::collections::HashMap::<
+            String,
+            crate::server::functions::ColumnMetadata,
+        >::new());
 
     // Resource that fetches data when dependencies change
     let table_resource = Resource::new(
@@ -76,19 +82,45 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             } else {
                 Some(columns.join(","))
             };
-            get_stellarhosts_page(page, 50, sort_col, Some(order), columns_param).await
+            get_stellarhosts_page(page, 50, sort_col, Some(order), columns_param)
+                .await
         },
     );
 
-    // Update has_loaded when resource first completes successfully
+    // Track when resource source changes to set loading state
+    Effect::new(move |prev: Option<(usize, Option<String>, String, Vec<String>)>| {
+        let current = (
+            current_page.get(),
+            sort_column.get(),
+            sort_order.get(),
+            selected_columns.get(),
+        );
+        if let Some(prev_val) = prev {
+            if prev_val != current {
+                set_is_loading.set(true);
+            }
+        }
+        current
+    });
+
+    // Update has_loaded and cached metadata when resource completes successfully
     Effect::new(move |_| {
-        if table_resource.get().is_some() && !has_loaded.get() {
-            set_has_loaded.set(true);
+        if let Some(Ok(data)) = table_resource.get() {
+            set_is_loading.set(false);
+            if !has_loaded.get() {
+                set_has_loaded.set(true);
+            }
+            // Update cached metadata so column selector stays populated during loading
+            set_cached_metadata.set(data.metadata.clone());
+        } else if table_resource.get().is_some() {
+            // Also clear loading on error
+            set_is_loading.set(false);
         }
     });
 
     // Only show overlay when reloading (not on initial load)
-    let show_overlay = Signal::derive(move || is_pending.get() && has_loaded.get());
+    let show_overlay =
+        Signal::derive(move || is_loading.get() && has_loaded.get());
 
     // Derived signals for pagination
     let total_pages = move || {
@@ -139,7 +171,8 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             let page = current_page.get();
             let sort_col = sort_column.get();
             let order = sort_order.get();
-            let query_string = build_table_query(page, sort_col.as_deref(), &order);
+            let query_string =
+                build_table_query(page, sort_col.as_deref(), &order);
             navigate(
                 &format!("/stellarhosts?{}", query_string),
                 Default::default(),
@@ -190,15 +223,6 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         }
     });
 
-    // Get metadata from the table resource for the column selector
-    let available_columns = move || {
-        table_resource
-            .get()
-            .and_then(|res| res.ok())
-            .map(|data| data.metadata)
-            .unwrap_or_default()
-    };
-
     view! {
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             // Header
@@ -218,21 +242,13 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                 </div>
 
                 // Column Selector
-                <Suspense fallback=|| view! { <div></div> }>
-                    {move || {
-                        let columns_map = available_columns();
-                        let (columns_signal, _) = signal(columns_map);
-                        view! {
-                            <ColumnSelector
-                                available_columns=columns_signal
-                                selected_columns=selected_columns
-                                on_change=on_columns_change
-                                is_open=selector_is_open
-                                on_toggle=Callback::new(move |state| set_selector_is_open.set(state))
-                            />
-                        }
-                    }}
-                </Suspense>
+                <ColumnSelector
+                    available_columns=cached_metadata
+                    selected_columns=selected_columns
+                    on_change=on_columns_change
+                    is_open=selector_is_open
+                    on_toggle=Callback::new(move |state| set_selector_is_open.set(state))
+                />
 
                 // Main content with Transition (keeps old content visible while loading)
                 <div class="relative">
@@ -251,7 +267,6 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                 </div>
                             }
                         }
-                        set_pending=set_is_pending
                     >
                         {move || {
                             table_resource.get().map(|result| match result {

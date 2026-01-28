@@ -326,8 +326,18 @@ pub fn get_planets_by_hostname(
         .collect()
         .map_err(|e| format!("Failed to filter planets: {}", e))?;
 
+    // Deduplicate by pl_name (exoplanets table has multiple rows per planet)
+    let filtered = filtered
+        .unique::<String, String>(
+            Some(&["pl_name".to_string()]),
+            UniqueKeepStrategy::First,
+            None,
+        )
+        .map_err(|e| format!("Failed to deduplicate planets: {}", e))?;
+
     let rows = dataframe_to_json(&filtered)?;
-    let column_names: Vec<String> = valid_columns.iter().map(|s| s.to_string()).collect();
+    let column_names: Vec<String> =
+        valid_columns.iter().map(|s| s.to_string()).collect();
 
     // Filter metadata to only include relevant columns
     let filtered_metadata: HashMap<String, ColumnMetadata> = all_metadata

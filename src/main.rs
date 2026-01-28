@@ -101,8 +101,8 @@ async fn start_server() {
 
     // Merge REST API and Swagger UI on top (these take priority over Leptos fallback)
     let app = app
-        .merge(server::swagger_ui())  // Swagger UI at /swagger-ui
-        .nest_service("/rest", server::api_routes(api_state));  // REST API at /rest/*
+        .merge(server::swagger_ui()) // Swagger UI at /swagger-ui
+        .nest_service("/rest", server::api_routes(api_state)); // REST API at /rest/*
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     println!("listening on http://{}", &addr);

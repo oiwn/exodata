@@ -4,7 +4,7 @@ use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
 
 use crate::server::functions::{
-    get_planets_for_host, get_stellar_host_detail, HostPlanets, StellarHostDetail,
+    HostPlanets, StellarHostDetail, get_planets_for_host, get_stellar_host_detail,
 };
 
 #[component]

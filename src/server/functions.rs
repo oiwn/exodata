@@ -249,7 +249,9 @@ pub async fn get_stellar_host_detail(
 
     let metadata: HashMap<String, ColumnMetadata> = exo_metadata
         .into_iter()
-        .map(|(key, val): (String, exo_core::metadata::ColumnMetadata)| (key, val.into()))
+        .map(|(key, val): (String, exo_core::metadata::ColumnMetadata)| {
+            (key, val.into())
+        })
         .collect();
 
     Ok(StellarHostDetail {
@@ -279,7 +281,9 @@ pub async fn get_planets_for_host(
 
     let metadata: HashMap<String, ColumnMetadata> = exo_metadata
         .into_iter()
-        .map(|(key, val): (String, exo_core::metadata::ColumnMetadata)| (key, val.into()))
+        .map(|(key, val): (String, exo_core::metadata::ColumnMetadata)| {
+            (key, val.into())
+        })
         .collect();
 
     Ok(HostPlanets {

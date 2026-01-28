@@ -22,12 +22,22 @@ const TECH_ITEMS: &[&str] = &[
 const API_TITLE: &str = "REST API";
 const API_TEXT: &str = "The catalog exposes a SQL query endpoint. You can run arbitrary SELECT statements against the dataset.";
 const API_EXAMPLES: &[(&str, &str)] = &[
-    ("Find hot Jupiters", "SELECT pl_name, pl_bmasse, pl_eqt FROM exoplanets WHERE pl_bmasse > 100 AND pl_eqt > 1000 LIMIT 10"),
-    ("Count by discovery method", "SELECT discoverymethod, COUNT(*) as cnt FROM exoplanets GROUP BY discoverymethod ORDER BY cnt DESC"),
-    ("Nearest stars with planets", "SELECT pl_name, sy_dist FROM exoplanets WHERE sy_dist IS NOT NULL ORDER BY sy_dist LIMIT 20"),
+    (
+        "Find hot Jupiters",
+        "SELECT pl_name, pl_bmasse, pl_eqt FROM exoplanets WHERE pl_bmasse > 100 AND pl_eqt > 1000 LIMIT 10",
+    ),
+    (
+        "Count by discovery method",
+        "SELECT discoverymethod, COUNT(*) as cnt FROM exoplanets GROUP BY discoverymethod ORDER BY cnt DESC",
+    ),
+    (
+        "Nearest stars with planets",
+        "SELECT pl_name, sy_dist FROM exoplanets WHERE sy_dist IS NOT NULL ORDER BY sy_dist LIMIT 20",
+    ),
 ];
 
-const FOOTER_TEXT: &str = "Data: NASA Exoplanet Archive. Code: Rust, Leptos, Axum, DuckDB.";
+const FOOTER_TEXT: &str =
+    "Data: NASA Exoplanet Archive. Code: Rust, Leptos, Axum, DuckDB.";
 
 // --- Component ---
 
