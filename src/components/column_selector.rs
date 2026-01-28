@@ -150,7 +150,7 @@ fn SelectedColumnsList(
                                     on_move_down=on_move_down
                                     on_remove=on_remove
                                 />
-                            }
+                            }.into_any()
                         }
                     />
                 </Show>
@@ -233,7 +233,7 @@ fn AvailableColumnsList(
                                 selected_columns=selected_columns
                                 on_toggle=on_toggle
                             />
-                        }
+                        }.into_any()
                     }
                 />
             </div>
@@ -354,24 +354,26 @@ pub fn ColumnSelector(
             </button>
 
             <Show when=move || is_open_signal.get()>
-                <div class="mt-2 p-4 rounded-lg bg-slate-800/30 border border-slate-700 backdrop-blur-sm space-y-4">
-                    <SelectedColumnsList
-                        selected_columns=selected_columns
-                        on_move_up=on_move_up
-                        on_move_down=on_move_down
-                        on_remove=on_remove
-                        on_clear_all=on_clear_all
-                    />
+                {view! {
+                    <div class="mt-2 p-4 rounded-lg bg-slate-800/30 border border-slate-700 backdrop-blur-sm space-y-4">
+                        <SelectedColumnsList
+                            selected_columns=selected_columns
+                            on_move_up=on_move_up
+                            on_move_down=on_move_down
+                            on_remove=on_remove
+                            on_clear_all=on_clear_all
+                        />
 
-                    <hr class="border-slate-700" />
+                        <hr class="border-slate-700" />
 
-                    <AvailableColumnsList
-                        available_columns=available_columns
-                        selected_columns=selected_columns
-                        on_toggle=on_toggle_column
-                        on_select_all=on_select_all
-                    />
-                </div>
+                        <AvailableColumnsList
+                            available_columns=available_columns
+                            selected_columns=selected_columns
+                            on_toggle=on_toggle_column
+                            on_select_all=on_select_all
+                        />
+                    </div>
+                }.into_any()}
             </Show>
         </div>
     }

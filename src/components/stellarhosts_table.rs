@@ -277,7 +277,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                     let start = (page - 1) * limit + 1;
                                     let end = std::cmp::min(page * limit, total);
 
-                                    leptos::either::Either::Left(view! {
+                                    view! {
                                         <div class="space-y-6">
                                             // Pagination controls (top)
                                             <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">
@@ -395,11 +395,11 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                 </div>
                                             </div>
                                         </div>
-                                    })
+                                    }.into_any()
                                 }
                                 Err(err) => {
                                     let error_msg = format!("Error loading data: {}", err);
-                                    leptos::either::Either::Right(view! {
+                                    view! {
                                         <div class="max-w-2xl mx-auto mt-10 bg-red-900/50 border-2 border-red-500 text-red-100 px-6 py-4 rounded-xl backdrop-blur-sm">
                                             <div class="flex items-center gap-3">
                                                 <span class="text-2xl">"⚠️"</span>
@@ -409,7 +409,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                                 </div>
                                             </div>
                                         </div>
-                                    })
+                                    }.into_any()
                                 }
                             })
                         }}
