@@ -2,7 +2,6 @@ use leptos::prelude::*;
 use leptos_router::components::A;
 
 // Import server function and types - #[server] macro handles client/server compilation
-use crate::components::buy_me_coffee::BuyMeACoffee;
 use crate::server::functions::{DataStats, get_stats};
 
 #[component]
@@ -25,9 +24,6 @@ pub fn OverviewPage() -> impl IntoView {
                         <p class="text-xl text-gray-300 max-w-2xl mx-auto">
                             "Exploring the cosmos: A comprehensive catalog of confirmed exoplanets and their host stars"
                         </p>
-                        <div class="pt-4">
-                            <BuyMeACoffee slug="oiwn".to_string() />
-                        </div>
                     </div>
                 </div>
             </div>
