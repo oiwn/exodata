@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use anyhow::{Error, anyhow};
+use anyhow::{anyhow, Error};
 use polars::prelude::*;
 use votable::data::DataElem;
 use votable::datatype::Datatype;
-use votable::impls::VOTableValue;
 use votable::impls::mem::InMemTableDataRows;
+use votable::impls::VOTableValue;
 use votable::table::TableElem;
 use votable::votable::VOTableWrapper;
 
@@ -57,7 +57,6 @@ pub fn load_votable_with_progress_timed(
     let field_names: Vec<String> =
         fields.iter().map(|f| f.name.clone()).collect();
 
-    // Create column buffers.
     let mut column_buffers: Vec<ColumnData> = fields
         .iter()
         .map(|field| match field.datatype {
@@ -70,11 +69,10 @@ pub fn load_votable_with_progress_timed(
             Datatype::CharASCII | Datatype::CharUnicode => {
                 ColumnData::Text(Vec::new())
             }
-            _ => ColumnData::Text(Vec::new()), // Default for unsupported types
+            _ => ColumnData::Text(Vec::new()),
         })
         .collect();
 
-    // Get data rows with optional limit
     if let Some(data) = &table.data {
         if let DataElem::TableData(table_data) = &data.data {
             let rows_to_process = if let Some(limit) = limit {
@@ -114,7 +112,6 @@ pub fn load_votable_with_progress_timed(
 
             let rows_elapsed = row_start.elapsed();
 
-            // Convert buffers to Series.
             let series_vec: Result<Vec<Series>, Error> = column_buffers
                 .into_iter()
                 .zip(field_names.iter())
@@ -146,7 +143,6 @@ pub struct LoadTiming {
     pub rows: Duration,
 }
 
-// Enum to hold different types of column data.
 enum ColumnData {
     Float64(Vec<Option<f64>>),
     Float32(Vec<Option<f32>>),
@@ -158,7 +154,6 @@ enum ColumnData {
 }
 
 impl ColumnData {
-    // Push a cell value to the correct vector type.
     fn push(&mut self, cell: &VOTableValue) -> Result<(), Error> {
         match self {
             ColumnData::Float64(v) => match cell {
@@ -202,7 +197,6 @@ impl ColumnData {
         Ok(())
     }
 
-    // Convert the buffer to a Polars Series.
     fn to_series(self, name: &str) -> Result<Series, Error> {
         let series = match self {
             ColumnData::Float64(v) => Series::new(name.into(), v),

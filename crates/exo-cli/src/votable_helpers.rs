@@ -1,29 +1,25 @@
-//! Common functions!
-use std::collections::HashSet;
-use votable::iter::{TableIter, VOTableIterator};
-use votable::{TableElem, datatype::Datatype, impls::VOTableValue};
+use std::collections::{HashMap, HashSet};
 
-// Print table headers.
+use exo_core::metadata::ColumnMetadata;
+use votable::iter::{TableIter, VOTableIterator};
+use votable::{datatype::Datatype, impls::VOTableValue, TableElem};
+
+/// Print VOTable field headers.
 pub fn print_votable_headers(path: &str) {
     let mut votable_it = VOTableIterator::from_file(path).unwrap();
     let mut row = votable_it.next_table_row_value_iter().unwrap().unwrap();
     let table_ref_mut = row.table();
     for elem in table_ref_mut.elems.iter() {
-        match elem {
-            TableElem::Field(field) => {
-                println!(
-                    "FIELD. name: {}; datatype: {}",
-                    field.name, field.datatype
-                );
-            }
-            _ => {}
+        if let TableElem::Field(field) = elem {
+            println!(
+                "FIELD. name: {}; datatype: {}",
+                field.name, field.datatype
+            );
         }
     }
 }
 
-/// Function to detect if columns in a VOTable are nullable or not.
-/// Returns a HashMap with field names as keys and a boolean indicating
-/// if the field is nullable.
+/// Detect which VOTable columns contain null values.
 pub fn detect_nullable_columns(path: &str) -> HashSet<usize> {
     let mut is_null_columns: HashSet<usize> = HashSet::new();
     let mut votable_it = VOTableIterator::from_file(path).unwrap();
@@ -32,13 +28,9 @@ pub fn detect_nullable_columns(path: &str) -> HashSet<usize> {
         for (_, row) in row_it.enumerate() {
             match row {
                 Ok(r) => {
-                    // Now iterate over row elements
                     for (i, field) in r.iter().enumerate() {
-                        match field {
-                            VOTableValue::Null => {
-                                is_null_columns.insert(i);
-                            }
-                            _ => continue,
+                        if matches!(field, VOTableValue::Null) {
+                            is_null_columns.insert(i);
                         }
                     }
                 }
@@ -64,7 +56,6 @@ pub fn extract_coumns_types(path: &str) {
 }
 
 /// Generates a Rust struct from a VOTable by analyzing all rows for nullability.
-/// Next i supposed to paste it into actual code, where this struct is required
 pub fn structure_from_votables_codegen(
     path: &str,
     name: &str,
@@ -78,7 +69,6 @@ pub fn structure_from_votables_codegen(
     let mut field_types = vec![];
     let mut nullable_fields = HashSet::new();
 
-    // Extract field names and initial types from the header
     for elem in header.elems.iter() {
         if let TableElem::Field(field) = elem {
             let rust_type = match field.datatype {
@@ -86,14 +76,12 @@ pub fn structure_from_votables_codegen(
                 Datatype::Double => "f64",
                 Datatype::Int => "i32",
                 Datatype::Float => "f32",
-                // Add other necessary mappings
                 _ => continue,
             };
             field_types.push((field.name.clone(), rust_type));
         }
     }
 
-    // Scan all rows to determine nullability
     while let Ok(row_result) = votable_it.next_table_row_value_iter() {
         match row_result {
             Some(row_iter) => {
@@ -117,12 +105,11 @@ pub fn structure_from_votables_codegen(
             }
             None => {
                 eprintln!("Error reading row iterator");
-                continue; // Skip this row and move to the next
+                continue;
             }
         }
     }
 
-    // Generate the struct
     let mut structs_code = String::new();
     structs_code
         .push_str("#[derive(Debug, serde::Serialize, serde::Deserialize)]\n");
@@ -171,4 +158,45 @@ pub fn prev_structure_from_votables_codegen(path: &str, name: &str) {
     }
     structs_code.push_str("}\n");
     println!("{}", structs_code);
+}
+
+/// Parse VOTable and extract column metadata.
+pub fn parse_votable_metadata(
+    vot_path: &str,
+) -> Result<HashMap<String, ColumnMetadata>, String> {
+    let mut votable_it = VOTableIterator::from_file(vot_path)
+        .map_err(|e| format!("Failed to parse VOTable: {}", e))?;
+
+    let mut metadata = HashMap::new();
+
+    if let Ok(Some(mut row)) = votable_it.next_table_row_value_iter() {
+        let table = row.table();
+
+        for elem in table.elems.iter() {
+            if let TableElem::Field(field) = elem {
+                let column_metadata = ColumnMetadata {
+                    name: field.name.clone(),
+                    description: field.description.as_ref().map(|d| d.to_string()),
+                    unit: field.unit.clone(),
+                    datatype: format!("{:?}", field.datatype),
+                };
+
+                metadata.insert(field.name.clone(), column_metadata);
+            }
+        }
+    }
+
+    Ok(metadata)
+}
+
+pub fn get_exoplanets_metadata(
+    vot_path: &str,
+) -> HashMap<String, ColumnMetadata> {
+    parse_votable_metadata(vot_path).unwrap_or_default()
+}
+
+pub fn get_stellarhosts_metadata(
+    vot_path: &str,
+) -> HashMap<String, ColumnMetadata> {
+    parse_votable_metadata(vot_path).unwrap_or_default()
 }

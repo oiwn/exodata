@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use votable::TableElem;
-use votable::iter::{TableIter, VOTableIterator};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColumnMetadata {
@@ -17,54 +15,6 @@ pub struct ColumnMetadata {
 #[derive(Debug, Serialize, Deserialize)]
 struct MetadataFile {
     column: Vec<ColumnMetadata>,
-}
-
-/// Parse VOTable and extract column metadata
-pub fn parse_votable_metadata(
-    vot_path: &str,
-) -> Result<HashMap<String, ColumnMetadata>, String> {
-    let mut votable_it = VOTableIterator::from_file(vot_path)
-        .map_err(|e| format!("Failed to parse VOTable: {}", e))?;
-
-    let mut metadata = HashMap::new();
-
-    // Get the first row to access the table header
-    if let Ok(Some(mut row)) = votable_it.next_table_row_value_iter() {
-        let table = row.table();
-
-        // Iterate through table elements (fields)
-        for elem in table.elems.iter() {
-            if let TableElem::Field(field) = elem {
-                let column_metadata = ColumnMetadata {
-                    name: field.name.clone(),
-                    description: field
-                        .description
-                        .as_ref()
-                        .map(|d| d.to_string()),
-                    unit: field.unit.clone(),
-                    datatype: format!("{:?}", field.datatype),
-                };
-
-                metadata.insert(field.name.clone(), column_metadata);
-            }
-        }
-    }
-
-    Ok(metadata)
-}
-
-/// Get metadata for exoplanets columns from VOTable file
-pub fn get_exoplanets_metadata(
-    vot_path: &str,
-) -> HashMap<String, ColumnMetadata> {
-    parse_votable_metadata(vot_path).unwrap_or_default()
-}
-
-/// Get metadata for stellar hosts columns from VOTable file
-pub fn get_stellarhosts_metadata(
-    vot_path: &str,
-) -> HashMap<String, ColumnMetadata> {
-    parse_votable_metadata(vot_path).unwrap_or_default()
 }
 
 /// Print metadata in a human-readable format
@@ -158,13 +108,6 @@ pub fn load_metadata_toml(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_parse_votable_metadata() {
-        // This test requires actual VOTable files to be present
-        let result = parse_votable_metadata("../../data/exoplanets.vot");
-        assert!(result.is_ok() || result.is_err()); // Just check it doesn't panic
-    }
 
     #[test]
     fn test_get_columns_metadata() {

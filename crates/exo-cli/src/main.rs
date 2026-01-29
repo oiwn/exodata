@@ -1,8 +1,6 @@
 use clap::Parser;
-use exo_core::tables::conversion;
+use exo_cli::{commands, conversion, votable_helpers};
 use std::path::Path;
-
-mod commands;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -81,7 +79,7 @@ fn main() {
     let cli = Cli::parse();
     match cli.command {
         Commands::ViewFields { path } => {
-            exo_core::common::print_votable_headers(&path);
+            votable_helpers::print_votable_headers(&path);
         }
         Commands::ViewSamples {
             path,

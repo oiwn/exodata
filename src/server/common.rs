@@ -1,6 +1,7 @@
-// Common business logic for server operations
-// This module contains pure functions that are called by both Leptos server functions
-// and Axum REST handlers. It's server-only and contains no HTTP/Leptos dependencies.
+//! Common business logic for server operations
+//! This module contains pure functions that are called by both
+//! Leptos server functions and Axum REST handlers.
+//! It's server-only and contains no HTTP/Leptos dependencies.
 
 use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;

@@ -1154,7 +1154,10 @@ dependencies = [
  "indicatif",
  "polars",
  "predicates",
+ "rand",
  "ratatui",
+ "serde_json",
+ "votable 0.7.0",
 ]
 
 [[package]]
@@ -1162,12 +1165,10 @@ name = "exo-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "indicatif",
  "polars",
  "serde",
  "serde_json",
  "toml 0.9.10+spec-1.1.0",
- "votable 0.7.0",
 ]
 
 [[package]]
@@ -1181,7 +1182,6 @@ dependencies = [
  "console_error_panic_hook",
  "crossterm 0.28.1",
  "exo-core",
- "http",
  "indicatif",
  "leptos",
  "leptos_axum",
@@ -1193,7 +1193,6 @@ dependencies = [
  "ratatui",
  "serde",
  "serde_json",
- "thiserror 2.0.17",
  "tokio",
  "tower",
  "tower-http",

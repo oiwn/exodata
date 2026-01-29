@@ -79,7 +79,7 @@ fn process_votable(votable_path: &str) {
     println!("Processing: {}", votable_path);
 
     // Load the VOTable
-    let df = exo_core::tables::votable_loader::load_votable(votable_path, None)
+    let df = exo_cli::votable_loader::load_votable(votable_path, None)
         .expect(format!("Failed to load VOTable: {}", votable_path).as_str());
 
     let total_rows = df.height();

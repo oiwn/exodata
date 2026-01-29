@@ -1,21 +1,29 @@
-use http::status::StatusCode;
 use leptos::error::Errors;
 use leptos::prelude::*; // Replaces `use leptos::*;`
-use thiserror::Error;
+use std::fmt;
 
-#[derive(Clone, Debug, Error)]
+#[derive(Clone, Debug)]
 pub enum AppError {
-    #[error("Not Found")]
     NotFound,
 }
 
 impl AppError {
-    pub fn status_code(&self) -> StatusCode {
+    pub fn status_code(&self) -> u16 {
         match self {
-            AppError::NotFound => StatusCode::NOT_FOUND,
+            AppError::NotFound => 404,
         }
     }
 }
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::NotFound => write!(f, "Not Found"),
+        }
+    }
+}
+
+impl std::error::Error for AppError {}
 
 // A basic function to display errors served by the error boundaries.
 // Feel free to do more complicated things here than just displaying the error.
@@ -44,10 +52,15 @@ pub fn ErrorTemplate(
     // this may be customized by the specific application
     #[cfg(feature = "ssr")]
     {
+        use axum::http::StatusCode;
         use leptos_axum::ResponseOptions;
         let response = use_context::<ResponseOptions>();
         if let Some(response) = response {
-            response.set_status(errors[0].status_code());
+            let status =
+                StatusCode::from_u16(errors[0].status_code()).unwrap_or(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
+            response.set_status(status);
         }
     }
 

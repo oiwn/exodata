@@ -4,7 +4,8 @@ pub mod common;
 pub mod components;
 pub mod error_template;
 
-// Server module contains server functions that need to be visible to both client and server
+// Server module contains server functions that need to be
+// visible to both client and server.
 // The #[server] macro handles conditional compilation
 pub mod server;
 

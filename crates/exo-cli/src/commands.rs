@@ -495,11 +495,12 @@ pub fn execute_sql(query: &str, data_dir: &str) -> Result<(), Error> {
 
 /// View column metadata from a VOTable file
 pub fn view_metadata(path: &str, columns: Option<&str>) -> Result<(), Error> {
+    use crate::votable_helpers::parse_votable_metadata;
     use exo_core::metadata;
 
     println!("Loading metadata from: {}\n", path);
 
-    let all_metadata = metadata::parse_votable_metadata(path)
+    let all_metadata = parse_votable_metadata(path)
         .map_err(|e| anyhow::Error::msg(e))?;
 
     if let Some(col_filter) = columns {

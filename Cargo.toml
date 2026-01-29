@@ -17,17 +17,15 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 axum = { version = "0.8", optional = true }
 console_error_panic_hook = "0.1"
-leptos = { version = "0.8" }
+leptos = { version = "0.8", default-features = false }
 leptos_axum = { version = "0.8", optional = true }
-leptos_meta = { version = "0.8" }
-leptos_router = { version = "0.8" }
+leptos_meta = { version = "0.8", default-features = false }
+leptos_router = { version = "0.8", default-features = false }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"], optional = true }
 tower = { version = "0.5", optional = true }
 tower-http = { version = "0.6", features = ["fs"], optional = true }
 wasm-bindgen = "0.2"
-thiserror = "2"
 tracing = { version = "0.1", optional = true }
-http = "1"
 clap = { version = "4.5", features = ["derive"], optional = true }
 serde = { version = "1", features = ["derive"] }
 exo-core = { path = "crates/exo-core", optional = true }
