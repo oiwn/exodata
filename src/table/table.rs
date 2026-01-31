@@ -1,8 +1,39 @@
 use crate::server::functions::TableData;
+use crate::table::ColumnGroup;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
 use leptos_router::components::A;
 use std::collections::HashMap;
+
+#[component]
+fn MeasurementCell(
+    value: String,
+    err1: Option<String>,
+    err2: Option<String>,
+    lim_present: bool,
+) -> impl IntoView {
+    let lim_class = if lim_present {
+        "bg-amber-500/10 border-amber-500/30"
+    } else {
+        ""
+    };
+
+    view! {
+        <td class=format!("px-6 py-4 text-sm text-gray-300 font-mono border-l border-transparent {}", lim_class)>
+            <div class="flex items-center gap-2">
+                <div class="flex flex-col text-[10px] leading-none text-gray-400 min-w-[2.25rem] text-right">
+                    {err1.as_ref().map(|v| {
+                        view! { <span class="-translate-y-0.5">{"+"}{v.clone()}</span> }
+                    })}
+                    {err2.as_ref().map(|v| {
+                        view! { <span class="translate-y-0.5">{"-"}{v.clone()}</span> }
+                    })}
+                </div>
+                <span>{value}</span>
+            </div>
+        </td>
+    }
+}
 
 #[component]
 pub fn Table(
@@ -11,19 +42,26 @@ pub fn Table(
     current_sort_column: Option<String>,
     current_sort_order: String,
     #[prop(optional)] column_descriptions: Option<HashMap<String, String>>,
+    #[prop(optional)]
+    display_columns: Option<Vec<String>>,
+    #[prop(optional)]
+    column_groups: Option<HashMap<String, ColumnGroup>>,
     /// Column name to render as a link (e.g., "hostname")
     #[prop(optional)]
     link_column: Option<String>,
     /// Base URL for the link (e.g., "/stellarhosts/") - column value will be appended
     #[prop(optional)]
     link_base: Option<String>,
-) -> impl IntoView {
+    ) -> impl IntoView {
+    let columns = display_columns.unwrap_or_else(|| data.columns.clone());
+    let groups = column_groups.unwrap_or_default();
+
     view! {
         <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-sm">
             <table class="w-full border-collapse">
                 <thead class="bg-slate-900/50 sticky top-0">
                     <tr>
-                        {data.columns.iter().map(|col| {
+                        {columns.iter().map(|col| {
                             let col_name = col.clone();
                             let col_display = format_column_name(&col_name);
                             let is_sorted = current_sort_column.as_ref() == Some(&col_name);
@@ -38,9 +76,20 @@ pub fn Table(
                             };
 
                             // Get description for tooltip
-                            let description = column_descriptions.as_ref()
+                            let description = column_descriptions
+                                .as_ref()
                                 .and_then(|descs| descs.get(&col_name))
-                                .map(|s| s.clone());
+                                .cloned()
+                                .or_else(|| {
+                                    data.metadata
+                                        .get(&col_name)
+                                        .and_then(|m| m.description.clone())
+                                });
+                            let unit = data
+                                .metadata
+                                .get(&col_name)
+                                .and_then(|m| m.unit.clone());
+                            let title = build_column_title(description.clone(), unit);
 
                             let col_for_click = col_name.clone();
                             let on_click = move |_| {
@@ -51,7 +100,7 @@ pub fn Table(
                                 <th
                                     class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white hover:bg-slate-800/50 transition-colors select-none group relative"
                                     on:click=on_click
-                                    title=description.clone()
+                                    title=title
                                 >
                                     <div class="flex items-center gap-2">
                                         <span>{col_display}</span>
@@ -84,10 +133,11 @@ pub fn Table(
 
                         view! {
                             <tr class=format!("{} hover:bg-slate-700/50 transition-colors", row_class)>
-                                {data.columns.iter().map(|col| {
+                                {columns.iter().map(|col| {
                                     let value = row.get(col).unwrap_or(&Value::Null);
                                     let formatted_value = format_cell_value(value);
                                     let is_link_column = link_col.as_ref() == Some(col);
+                                    let group = groups.get(col);
 
                                     if is_link_column {
                                         let link_value = value.as_str().unwrap_or("");
@@ -106,6 +156,24 @@ pub fn Table(
                                                     {formatted_value}
                                                 </A>
                                             </td>
+                                        }.into_any()
+                                    } else if let Some(group) = group {
+                                        let base_value = row.get(&group.base).unwrap_or(&Value::Null);
+                                        let err1_value = group.err1.as_ref().and_then(|c| row.get(c));
+                                        let err2_value = group.err2.as_ref().and_then(|c| row.get(c));
+                                        let lim_value = group.lim.as_ref().and_then(|c| row.get(c));
+                                        let err1 = err1_value.and_then(format_error_value);
+                                        let err2 = err2_value.and_then(format_error_value);
+                                        let lim_present = lim_value.map(is_value_present).unwrap_or(false);
+                                        let base_formatted = format_cell_value(base_value);
+
+                                        view! {
+                                            <MeasurementCell
+                                                value=base_formatted
+                                                err1=err1
+                                                err2=err2
+                                                lim_present=lim_present
+                                            />
                                         }.into_any()
                                     } else {
                                         view! {
@@ -166,6 +234,42 @@ fn format_column_name(col: &str) -> String {
         "st_mass" => "Mass (M☉)".to_string(),
         "sy_pnum" => "Planets".to_string(),
         _ => col.to_string(),
+    }
+}
+
+fn build_column_title(
+    description: Option<String>,
+    unit: Option<String>,
+) -> Option<String> {
+    match (description, unit) {
+        (Some(desc), Some(unit)) => Some(format!("{} [{}]", desc, unit)),
+        (Some(desc), None) => Some(desc),
+        (None, Some(unit)) => Some(format!("[{}]", unit)),
+        (None, None) => None,
+    }
+}
+
+fn is_value_present(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::String(s) => !s.trim().is_empty(),
+        _ => true,
+    }
+}
+
+fn format_error_value(value: &Value) -> Option<String> {
+    let formatted = format_cell_value(value);
+    if formatted == "—" {
+        return None;
+    }
+    let trimmed = formatted
+        .trim_start_matches('-')
+        .trim_start_matches('+')
+        .to_string();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
     }
 }
 

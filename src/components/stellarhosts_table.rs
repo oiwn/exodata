@@ -1,7 +1,7 @@
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
 use crate::server::functions::get_stellarhosts_page;
-use crate::table::{Table, build_table_query};
+use crate::table::{Table, build_column_model, build_table_query, is_err_or_lim};
 use leptos::prelude::*;
 use leptos_router::NavigateOptions;
 use leptos_router::components::A;
@@ -43,6 +43,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             .map(|s| {
                 s.split(',')
                     .map(|col| col.trim().to_string())
+                    .filter(|col| !is_err_or_lim(col))
                     .collect::<Vec<_>>()
             })
             .unwrap_or_else(|| default_columns.clone())
@@ -66,6 +67,13 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             crate::server::functions::ColumnMetadata,
         >::new());
 
+    // Compute columns to fetch (base + err/lim companions)
+    let fetch_columns = Signal::derive(move || {
+        let all_columns: Vec<String> =
+            cached_metadata.get().keys().cloned().collect();
+        build_column_model(&all_columns, &selected_columns.get()).fetch_columns
+    });
+
     // Resource that fetches data when dependencies change
     let table_resource = Resource::new(
         move || {
@@ -73,7 +81,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                 current_page.get(),
                 sort_column.get(),
                 sort_order.get(),
-                selected_columns.get(),
+                fetch_columns.get(),
             )
         },
         move |(page, sort_col, order, columns)| async move {
@@ -333,14 +341,29 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                             </div>
 
                                             // Table
-                                            <Table
-                                                data=data
-                                                on_sort=on_sort
-                                                current_sort_column=sort_column.get()
-                                                current_sort_order=sort_order.get()
-                                                link_column="hostname".to_string()
-                                                link_base="/stellarhosts/".to_string()
-                                            />
+                                            {
+                                                let all_columns: Vec<String> = data
+                                                    .metadata
+                                                    .keys()
+                                                    .cloned()
+                                                    .collect();
+                                                let model = build_column_model(
+                                                    &all_columns,
+                                                    &selected_columns.get(),
+                                                );
+                                                view! {
+                                                    <Table
+                                                        data=data
+                                                        on_sort=on_sort
+                                                        current_sort_column=sort_column.get()
+                                                        current_sort_order=sort_order.get()
+                                                        display_columns=model.display_columns
+                                                        column_groups=model.groups
+                                                        link_column="hostname".to_string()
+                                                        link_base="/stellarhosts/".to_string()
+                                                    />
+                                                }
+                                            }
 
                                             // Pagination controls (bottom)
                                             <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">

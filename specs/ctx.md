@@ -2,27 +2,20 @@
 
 ## Current task
 
-[PASTE DETAILED PLAN HERE]
+### Measurement Groups Status
+- ✅ Column model (names only) added; err/lim excluded from selector.
+- ✅ Stellarhosts table renders `err1/err2` with left-side mini values.
+- ✅ Columns fetch includes err/lim companions; sorting stays on base columns.
+- ✅ Metadata tooltips wired to table headers.
 
-Generic table data pipeline on the server
+### Remaining for Measurement Groups
+- Finalize `lim` indication styling (color/badge rules).
+- Apply measurement rendering to Exoplanets (later, after Stellarhosts is stable).
 
-- `get_stellarhosts_data` and `get_exoplanets_data` are near-duplicates with different defaults.
-- Recommendation: replace with a `get_table_data(config, params)` or similar helper that handles select/sort/pagination once, and pass a per-table config (default columns, link column, etc.).
-- Files: `src/server/common.rs`, `src/server/functions.rs`, `src/server/handlers.rs`.
-
-### Let's think about it for a while, my thoughts:
-
-- since data are basically in column in-memory database i really do not to know metadata about the table. so we can abstract out actions possible with table.
-- we'll need to think that table will need to attach metadata to DataFrame first, some columns are meaningless without context ("err1", "err2", "lim")
-
-
-#### Consideration: Measurement groups (value + err1/err2/lim)
-
-- Many stellarhosts columns appear in sets like `st_teff`, `st_tefferr1`, `st_tefferr2`, `st_tefflim`.
-- Proposed approach: keep DataFrame as the source of truth, but introduce a light model that groups related columns for display (e.g., render value with ± error in the table cell). We shouldn't store data in this model, only use it to quickly fetch data from DataFrame
-- Benefits: preserves flexibility of dynamic columns while enabling richer display logic without hardcoding a full Rust struct for all columns.
-- Risks: needs a clear mapping rule and confirmation of `err1/err2/lim` semantics; avoid incorrect rendering if a column lacks the companions.
-- this fields with "err1", "err2", "lim" should be excluded from the column selection
+### Server Pipeline Refactor (next)
+- Replace `get_stellarhosts_data` / `get_exoplanets_data` with `get_table_data(config, params)`.
+- Centralize select/sort/pagination (and later filters).
+- Keep metadata attached to responses.
 
 # Tasks we'll have to do after refactoring (keep in mind)
 
@@ -97,4 +90,3 @@ Stellar Hosts and Exoplanets tables. Filters should update data, totals, and pag
   - `TableQuery { page, limit, sort, order, columns, filters }`
 - Implement a single filter parser (URL format chosen once).
 - Reuse parser in both `src/server/handlers.rs` and `src/server/functions.rs`.
-

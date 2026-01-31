@@ -1,7 +1,7 @@
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
 use crate::server::functions::get_exoplanets_page;
-use crate::table::{Table, build_table_query};
+use crate::table::{Table, build_table_query, is_err_or_lim};
 use leptos::prelude::*;
 use leptos_router::NavigateOptions;
 use leptos_router::components::A;
@@ -45,6 +45,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             .map(|s| {
                 s.split(',')
                     .map(|col| col.trim().to_string())
+                    .filter(|col| !is_err_or_lim(col))
                     .collect::<Vec<_>>()
             })
             .unwrap_or_else(|| default_columns.clone())

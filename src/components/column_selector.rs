@@ -1,4 +1,5 @@
 use crate::server::functions::ColumnMetadata;
+use crate::table::is_err_or_lim;
 use leptos::ev::Event;
 use leptos::prelude::*;
 use std::collections::HashMap;
@@ -171,7 +172,11 @@ fn AvailableColumnsList(
 
     // Sort columns alphabetically
     let sorted_columns = move || {
-        let mut cols: Vec<_> = available_columns.get().into_iter().collect();
+        let mut cols: Vec<_> = available_columns
+            .get()
+            .into_iter()
+            .filter(|(name, _)| !is_err_or_lim(name))
+            .collect();
         cols.sort_by(|a, b| a.0.cmp(&b.0));
         cols
     };
@@ -242,7 +247,7 @@ fn AvailableColumnsList(
             <div class="mt-2 text-xs text-gray-500 text-center">
                 {move || {
                     let filtered = filtered_columns();
-                    let total = available_columns.get().len();
+                    let total = sorted_columns().len();
                     if filtered.len() < total {
                         format!("Showing {} of {} columns", filtered.len(), total)
                     } else {
@@ -283,7 +288,12 @@ pub fn ColumnSelector(
 
     // Select all handler
     let on_select_all = Callback::new(move |_: ()| {
-        let all: Vec<String> = available_columns.get().keys().cloned().collect();
+        let all: Vec<String> = available_columns
+            .get()
+            .keys()
+            .filter(|name| !is_err_or_lim(name))
+            .cloned()
+            .collect();
         on_change.run(all);
     });
 
