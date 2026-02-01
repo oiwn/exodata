@@ -1,7 +1,9 @@
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
 use crate::server::functions::get_exoplanets_page;
-use crate::table::{Table, build_table_query, is_err_or_lim};
+use crate::table::{
+    Table, build_column_model, build_table_query, is_err_or_lim,
+};
 use leptos::prelude::*;
 use leptos_router::NavigateOptions;
 use leptos_router::components::A;
@@ -27,6 +29,11 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
         q.get("order")
             .map(|o| o.to_string())
             .unwrap_or_else(|| "asc".to_string())
+    });
+    let initial_filter = query_map.with_untracked(|q| {
+        q.get("filter")
+            .map(|f| f.to_string())
+            .unwrap_or_default()
     });
 
     // Default columns for exoplanets
@@ -57,6 +64,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let (sort_order, set_sort_order) = signal(initial_sort_order);
     let (selected_columns, set_selected_columns) = signal(initial_columns);
     let (selector_is_open, set_selector_is_open) = signal(false);
+    let (filter_text, set_filter_text) = signal(initial_filter.clone());
+    let (filter_input, set_filter_input) = signal(initial_filter);
 
     // Signal to track loading state for overlay (managed manually to avoid Transition disposal panic)
     let (is_loading, set_is_loading) = signal(false);
@@ -69,6 +78,13 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             crate::server::functions::ColumnMetadata,
         >::new());
 
+    // Compute columns to fetch (base + err/lim companions)
+    let fetch_columns = Signal::derive(move || {
+        let all_columns: Vec<String> =
+            cached_metadata.get().keys().cloned().collect();
+        build_column_model(&all_columns, &selected_columns.get()).fetch_columns
+    });
+
     // Resource that fetches data when dependencies change
     let table_resource = Resource::new(
         move || {
@@ -76,27 +92,42 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                 current_page.get(),
                 sort_column.get(),
                 sort_order.get(),
-                selected_columns.get(),
+                fetch_columns.get(),
+                filter_text.get(),
             )
         },
-        move |(page, sort_col, order, columns)| async move {
+        move |(page, sort_col, order, columns, filter)| async move {
             let columns_param = if columns.is_empty() {
                 None
             } else {
                 Some(columns.join(","))
             };
-            get_exoplanets_page(page, 50, sort_col, Some(order), columns_param)
+            let filter_param = if filter.trim().is_empty() {
+                None
+            } else {
+                Some(filter)
+            };
+            get_exoplanets_page(
+                page,
+                50,
+                sort_col,
+                Some(order),
+                columns_param,
+                filter_param,
+            )
                 .await
         },
     );
 
     // Track when resource source changes to set loading state
-    Effect::new(move |prev: Option<(usize, Option<String>, String, Vec<String>)>| {
+    Effect::new(
+        move |prev: Option<(usize, Option<String>, String, Vec<String>, String)>| {
         let current = (
             current_page.get(),
             sort_column.get(),
             sort_order.get(),
             selected_columns.get(),
+            filter_text.get(),
         );
         if let Some(prev_val) = prev {
             if prev_val != current {
@@ -104,7 +135,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             }
         }
         current
-    });
+    },
+    );
 
     // Update has_loaded and cached metadata when resource completes successfully
     Effect::new(move |_| {
@@ -174,8 +206,15 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             let page = current_page.get();
             let sort_col = sort_column.get();
             let order = sort_order.get();
-            let query_string =
-                build_table_query(page, sort_col.as_deref(), &order);
+            let cols = selected_columns.get();
+            let filter = filter_text.get();
+            let query_string = build_table_query(
+                page,
+                sort_col.as_deref(),
+                &order,
+                Some(&cols),
+                Some(&filter),
+            );
             navigate(
                 &format!("/exoplanets?{}", query_string),
                 Default::default(),
@@ -202,20 +241,40 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             let page = current_page.get();
             let sort_col = sort_column.get();
             let order = sort_order.get();
-            let mut query_params = vec![format!("page={}", page)];
+            let filter = filter_text.get();
+            let query_string = build_table_query(
+                page,
+                sort_col.as_deref(),
+                &order,
+                Some(&columns),
+                Some(&filter),
+            );
+            navigate(
+                &format!("/exoplanets?{}", query_string),
+                NavigateOptions {
+                    scroll: false,
+                    ..Default::default()
+                },
+            );
+        }
+    });
 
-            if let Some(col) = sort_col.as_deref() {
-                if columns.contains(&col.to_string()) {
-                    query_params.push(format!("sort={}", col));
-                    query_params.push(format!("order={}", order));
-                }
-            }
-
-            if !columns.is_empty() {
-                query_params.push(format!("columns={}", columns.join(",")));
-            }
-
-            let query_string = query_params.join("&");
+    // Filter commit handler (blur/enter)
+    let on_filter_commit = Callback::new({
+        let navigate = navigate.clone();
+        move |value: String| {
+            set_filter_text.set(value.clone());
+            set_current_page.set(1);
+            let sort_col = sort_column.get();
+            let order = sort_order.get();
+            let cols = selected_columns.get();
+            let query_string = build_table_query(
+                1,
+                sort_col.as_deref(),
+                &order,
+                Some(&cols),
+                Some(&value),
+            );
             navigate(
                 &format!("/exoplanets?{}", query_string),
                 NavigateOptions {
@@ -300,7 +359,15 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                                     let page = current_page.get();
                                                                     let sort_col = sort_column.get();
                                                                     let order = sort_order.get();
-                                                                    let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                    let cols = selected_columns.get();
+                                                                    let filter = filter_text.get();
+                                                                    let query_string = build_table_query(
+                                                                        page,
+                                                                        sort_col.as_deref(),
+                                                                        &order,
+                                                                        Some(&cols),
+                                                                        Some(&filter),
+                                                                    );
                                                                     navigate(&format!("/exoplanets?{}", query_string), Default::default());
                                                                 }
                                                             }
@@ -324,7 +391,15 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                                     let page = current_page.get();
                                                                     let sort_col = sort_column.get();
                                                                     let order = sort_order.get();
-                                                                    let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                    let cols = selected_columns.get();
+                                                                    let filter = filter_text.get();
+                                                                    let query_string = build_table_query(
+                                                                        page,
+                                                                        sort_col.as_deref(),
+                                                                        &order,
+                                                                        Some(&cols),
+                                                                        Some(&filter),
+                                                                    );
                                                                     navigate(&format!("/exoplanets?{}", query_string), Default::default());
                                                                 }
                                                             }
@@ -336,12 +411,30 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                             </div>
 
                                             // Table
-                                            <Table
-                                                data=data
-                                                on_sort=on_sort
-                                                current_sort_column=sort_column.get()
-                                                current_sort_order=sort_order.get()
-                                            />
+                                            {
+                                                let all_columns: Vec<String> = data
+                                                    .metadata
+                                                    .keys()
+                                                    .cloned()
+                                                    .collect();
+                                                let model = build_column_model(
+                                                    &all_columns,
+                                                    &selected_columns.get(),
+                                                );
+                                                view! {
+                                                    <Table
+                                                        data=data
+                                                        on_sort=on_sort
+                                                        current_sort_column=sort_column.get()
+                                                        current_sort_order=sort_order.get()
+                                                        display_columns=model.display_columns
+                                                        column_groups=model.groups
+                                                        filter_input=filter_input
+                                                        set_filter_input=set_filter_input
+                                                        on_filter_commit=on_filter_commit
+                                                    />
+                                                }
+                                            }
 
                                             // Pagination controls (bottom)
                                             <div class="flex flex-col md:flex-row items-center justify-between gap-4 px-4">
@@ -361,7 +454,15 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                                     let page = current_page.get();
                                                                     let sort_col = sort_column.get();
                                                                     let order = sort_order.get();
-                                                                    let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                    let cols = selected_columns.get();
+                                                                    let filter = filter_text.get();
+                                                                    let query_string = build_table_query(
+                                                                        page,
+                                                                        sort_col.as_deref(),
+                                                                        &order,
+                                                                        Some(&cols),
+                                                                        Some(&filter),
+                                                                    );
                                                                     navigate(&format!("/exoplanets?{}", query_string), Default::default());
                                                                 }
                                                             }
@@ -385,7 +486,15 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                                     let page = current_page.get();
                                                                     let sort_col = sort_column.get();
                                                                     let order = sort_order.get();
-                                                                    let query_string = build_table_query(page, sort_col.as_deref(), &order);
+                                                                    let cols = selected_columns.get();
+                                                                    let filter = filter_text.get();
+                                                                    let query_string = build_table_query(
+                                                                        page,
+                                                                        sort_col.as_deref(),
+                                                                        &order,
+                                                                        Some(&cols),
+                                                                        Some(&filter),
+                                                                    );
                                                                     navigate(&format!("/exoplanets?{}", query_string), Default::default());
                                                                 }
                                                             }

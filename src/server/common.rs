@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 /// Result type for stellarhosts data operations
 /// Returns: (rows, filtered_total, unfiltered_total, columns, metadata)
-pub type StellarHostsResult = Result<
+pub type TableResult = Result<
     (
         Vec<Value>,
         usize,
@@ -21,37 +21,22 @@ pub type StellarHostsResult = Result<
     ),
     String,
 >;
+
+/// Result type for stellarhosts data operations
+/// Returns: (rows, filtered_total, unfiltered_total, columns, metadata)
+pub type StellarHostsResult = TableResult;
 
 /// Result type for exoplanets data operations
 /// Returns: (rows, filtered_total, unfiltered_total, columns, metadata)
-pub type ExoplanetsResult = Result<
-    (
-        Vec<Value>,
-        usize,
-        usize,
-        Vec<String>,
-        HashMap<String, ColumnMetadata>,
-    ),
-    String,
->;
+pub type ExoplanetsResult = TableResult;
 
-/// Get paginated stellar hosts data with sorting
-///
-/// This is the core business logic that both server functions and REST handlers use.
-/// It performs Polars operations and returns the data in a simple format.
-///
-/// # Arguments
-/// * `df` - Reference to the stellarhosts DataFrame
-/// * `all_metadata` - Reference to all column metadata
-/// * `page` - Page number (1-indexed)
-/// * `limit` - Number of rows per page
-/// * `sort_by` - Optional column name to sort by
-/// * `order` - Sort order ("asc" or "desc")
-/// * `selected_columns` - Optional list of column names to display
-///
-/// # Returns
-/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names, column metadata)
-pub fn get_stellarhosts_data(
+/// Table configuration for generic data queries.
+pub struct TableConfig<'a> {
+    pub default_columns: &'a [&'a str],
+}
+
+/// Generic table data query with shared pagination/sort/select logic.
+pub fn get_table_data(
     df: &DataFrame,
     all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
     page: usize,
@@ -59,13 +44,11 @@ pub fn get_stellarhosts_data(
     sort_by: Option<String>,
     order: Option<String>,
     selected_columns: Option<Vec<String>>,
-) -> StellarHostsResult {
+    filter: Option<String>,
+    config: TableConfig<'_>,
+) -> TableResult {
     // Clone the dataframe to work with it
     let mut df = df.clone();
-
-    // Define default columns if none specified
-    let default_columns =
-        vec!["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
 
     // Use selected columns or fall back to defaults
     let columns_to_select: Vec<&str> = if let Some(cols) = &selected_columns {
@@ -75,7 +58,7 @@ pub fn get_stellarhosts_data(
             .map(|s| s.as_str())
             .collect()
     } else {
-        default_columns.iter().map(|s| *s).collect()
+        config.default_columns.iter().copied().collect()
     };
 
     // Ensure we have at least one column
@@ -90,6 +73,35 @@ pub fn get_stellarhosts_data(
 
     // Get unfiltered total FIRST (before any filtering)
     let total_all = df.height();
+
+    // Apply first-column text filter if provided
+    if let Some(filter_value) = filter {
+        let needle = filter_value.trim().to_lowercase();
+        if !needle.is_empty() {
+            if let Some(first_col) = columns_to_select.first() {
+                let series = df
+                    .column(first_col)
+                    .map_err(|e| format!("Failed to read filter column: {}", e))?;
+                let series = if matches!(series.dtype(), DataType::String) {
+                    series.clone()
+                } else {
+                    series
+                        .cast(&DataType::String)
+                        .map_err(|e| format!("Failed to cast filter column: {}", e))?
+                };
+                let utf8 = series
+                    .str()
+                    .map_err(|e| format!("Failed to read string column: {}", e))?;
+                let mask: BooleanChunked = utf8
+                    .into_iter()
+                    .map(|opt| opt.map(|s| s.to_lowercase().contains(&needle)))
+                    .collect();
+                df = df
+                    .filter(&mask)
+                    .map_err(|e| format!("Failed to apply filter: {}", e))?;
+            }
+        }
+    }
 
     // Apply sorting with null filtering if requested
     // Only sort if the sort column is actually in the selected columns
@@ -144,6 +156,50 @@ pub fn get_stellarhosts_data(
     Ok((rows, total, total_all, columns, all_column_metadata))
 }
 
+/// Get paginated stellar hosts data with sorting
+///
+/// This is the core business logic that both server functions and REST handlers use.
+/// It performs Polars operations and returns the data in a simple format.
+///
+/// # Arguments
+/// * `df` - Reference to the stellarhosts DataFrame
+/// * `all_metadata` - Reference to all column metadata
+/// * `page` - Page number (1-indexed)
+/// * `limit` - Number of rows per page
+/// * `sort_by` - Optional column name to sort by
+/// * `order` - Sort order ("asc" or "desc")
+/// * `selected_columns` - Optional list of column names to display
+///
+/// # Returns
+/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names, column metadata)
+pub fn get_stellarhosts_data(
+    df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+    selected_columns: Option<Vec<String>>,
+    filter: Option<String>,
+) -> StellarHostsResult {
+    // Define default columns if none specified
+    let default_columns =
+        vec!["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
+    get_table_data(
+        df,
+        all_metadata,
+        page,
+        limit,
+        sort_by,
+        order,
+        selected_columns,
+        filter,
+        TableConfig {
+            default_columns: &default_columns,
+        },
+    )
+}
+
 /// Get paginated exoplanets data with sorting
 ///
 /// This is the core business logic that both server functions and REST handlers use.
@@ -168,10 +224,8 @@ pub fn get_exoplanets_data(
     sort_by: Option<String>,
     order: Option<String>,
     selected_columns: Option<Vec<String>>,
+    filter: Option<String>,
 ) -> ExoplanetsResult {
-    // Clone the dataframe to work with it
-    let mut df = df.clone();
-
     // Define default columns if none specified
     let default_columns = vec![
         "pl_name",
@@ -182,82 +236,19 @@ pub fn get_exoplanets_data(
         "pl_rade",
         "pl_bmasse",
     ];
-
-    // Use selected columns or fall back to defaults
-    let columns_to_select: Vec<&str> = if let Some(cols) = &selected_columns {
-        // Validate that requested columns exist in dataframe
-        cols.iter()
-            .filter(|col| df.column(col).is_ok())
-            .map(|s| s.as_str())
-            .collect()
-    } else {
-        default_columns.iter().map(|s| *s).collect()
-    };
-
-    // Ensure we have at least one column
-    if columns_to_select.is_empty() {
-        return Err("No valid columns selected".to_string());
-    }
-
-    // Select only the columns we need
-    df = df
-        .select(columns_to_select.clone())
-        .map_err(|e| format!("Failed to select columns: {}", e))?;
-
-    // Get unfiltered total FIRST (before any filtering)
-    let total_all = df.height();
-
-    // Apply sorting with null filtering if requested
-    // Only sort if the sort column is actually in the selected columns
-    if let Some(sort_col) = &sort_by {
-        if columns_to_select.contains(&sort_col.as_str()) {
-            // Filter out rows where sort column is null using LazyFrame
-            df = df
-                .lazy()
-                .filter(col(sort_col).is_not_null())
-                .collect()
-                .map_err(|e| format!("Failed to filter nulls: {}", e))?;
-
-            // Then sort
-            let descending = order.as_deref().unwrap_or("asc") == "desc";
-            let options =
-                SortMultipleOptions::new().with_order_descending(descending);
-
-            df = df
-                .sort([sort_col.as_str()], options)
-                .map_err(|e| format!("Failed to sort: {}", e))?;
-        }
-        // If sort column is not in selected columns, silently ignore the sort
-    }
-
-    // Get filtered total AFTER filtering (but before pagination)
-    let total = df.height();
-
-    // Apply pagination
-    let page = if page == 0 { 1 } else { page };
-    let offset = (page - 1) * limit;
-
-    if offset < df.height() {
-        let end = std::cmp::min(offset + limit, df.height());
-        df = df.slice(offset as i64, end - offset);
-    } else {
-        // Return empty dataframe if offset is beyond data
-        df = df.slice(0, 0);
-    }
-
-    // Convert DataFrame to JSON
-    let rows = dataframe_to_json(&df)?;
-
-    // Get column names
-    let columns: Vec<String> =
-        columns_to_select.iter().map(|s| (*s).to_string()).collect();
-
-    // Return ALL metadata (not just selected columns) so the column selector
-    // can show all available columns to the user
-    let all_column_metadata: HashMap<String, ColumnMetadata> =
-        all_metadata.as_ref().clone();
-
-    Ok((rows, total, total_all, columns, all_column_metadata))
+    get_table_data(
+        df,
+        all_metadata,
+        page,
+        limit,
+        sort_by,
+        order,
+        selected_columns,
+        filter,
+        TableConfig {
+            default_columns: &default_columns,
+        },
+    )
 }
 
 /// Get a single stellar host by hostname
@@ -442,7 +433,7 @@ mod tests {
 
         // Test first page
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 1, 2, None, None, None)
+            get_stellarhosts_data(&df, &metadata, 1, 2, None, None, None, None)
                 .unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
@@ -450,7 +441,7 @@ mod tests {
 
         // Test second page
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 2, 2, None, None, None)
+            get_stellarhosts_data(&df, &metadata, 2, 2, None, None, None, None)
                 .unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
@@ -458,7 +449,7 @@ mod tests {
 
         // Test last page (partial)
         let (rows, total, total_all, _cols, _meta) =
-            get_stellarhosts_data(&df, &metadata, 3, 2, None, None, None)
+            get_stellarhosts_data(&df, &metadata, 3, 2, None, None, None, None)
                 .unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(total, 5);
@@ -488,6 +479,7 @@ mod tests {
             Some("hostname".to_string()),
             Some("asc".to_string()),
             None,
+            None,
         )
         .unwrap();
         assert_eq!(rows[0]["hostname"], "Star A");
@@ -502,6 +494,7 @@ mod tests {
             10,
             Some("sy_dist".to_string()),
             Some("desc".to_string()),
+            None,
             None,
         )
         .unwrap();
@@ -534,6 +527,7 @@ mod tests {
             None,
             None,
             Some(selected_columns),
+            None,
         )
         .unwrap();
 
@@ -575,6 +569,7 @@ mod tests {
             None,
             None,
             Some(selected_columns),
+            None,
         );
 
         // Should return error for no valid columns
@@ -609,6 +604,7 @@ mod tests {
             None,
             None,
             Some(selected_columns),
+            None,
         )
         .unwrap();
 

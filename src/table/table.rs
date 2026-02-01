@@ -1,5 +1,6 @@
 use crate::server::functions::TableData;
 use crate::table::ColumnGroup;
+use leptos::ev::KeyboardEvent;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
 use leptos_router::components::A;
@@ -46,6 +47,12 @@ pub fn Table(
     display_columns: Option<Vec<String>>,
     #[prop(optional)]
     column_groups: Option<HashMap<String, ColumnGroup>>,
+    #[prop(optional)]
+    filter_input: Option<ReadSignal<String>>,
+    #[prop(optional)]
+    set_filter_input: Option<WriteSignal<String>>,
+    #[prop(optional)]
+    on_filter_commit: Option<Callback<String>>,
     /// Column name to render as a link (e.g., "hostname")
     #[prop(optional)]
     link_column: Option<String>,
@@ -55,6 +62,9 @@ pub fn Table(
     ) -> impl IntoView {
     let columns = display_columns.unwrap_or_else(|| data.columns.clone());
     let groups = column_groups.unwrap_or_default();
+    let show_filter = filter_input.is_some()
+        && set_filter_input.is_some()
+        && on_filter_commit.is_some();
 
     view! {
         <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-sm">
@@ -119,6 +129,46 @@ pub fn Table(
                             }
                         }).collect::<Vec<_>>()}
                     </tr>
+                    {if show_filter {
+                        let filter_input = filter_input.unwrap();
+                        let set_filter_input = set_filter_input.unwrap();
+                        let on_filter_commit = on_filter_commit.unwrap();
+                        let commit = move || {
+                            let value = filter_input.get().trim().to_string();
+                            on_filter_commit.run(value);
+                        };
+                        view! {
+                            <tr>
+                                {columns.iter().enumerate().map(|(idx, _)| {
+                                    if idx == 0 {
+                                        view! {
+                                            <th class="px-6 py-3">
+                                                <input
+                                                    type="text"
+                                                    class="w-full px-3 py-2 rounded-md bg-slate-900/50 border border-slate-700 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                                    placeholder="Filter..."
+                                                    prop:value=move || filter_input.get()
+                                                    on:input=move |e| {
+                                                        set_filter_input.set(event_target_value(&e));
+                                                    }
+                                                    on:blur=move |_| commit()
+                                                    on:keydown=move |e: KeyboardEvent| {
+                                                        if e.key() == "Enter" {
+                                                            commit();
+                                                        }
+                                                    }
+                                                />
+                                            </th>
+                                        }.into_any()
+                                    } else {
+                                        view! { <th class="px-6 py-3"></th> }.into_any()
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </tr>
+                        }.into_any()
+                    } else {
+                        view! { <></> }.into_any()
+                    }}
                 </thead>
                 <tbody>
                     {data.rows.iter().enumerate().map(|(idx, row)| {
@@ -216,11 +266,26 @@ pub fn build_table_query(
     page: usize,
     sort_col: Option<&str>,
     order: &str,
+    columns: Option<&[String]>,
+    filter: Option<&str>,
 ) -> String {
     let mut query_params = vec![format!("page={}", page)];
     if let Some(col) = sort_col {
         query_params.push(format!("sort={}", col));
         query_params.push(format!("order={}", order));
+    }
+    if let Some(cols) = columns {
+        if !cols.is_empty() {
+            let encoded = encode_query_value(&cols.join(","));
+            query_params.push(format!("columns={}", encoded));
+        }
+    }
+    if let Some(value) = filter {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            let encoded = encode_query_value(trimmed);
+            query_params.push(format!("filter={}", encoded));
+        }
     }
     query_params.join("&")
 }
@@ -255,6 +320,15 @@ fn is_value_present(value: &Value) -> bool {
         Value::String(s) => !s.trim().is_empty(),
         _ => true,
     }
+}
+
+fn encode_query_value(value: &str) -> String {
+    value
+        .replace('%', "%25")
+        .replace(' ', "%20")
+        .replace('#', "%23")
+        .replace('&', "%26")
+        .replace('?', "%3F")
 }
 
 fn format_error_value(value: &Value) -> Option<String> {

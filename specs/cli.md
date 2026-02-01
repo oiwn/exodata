@@ -57,11 +57,13 @@ polars = { version = "0.52.0", features = ["lazy", "temporal", "timezones", "par
 ```
 exo
 ├── view-fields              View VOTable structure
+├── view-metadata            View VOTable column metadata
 ├── view-samples             View stellarhosts data samples
 ├── view-stats               View stellarhosts statistics
 ├── view-exoplanets-samples  View exoplanets data samples
 ├── view-exoplanets-stats    View exoplanets statistics
-└── convert-raw-files        Convert VOTable files to Parquet
+├── convert-raw-files        Convert VOTable files to Parquet
+└── sql                      Execute SQL query against parquet files
 ```
 
 ## Commands
@@ -99,7 +101,38 @@ FIELD. name: st_teff; datatype: double
 
 ---
 
-### 2. view-samples
+### 2. view-metadata
+
+View column metadata from a VOTable file.
+
+**Usage:**
+```bash
+exo view-metadata [OPTIONS]
+```
+
+**Options:**
+- `-p, --path <PATH>` - Path to VOTable file (default: `data/exoplanets.vot`)
+- `-c, --columns <COLUMNS>` - Filter to specific columns (comma-separated)
+
+**Examples:**
+```bash
+# View all column metadata from exoplanets VOTable
+exo view-metadata
+
+# View metadata for specific columns
+exo view-metadata -p data/stellarhosts.vot -c "hostname,st_teff,st_mass"
+```
+
+**Output:**
+Column metadata including descriptions and units.
+
+**Implementation:**
+- Calls `commands::view_metadata()`
+- Uses VOTable metadata parsing from `exo_core`
+
+---
+
+### 3. view-samples
 
 View sample rows from stellarhosts parquet file.
 
@@ -148,7 +181,7 @@ Pretty-printed table using `comfy-table` with:
 
 ---
 
-### 3. view-stats
+### 4. view-stats
 
 Display comprehensive statistics for stellarhosts dataset.
 
@@ -197,7 +230,7 @@ Temperature Distribution (K):
 
 ---
 
-### 4. view-exoplanets-samples
+### 5. view-exoplanets-samples
 
 View sample rows from exoplanets parquet file.
 
@@ -235,7 +268,7 @@ Similar to `view-samples` but for exoplanets data.
 
 ---
 
-### 5. view-exoplanets-stats
+### 6. view-exoplanets-stats
 
 Display comprehensive statistics for exoplanets dataset.
 
@@ -262,7 +295,7 @@ Statistics for exoplanet properties:
 
 ---
 
-### 6. convert-raw-files
+### 7. convert-raw-files
 
 Convert all VOTable (.vot) files in a directory to Parquet format.
 
@@ -313,6 +346,37 @@ Conversion complete: 2 files processed
 
 ---
 
+### 8. sql
+
+Execute a SQL query against parquet files.
+
+**Usage:**
+```bash
+exo sql "<SQL_QUERY>" [OPTIONS]
+```
+
+**Options:**
+- `--data-dir <DATA_DIR>` - Directory containing `stellarhosts.parquet` and `exoplanets.parquet` (default: `data`)
+
+**Tables:**
+- `stellarhosts`
+- `exoplanets`
+
+**Examples:**
+```bash
+# Count Gliese hostnames
+exo sql "SELECT hostname, COUNT(*) AS rows FROM stellarhosts WHERE LOWER(hostname) LIKE '%gliese%' GROUP BY hostname ORDER BY rows DESC"
+
+# Join stellar hosts with their planets
+exo sql "SELECT s.hostname, s.st_teff, e.pl_name FROM stellarhosts s JOIN exoplanets e ON s.hostname = e.hostname LIMIT 10"
+```
+
+**Implementation:**
+- Calls `commands::execute_sql()`
+- Uses Polars `SQLContext` with lazy frames loaded from parquet
+
+---
+
 ## Implementation Details
 
 ### Module Structure
@@ -337,7 +401,9 @@ struct Cli {
 #[derive(Parser, Debug)]
 enum Commands {
     ViewFields { path: String },
+    ViewMetadata { ... },
     ViewSamples { ... },
+    Sql { ... },
     // ...
 }
 ```
@@ -350,8 +416,14 @@ fn main() {
         Commands::ViewFields { path } => {
             exo_core::common::print_votable_headers(&path);
         }
+        Commands::ViewMetadata { path, columns } => {
+            commands::view_metadata(&path, columns.as_deref())?;
+        }
         Commands::ViewSamples { path, limit, category } => {
             commands::view_stellarhosts_samples(&path, limit, cat)?;
+        }
+        Commands::Sql { query, data_dir } => {
+            commands::execute_sql(&query, &data_dir)?;
         }
         // ...
     }
@@ -387,7 +459,6 @@ Planned additions:
 - `exo diff` - Compare two datasets
 - `exo validate` - Validate data integrity
 - `exo export` - Export to CSV/JSON
-- `exo query` - SQL-like queries on data
 - `exo filter` - Filter data by criteria
 - `exo merge` - Merge multiple datasets
 - `exo tui` - Interactive TUI mode

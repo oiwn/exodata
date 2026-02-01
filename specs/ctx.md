@@ -2,22 +2,18 @@
 
 ## Current task
 
-### Measurement Groups Status
-- ✅ Column model (names only) added; err/lim excluded from selector.
-- ✅ Stellarhosts table renders `err1/err2` with left-side mini values.
-- ✅ Columns fetch includes err/lim companions; sorting stays on base columns.
-- ✅ Metadata tooltips wired to table headers.
+### Done (this iteration)
+- ✅ Measurement groups model (names only); err/lim hidden in selector.
+- ✅ Stellarhosts renders err1/err2 mini values; headers use metadata tooltips.
+- ✅ Fetch includes err/lim companions; sort remains on base columns.
+- ✅ Measurement rendering rolled into Exoplanets.
+- ✅ Server table pipeline unified via `get_table_data`.
+- ✅ First-column text filter (server-side) with blur/enter commit; query param `filter`.
 
-### Remaining for Measurement Groups
-- Finalize `lim` indication styling (color/badge rules).
-- Apply measurement rendering to Exoplanets (later, after Stellarhosts is stable).
+### Next
+- Finalize `lim` indication styling for measurement cells.
 
-### Server Pipeline Refactor (next)
-- Replace `get_stellarhosts_data` / `get_exoplanets_data` with `get_table_data(config, params)`.
-- Centralize select/sort/pagination (and later filters).
-- Keep metadata attached to responses.
-
-# Tasks we'll have to do after refactoring (keep in mind)
+# Tasks to keep in mind (post-refactor)
 
 ## Status (Jan 29, 2026)
 

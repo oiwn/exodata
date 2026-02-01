@@ -49,6 +49,9 @@ pub struct QueryParams {
     /// Comma-separated list of columns to return
     #[param(example = "hostname,sy_dist,st_teff")]
     pub columns: Option<String>,
+    /// Text filter applied to the first selected column
+    #[param(example = "Kepler")]
+    pub filter: Option<String>,
 }
 
 /// Response structure for paginated data
@@ -212,6 +215,7 @@ pub async fn get_stellarhosts(
             params.sort_by,
             params.order,
             selected_columns,
+            params.filter,
         )
         .map_err(|e| {
             tracing::error!("Failed to get stellarhosts data: {}", e);
@@ -266,6 +270,7 @@ pub async fn get_exoplanets(
             params.sort_by,
             params.order,
             selected_columns,
+            params.filter,
         )
         .map_err(|e| {
             tracing::error!("Failed to get exoplanets data: {}", e);

@@ -130,6 +130,7 @@ pub async fn get_stellarhosts_page(
     sort_by: Option<String>,
     order: Option<String>,
     columns: Option<String>,
+    filter: Option<String>,
 ) -> Result<TableData, ServerFnError> {
     // Get ApiState from leptos context
     let state = expect_context::<ApiState>();
@@ -151,6 +152,7 @@ pub async fn get_stellarhosts_page(
             sort_by,
             order,
             selected_columns,
+            filter,
         )
         .map_err(|e: String| -> ServerFnError {
             ServerFnError::ServerError(e)
@@ -186,6 +188,7 @@ pub async fn get_exoplanets_page(
     sort_by: Option<String>,
     order: Option<String>,
     columns: Option<String>,
+    filter: Option<String>,
 ) -> Result<TableData, ServerFnError> {
     // Get ApiState from leptos context
     let state = expect_context::<ApiState>();
@@ -207,6 +210,7 @@ pub async fn get_exoplanets_page(
             sort_by,
             order,
             selected_columns,
+            filter,
         )
         .map_err(|e: String| -> ServerFnError {
             ServerFnError::ServerError(e)
