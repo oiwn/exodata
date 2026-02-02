@@ -2,22 +2,14 @@
 
 ## Current task
 
-### Planet detail page (agreed plan)
-- Route: add `/exoplanets/:pl_name` to mirror stellar host detail routing.
-- Key: use `pl_name` in the URL; handle duplicates by listing all matching rows on the same page.
-- Component: `ExoplanetDetailPage` modeled after `StellarHostDetailPage`.
-- Data: load all columns + metadata; render full record(s) with err/lim formatting.
-- Links: exoplanets table links to `/exoplanets/<encoded pl_name>`.
-- Edge cases: URL encoding + missing record UI.
-- Tests: add server-side lookup tests for planet detail.
-- Note: REST single-record endpoint is not required now; add as future idea instead.
+### Recently completed
+- Exoplanet detail page with duplicate-row records by `pl_name`.
+- Table links from exoplanets → `/exoplanets/:pl_name`.
+- Server helper + test for multi-row planet detail.
+- Navbar active state now includes detail routes.
+- Stellar host detail lists all matching records (multi-row), with summary + record list.
 
-### Recent completions
-- Measurement groups/err/lim rendering in tables + metadata tooltips.
-- Unified server table pipeline via `get_table_data`.
-- First-column text filter (server-side) with `filter` param.
-
-### Next (after planet detail)
+### Next
 - Finalize `lim` indication styling for measurement cells.
 - Per-column filters in tables (server + frontend).
 

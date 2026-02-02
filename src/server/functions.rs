@@ -105,7 +105,7 @@ pub struct TableData {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct StellarHostDetail {
     pub hostname: String,
-    pub properties: HashMap<String, Value>,
+    pub records: Vec<Value>,
     pub metadata: HashMap<String, ColumnMetadata>,
 }
 
@@ -249,8 +249,8 @@ pub async fn get_stellar_host_detail(
 ) -> Result<StellarHostDetail, ServerFnError> {
     let state = expect_context::<ApiState>();
 
-    let (properties, exo_metadata): (
-        HashMap<String, Value>,
+    let (records, exo_metadata): (
+        Vec<Value>,
         HashMap<String, exo_core::metadata::ColumnMetadata>,
     ) = common::get_stellar_host_by_name(
         &state.stellarhosts_df,
@@ -268,7 +268,7 @@ pub async fn get_stellar_host_detail(
 
     Ok(StellarHostDetail {
         hostname,
-        properties,
+        records,
         metadata,
     })
 }

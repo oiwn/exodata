@@ -7,6 +7,10 @@ use leptos_router::hooks::use_location;
 pub fn Navbar() -> impl IntoView {
     let location = use_location();
     let pathname = move || location.pathname.get();
+    let is_root = move || pathname() == "/";
+    let is_stellarhosts = move || pathname().starts_with("/stellarhosts");
+    let is_exoplanets = move || pathname().starts_with("/exoplanets");
+    let is_about = move || pathname().starts_with("/about");
 
     // Mobile menu state
     let (mobile_menu_open, set_mobile_menu_open) = signal(false);
@@ -42,7 +46,7 @@ pub fn Navbar() -> impl IntoView {
                         <A
                             href="/"
                             attr:class=move || {
-                                if pathname() == "/" {
+                                if is_root() {
                                     active_class
                                 } else {
                                     link_class
@@ -55,7 +59,7 @@ pub fn Navbar() -> impl IntoView {
                         <A
                             href="/stellarhosts"
                             attr:class=move || {
-                                if pathname() == "/stellarhosts" {
+                                if is_stellarhosts() {
                                     active_class
                                 } else {
                                     link_class
@@ -68,7 +72,7 @@ pub fn Navbar() -> impl IntoView {
                         <A
                             href="/exoplanets"
                             attr:class=move || {
-                                if pathname() == "/exoplanets" {
+                                if is_exoplanets() {
                                     active_class
                                 } else {
                                     link_class
@@ -81,7 +85,7 @@ pub fn Navbar() -> impl IntoView {
                         <A
                             href="/about"
                             attr:class=move || {
-                                if pathname() == "/about" {
+                                if is_about() {
                                     active_class
                                 } else {
                                     link_class
@@ -162,7 +166,7 @@ pub fn Navbar() -> impl IntoView {
                         <A
                             href="/stellarhosts"
                             attr:class=move || {
-                                if pathname() == "/stellarhosts" { mobile_active_class } else { mobile_link_class }
+                                if is_stellarhosts() { mobile_active_class } else { mobile_link_class }
                             }
                         >
                             "Stellar Hosts"
@@ -170,7 +174,7 @@ pub fn Navbar() -> impl IntoView {
                         <A
                             href="/exoplanets"
                             attr:class=move || {
-                                if pathname() == "/exoplanets" { mobile_active_class } else { mobile_link_class }
+                                if is_exoplanets() { mobile_active_class } else { mobile_link_class }
                             }
                         >
                             "Exoplanets"
@@ -178,7 +182,7 @@ pub fn Navbar() -> impl IntoView {
                         <A
                             href="/about"
                             attr:class=move || {
-                                if pathname() == "/about" { mobile_active_class } else { mobile_link_class }
+                                if is_about() { mobile_active_class } else { mobile_link_class }
                             }
                         >
                             "About"

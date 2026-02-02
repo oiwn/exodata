@@ -251,15 +251,14 @@ pub fn get_exoplanets_data(
     )
 }
 
-/// Get a single stellar host by hostname
+/// Get all stellar host records for a given hostname
 ///
-/// Returns all columns for the matching stellar host.
+/// Returns all columns for each matching stellar host row.
 pub fn get_stellar_host_by_name(
     df: &DataFrame,
     all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
     hostname: &str,
-) -> Result<(HashMap<String, Value>, HashMap<String, ColumnMetadata>), String> {
-    // Filter by hostname
+) -> Result<(Vec<Value>, HashMap<String, ColumnMetadata>), String> {
     let filtered = df
         .clone()
         .lazy()
@@ -271,16 +270,9 @@ pub fn get_stellar_host_by_name(
         return Err(format!("Stellar host '{}' not found", hostname));
     }
 
-    // Convert the single row to a map of properties
     let rows = dataframe_to_json(&filtered)?;
-    let properties = rows
-        .into_iter()
-        .next()
-        .and_then(|v| v.as_object().cloned())
-        .map(|m| m.into_iter().collect::<HashMap<String, Value>>())
-        .unwrap_or_default();
 
-    Ok((properties, all_metadata.as_ref().clone()))
+    Ok((rows, all_metadata.as_ref().clone()))
 }
 
 /// Get all exoplanet records for a given planet name
@@ -525,6 +517,25 @@ mod tests {
         assert_eq!(rows[0]["sy_dist"], 20.3);
         assert_eq!(rows[1]["sy_dist"], 15.7);
         assert_eq!(rows[2]["sy_dist"], 10.5);
+    }
+
+    #[test]
+    fn test_get_stellar_host_by_name_returns_all_rows() {
+        let df = df! {
+            "hostname" => &["Star A", "Star A", "Star B"],
+            "sy_dist" => &[10.0, 10.1, 30.0],
+            "st_teff" => &[5500.0, 5520.0, 6000.0],
+        }
+        .unwrap();
+
+        let metadata = Arc::new(HashMap::new());
+
+        let (rows, _meta) =
+            get_stellar_host_by_name(&df, &metadata, "Star A").unwrap();
+
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0]["hostname"], "Star A");
+        assert_eq!(rows[1]["hostname"], "Star A");
     }
 
     #[test]

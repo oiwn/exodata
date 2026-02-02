@@ -16,6 +16,7 @@ pub fn StellarHostDetailPage() -> impl IntoView {
             .get("hostname")
             .unwrap_or_default()
             .replace("%20", " ")
+            .replace("%23", "#")
     };
 
     // Fetch stellar host details
@@ -81,8 +82,9 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                             (Some(Ok(host)), Some(Ok(planets))) => {
                                 view! {
                                     <div class="space-y-10">
-                                        <StellarProperties host=host />
+                                        <HostSummary host=host.clone() />
                                         <PlanetsSection planets=planets />
+                                        <HostRecords host=host />
                                     </div>
                                 }.into_any()
                             }
@@ -112,8 +114,10 @@ pub fn StellarHostDetailPage() -> impl IntoView {
 }
 
 #[component]
-fn StellarProperties(host: StellarHostDetail) -> impl IntoView {
-    // Group properties by category for better display
+fn HostSummary(host: StellarHostDetail) -> impl IntoView {
+    let record = host.records.first().cloned().unwrap_or(Value::Null);
+    let metadata = host.metadata.clone();
+
     let key_properties = vec![
         ("sy_dist", "Distance", "pc", "from-blue-600 to-cyan-500"),
         ("st_teff", "Temperature", "K", "from-orange-600 to-red-500"),
@@ -130,32 +134,108 @@ fn StellarProperties(host: StellarHostDetail) -> impl IntoView {
                 <span>"Key Properties"</span>
             </h2>
 
-            // Key properties cards
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {key_properties.iter().map(|(key, label, unit, gradient)| {
-                    let value = host.properties.get(*key).cloned();
-                    let description = host.metadata.get(*key)
-                        .and_then(|m| m.description.clone());
+                {key_properties.iter().map(|(key, label, fallback_unit, gradient)| {
+                    let value = record.get(*key).cloned();
+                    let meta = metadata.get(*key);
+                    let unit = meta
+                        .and_then(|m| m.unit.clone())
+                        .unwrap_or_else(|| fallback_unit.to_string());
+                    let description = meta.and_then(|m| m.description.clone());
 
                     view! {
                         <PropertyCard
                             label=label.to_string()
                             value=value
-                            unit=unit.to_string()
+                            unit=unit
                             gradient=gradient.to_string()
                             description=description
                         />
                     }
                 }).collect::<Vec<_>>()}
             </div>
+        </div>
+    }
+}
 
-            // All properties in collapsible section
-            <details class="group">
+#[component]
+fn HostRecords(host: StellarHostDetail) -> impl IntoView {
+    let total = host.records.len();
+    let metadata = host.metadata.clone();
+
+    view! {
+        <div class="space-y-6">
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                <span>"🧾"</span>
+                <span>"Records"</span>
+                <span class="text-lg font-normal text-gray-400">
+                    "(" {total} " rows)"
+                </span>
+            </h2>
+
+            <div class="space-y-4">
+                {host.records.into_iter().enumerate().map(|(idx, record)| {
+                    let metadata = metadata.clone();
+                    view! {
+                        <HostRecordCard index=idx record=record metadata=metadata />
+                    }
+                }).collect::<Vec<_>>()}
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn HostRecordCard(
+    index: usize,
+    record: Value,
+    metadata: std::collections::HashMap<
+        String,
+        crate::server::functions::ColumnMetadata,
+    >,
+) -> impl IntoView {
+    let reference = record
+        .get("sy_refname")
+        .and_then(|v| v.as_str())
+        .or_else(|| record.get("st_refname").and_then(|v| v.as_str()))
+        .unwrap_or("—")
+        .to_string();
+    let spectype = record
+        .get("st_spectype")
+        .and_then(|v| v.as_str())
+        .unwrap_or("—")
+        .to_string();
+    let distance = record
+        .get("sy_dist")
+        .map(|v| {
+            let unit = metadata
+                .get("sy_dist")
+                .and_then(|m| m.unit.clone())
+                .unwrap_or_else(|| "pc".to_string());
+            format_value(v, &unit)
+        })
+        .unwrap_or_else(|| "—".to_string());
+
+    view! {
+        <div class="rounded-xl bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-5 hover:border-purple-500/40 transition-all duration-300">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-white">
+                        {format!("Record {}", index + 1)}
+                    </h3>
+                    <p class="text-sm text-gray-400">
+                        {format!("{} • {} • {}", spectype, distance, reference)}
+                    </p>
+                </div>
+                <span class="text-2xl">"⭐"</span>
+            </div>
+
+            <details class="group mt-4">
                 <summary class="cursor-pointer text-gray-400 hover:text-white transition-colors flex items-center gap-2">
                     <span class="group-open:rotate-90 transition-transform">"▶"</span>
-                    <span>"All Properties ("{ host.properties.len() }" columns)"</span>
+                    <span>"All Properties"</span>
                 </summary>
-                <div class="mt-4 rounded-xl bg-slate-800/50 border border-slate-700 overflow-hidden">
+                <div class="mt-4 rounded-xl bg-slate-900/40 border border-slate-700 overflow-hidden">
                     <div class="max-h-96 overflow-y-auto">
                         <table class="w-full">
                             <thead class="bg-slate-900/50 sticky top-0">
@@ -166,21 +246,23 @@ fn StellarProperties(host: StellarHostDetail) -> impl IntoView {
                                 </tr>
                             </thead>
                             <tbody>
-                                {host.properties.iter().map(|(key, value)| {
-                                    let meta = host.metadata.get(key);
-                                    let desc = meta.and_then(|m| m.description.clone()).unwrap_or_default();
-                                    let desc_title = desc.clone();
-                                    let unit = meta.and_then(|m| m.unit.clone()).unwrap_or_default();
-                                    let formatted = format_value(value, &unit);
+                                {record.as_object().map(|map| {
+                                    map.iter().map(|(key, value)| {
+                                        let meta = metadata.get(key);
+                                        let desc = meta.and_then(|m| m.description.clone()).unwrap_or_default();
+                                        let desc_title = desc.clone();
+                                        let unit = meta.and_then(|m| m.unit.clone()).unwrap_or_default();
+                                        let formatted = format_value(value, &unit);
 
-                                    view! {
-                                        <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
-                                            <td class="px-4 py-2 text-sm font-mono text-purple-400">{key.clone()}</td>
-                                            <td class="px-4 py-2 text-sm text-white font-mono">{formatted}</td>
-                                            <td class="px-4 py-2 text-xs text-gray-500 max-w-xs truncate" title=desc_title>{desc}</td>
-                                        </tr>
-                                    }
-                                }).collect::<Vec<_>>()}
+                                        view! {
+                                            <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
+                                                <td class="px-4 py-2 text-sm font-mono text-purple-400">{key.clone()}</td>
+                                                <td class="px-4 py-2 text-sm text-white font-mono">{formatted}</td>
+                                                <td class="px-4 py-2 text-xs text-gray-500 max-w-xs truncate" title=desc_title>{desc}</td>
+                                            </tr>
+                                        }
+                                    }).collect::<Vec<_>>()
+                                }).unwrap_or_default()}
                             </tbody>
                         </table>
                     </div>
