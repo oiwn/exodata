@@ -37,22 +37,21 @@ comfy-table = { version = "7", optional = true }
 ratatui = { version = "0.29", features = ["all-widgets"], optional = true }
 crossterm = { version = "0.28", optional = true }
 indicatif = { version = "0.18", optional = true }
-utoipa = { version = "5.4.0", features = ["axum_extras"], optional = true }
-utoipa-swagger-ui = { version = "9.0.2", features = ["axum"], optional = true }
+utoipa = { version = "5.4", features = ["axum_extras"], optional = true }
+utoipa-swagger-ui = { version = "9.0", features = ["axum"], optional = true }
+sqlparser = { version = "0.60", optional = true }
 
-[build-dependencies]
-markdown = "1.0.0-alpha"
+# [build-dependencies]
+# markdown = "1.0.0-alpha"
 
 [dev-dependencies]
-clap = { version = "4.5.52", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 comfy-table = "7.2.1"
-ratatui = { version = "0.29.0", features = ["all-widgets"] }
+ratatui = { version = "0.29", features = ["all-widgets"] }
 crossterm = "0.28"
 anyhow = "1.0.100"
-polars = { version = "0.52.0", features = ["lazy", "temporal", "timezones", "parquet"] }
+polars = { version = "0.52", features = ["lazy", "temporal", "timezones", "parquet"] }
 serde_json = "1.0"
-votable = "0.6.3"
-indicatif = "0.18.3"
 rand = "0.9.2"
 
 [features]
@@ -74,11 +73,13 @@ ssr = [
     "dep:serde_json",
     "dep:votable",
     "dep:indicatif",
+    "dep:sqlparser",
     # OpenAPI / Swagger
     "dep:utoipa",
     "dep:utoipa-swagger-ui",
 ]
 default = ["ssr"]
+sqlparser = ["dep:sqlparser"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

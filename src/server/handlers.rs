@@ -17,6 +17,8 @@ use polars::prelude::*;
 use polars::sql::SQLContext;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlparser::dialect::GenericDialect;
+use sqlparser::parser::Parser;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -353,15 +355,7 @@ pub async fn execute_sql(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let upper = query.to_uppercase();
-    if !upper.starts_with("SELECT") {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    let blocked = ["DROP", "DELETE", "UPDATE", "INSERT", "CREATE", "ALTER"];
-    if blocked.iter().any(|keyword| upper.contains(keyword)) {
-        return Err(StatusCode::BAD_REQUEST);
-    }
+    validate_sql_select_only(&query)?;
 
     let limit = params.limit.unwrap_or(1000).min(10000);
     let query_for_exec = query.clone();
@@ -414,6 +408,21 @@ pub async fn execute_sql(
                 query,
             })),
         },
+    }
+}
+
+fn validate_sql_select_only(query: &str) -> Result<(), StatusCode> {
+    let dialect = GenericDialect {};
+    let statements =
+        Parser::parse_sql(&dialect, query).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    if statements.len() != 1 {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    match statements.first() {
+        Some(sqlparser::ast::Statement::Query(_)) => Ok(()),
+        _ => Err(StatusCode::BAD_REQUEST),
     }
 }
 
