@@ -500,8 +500,8 @@ pub fn view_metadata(path: &str, columns: Option<&str>) -> Result<(), Error> {
 
     println!("Loading metadata from: {}\n", path);
 
-    let all_metadata = parse_votable_metadata(path)
-        .map_err(|e| anyhow::Error::msg(e))?;
+    let all_metadata =
+        parse_votable_metadata(path).map_err(|e| anyhow::Error::msg(e))?;
 
     if let Some(col_filter) = columns {
         // Filter to specific columns

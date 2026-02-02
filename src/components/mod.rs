@@ -1,6 +1,7 @@
 pub mod about;
 // pub mod buy_me_coffee;
 pub mod column_selector;
+pub mod exoplanet_detail;
 pub mod exoplanets_table;
 pub mod google_analytics;
 pub mod loading_overlay;

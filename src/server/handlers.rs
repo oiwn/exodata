@@ -413,8 +413,8 @@ pub async fn execute_sql(
 
 fn validate_sql_select_only(query: &str) -> Result<(), StatusCode> {
     let dialect = GenericDialect {};
-    let statements =
-        Parser::parse_sql(&dialect, query).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let statements = Parser::parse_sql(&dialect, query)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
 
     if statements.len() != 1 {
         return Err(StatusCode::BAD_REQUEST);

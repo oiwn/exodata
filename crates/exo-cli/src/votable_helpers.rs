@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use exo_core::metadata::ColumnMetadata;
 use votable::iter::{TableIter, VOTableIterator};
-use votable::{datatype::Datatype, impls::VOTableValue, TableElem};
+use votable::{TableElem, datatype::Datatype, impls::VOTableValue};
 
 /// Print VOTable field headers.
 pub fn print_votable_headers(path: &str) {
@@ -11,10 +11,7 @@ pub fn print_votable_headers(path: &str) {
     let table_ref_mut = row.table();
     for elem in table_ref_mut.elems.iter() {
         if let TableElem::Field(field) = elem {
-            println!(
-                "FIELD. name: {}; datatype: {}",
-                field.name, field.datatype
-            );
+            println!("FIELD. name: {}; datatype: {}", field.name, field.datatype);
         }
     }
 }
@@ -176,7 +173,10 @@ pub fn parse_votable_metadata(
             if let TableElem::Field(field) = elem {
                 let column_metadata = ColumnMetadata {
                     name: field.name.clone(),
-                    description: field.description.as_ref().map(|d| d.to_string()),
+                    description: field
+                        .description
+                        .as_ref()
+                        .map(|d| d.to_string()),
                     unit: field.unit.clone(),
                     datatype: format!("{:?}", field.datatype),
                 };

@@ -29,9 +29,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             .unwrap_or_else(|| "asc".to_string())
     });
     let initial_filter = query_map.with_untracked(|q| {
-        q.get("filter")
-            .map(|f| f.to_string())
-            .unwrap_or_default()
+        q.get("filter").map(|f| f.to_string()).unwrap_or_default()
     });
 
     // Default columns for stellar hosts
@@ -111,27 +109,33 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                 columns_param,
                 filter_param,
             )
-                .await
+            .await
         },
     );
 
     // Track when resource source changes to set loading state
     Effect::new(
-        move |prev: Option<(usize, Option<String>, String, Vec<String>, String)>| {
-        let current = (
-            current_page.get(),
-            sort_column.get(),
-            sort_order.get(),
-            selected_columns.get(),
-            filter_text.get(),
-        );
-        if let Some(prev_val) = prev {
-            if prev_val != current {
-                set_is_loading.set(true);
+        move |prev: Option<(
+            usize,
+            Option<String>,
+            String,
+            Vec<String>,
+            String,
+        )>| {
+            let current = (
+                current_page.get(),
+                sort_column.get(),
+                sort_order.get(),
+                selected_columns.get(),
+                filter_text.get(),
+            );
+            if let Some(prev_val) = prev {
+                if prev_val != current {
+                    set_is_loading.set(true);
+                }
             }
-        }
-        current
-    },
+            current
+        },
     );
 
     // Update has_loaded and cached metadata when resource completes successfully

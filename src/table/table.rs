@@ -43,23 +43,18 @@ pub fn Table(
     current_sort_column: Option<String>,
     current_sort_order: String,
     #[prop(optional)] column_descriptions: Option<HashMap<String, String>>,
-    #[prop(optional)]
-    display_columns: Option<Vec<String>>,
-    #[prop(optional)]
-    column_groups: Option<HashMap<String, ColumnGroup>>,
-    #[prop(optional)]
-    filter_input: Option<ReadSignal<String>>,
-    #[prop(optional)]
-    set_filter_input: Option<WriteSignal<String>>,
-    #[prop(optional)]
-    on_filter_commit: Option<Callback<String>>,
+    #[prop(optional)] display_columns: Option<Vec<String>>,
+    #[prop(optional)] column_groups: Option<HashMap<String, ColumnGroup>>,
+    #[prop(optional)] filter_input: Option<ReadSignal<String>>,
+    #[prop(optional)] set_filter_input: Option<WriteSignal<String>>,
+    #[prop(optional)] on_filter_commit: Option<Callback<String>>,
     /// Column name to render as a link (e.g., "hostname")
     #[prop(optional)]
     link_column: Option<String>,
     /// Base URL for the link (e.g., "/stellarhosts/") - column value will be appended
     #[prop(optional)]
     link_base: Option<String>,
-    ) -> impl IntoView {
+) -> impl IntoView {
     let columns = display_columns.unwrap_or_else(|| data.columns.clone());
     let groups = column_groups.unwrap_or_default();
     let show_filter = filter_input.is_some()

@@ -118,6 +118,14 @@ pub struct HostPlanets {
     pub metadata: HashMap<String, ColumnMetadata>,
 }
 
+/// Exoplanet detail data structure (all rows for a planet)
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct ExoplanetDetail {
+    pub pl_name: String,
+    pub records: Vec<Value>,
+    pub metadata: HashMap<String, ColumnMetadata>,
+}
+
 /// Server function to fetch paginated stellar hosts data
 ///
 /// This is a thin wrapper around the common business logic.
@@ -294,6 +302,37 @@ pub async fn get_planets_for_host(
         hostname,
         planets,
         columns,
+        metadata,
+    })
+}
+
+/// Server function to fetch all exoplanet records for a planet name
+#[server(input = GetUrl)]
+pub async fn get_exoplanet_detail(
+    pl_name: String,
+) -> Result<ExoplanetDetail, ServerFnError> {
+    let state = expect_context::<ApiState>();
+
+    let (records, exo_metadata): (
+        Vec<Value>,
+        HashMap<String, exo_core::metadata::ColumnMetadata>,
+    ) = common::get_exoplanet_by_name(
+        &state.exoplanets_df,
+        &state.exoplanets_metadata,
+        &pl_name,
+    )
+    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+
+    let metadata: HashMap<String, ColumnMetadata> = exo_metadata
+        .into_iter()
+        .map(|(key, val): (String, exo_core::metadata::ColumnMetadata)| {
+            (key, val.into())
+        })
+        .collect();
+
+    Ok(ExoplanetDetail {
+        pl_name,
+        records,
         metadata,
     })
 }

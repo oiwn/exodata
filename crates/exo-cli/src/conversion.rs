@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error, anyhow};
 use indicatif::{ProgressBar, ProgressStyle};
 use polars::prelude::{ParquetCompression, ParquetReader, ParquetWriter, *};
 

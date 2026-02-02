@@ -79,19 +79,19 @@ pub fn get_table_data(
         let needle = filter_value.trim().to_lowercase();
         if !needle.is_empty() {
             if let Some(first_col) = columns_to_select.first() {
-                let series = df
-                    .column(first_col)
-                    .map_err(|e| format!("Failed to read filter column: {}", e))?;
+                let series = df.column(first_col).map_err(|e| {
+                    format!("Failed to read filter column: {}", e)
+                })?;
                 let series = if matches!(series.dtype(), DataType::String) {
                     series.clone()
                 } else {
-                    series
-                        .cast(&DataType::String)
-                        .map_err(|e| format!("Failed to cast filter column: {}", e))?
+                    series.cast(&DataType::String).map_err(|e| {
+                        format!("Failed to cast filter column: {}", e)
+                    })?
                 };
-                let utf8 = series
-                    .str()
-                    .map_err(|e| format!("Failed to read string column: {}", e))?;
+                let utf8 = series.str().map_err(|e| {
+                    format!("Failed to read string column: {}", e)
+                })?;
                 let mask: BooleanChunked = utf8
                     .into_iter()
                     .map(|opt| opt.map(|s| s.to_lowercase().contains(&needle)))
@@ -281,6 +281,30 @@ pub fn get_stellar_host_by_name(
         .unwrap_or_default();
 
     Ok((properties, all_metadata.as_ref().clone()))
+}
+
+/// Get all exoplanet records for a given planet name
+///
+/// Returns all columns for each matching exoplanet row.
+pub fn get_exoplanet_by_name(
+    df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    pl_name: &str,
+) -> Result<(Vec<Value>, HashMap<String, ColumnMetadata>), String> {
+    let filtered = df
+        .clone()
+        .lazy()
+        .filter(col("pl_name").eq(lit(pl_name)))
+        .collect()
+        .map_err(|e| format!("Failed to filter by planet name: {}", e))?;
+
+    if filtered.height() == 0 {
+        return Err(format!("Exoplanet '{}' not found", pl_name));
+    }
+
+    let rows = dataframe_to_json(&filtered)?;
+
+    Ok((rows, all_metadata.as_ref().clone()))
 }
 
 /// Get planets for a given hostname
@@ -501,6 +525,25 @@ mod tests {
         assert_eq!(rows[0]["sy_dist"], 20.3);
         assert_eq!(rows[1]["sy_dist"], 15.7);
         assert_eq!(rows[2]["sy_dist"], 10.5);
+    }
+
+    #[test]
+    fn test_get_exoplanet_by_name_returns_all_rows() {
+        let df = df! {
+            "pl_name" => &["Planet X", "Planet X", "Planet Y"],
+            "hostname" => &["Star A", "Star A", "Star B"],
+            "disc_year" => &[2010i64, 2012i64, 2018i64],
+        }
+        .unwrap();
+
+        let metadata = Arc::new(HashMap::new());
+
+        let (rows, _meta) =
+            get_exoplanet_by_name(&df, &metadata, "Planet X").unwrap();
+
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0]["pl_name"], "Planet X");
+        assert_eq!(rows[1]["pl_name"], "Planet X");
     }
 
     #[test]

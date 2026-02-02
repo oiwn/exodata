@@ -56,10 +56,8 @@ pub fn ErrorTemplate(
         use leptos_axum::ResponseOptions;
         let response = use_context::<ResponseOptions>();
         if let Some(response) = response {
-            let status =
-                StatusCode::from_u16(errors[0].status_code()).unwrap_or(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                );
+            let status = StatusCode::from_u16(errors[0].status_code())
+                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             response.set_status(status);
         }
     }
