@@ -6,6 +6,8 @@ Built with Rust using [Leptos](https://github.com/leptos-rs/leptos) for the fron
 
 For architecture details, see the [overview document](./specs/overview.md).
 
+Live site: https://exodata.space/
+
 ## Features
 
 - **Interactive Web UI** - Browse and sort stellar hosts and exoplanets tables with customizable columns
