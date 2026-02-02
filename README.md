@@ -80,6 +80,9 @@ cargo run -p exo-cli -- view-metadata --path data/stellarhosts.vot
 ### Other CLI Commands
 
 ```bash
+# Execute SQL directly against parquet files
+cargo run -p exo-cli -- sql "SELECT hostname, COUNT(*) AS rows FROM stellarhosts WHERE LOWER(hostname) LIKE '%gliese%' GROUP BY hostname ORDER BY rows DESC"
+
 # View field information from VOTable
 cargo run -p exo-cli -- view-fields data/exoplanets.vot
 
