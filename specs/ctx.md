@@ -1,37 +1,71 @@
 # Current Context
 
-## Current task
+## Goal
+Implement backend-only in-process caching so overview and table requests avoid repeated heavy computations.
 
-### Recently completed
-- Exoplanet detail page with duplicate-row records by `pl_name`.
-- Table links from exoplanets → `/exoplanets/:pl_name`.
-- Server helper + test for multi-row planet detail.
-- Navbar active state now includes detail routes.
-- Stellar host detail lists all matching records (multi-row), with summary + record list.
+## Key Decisions
+- Cache library: `moka` (`future` feature), server side only.
+- Frontend does not use `moka`; keep lightweight Leptos resource/signal state.
+- Cache invalidation model: process-local cache, rebuilt on service restart.
+- No dedicated metadata endpoint in this phase.
 
-### Next
-- Finalize `lim` indication styling for measurement cells.
-- Per-column filters in tables (server + frontend).
+## Cache Design (Current)
+- Overview cache:
+  - precompute `DataStats` at startup
+  - store in `ApiState.overview_stats`
+  - `get_stats()` returns cached value directly
+- Table cache:
+  - bounded in-memory cache (`max_entries = 400`)
+  - key fields: `table`, `page`, `limit`, `sort_by`, `order`, `columns`, `filter`
+  - key normalization: trim/lowercase for sort/filter, normalize empty values, keep column order
+  - value fields: `rows`, `columns`, `total`, `total_all`, `metadata`
+  - behavior: read-through (hit returns cached value, miss computes + inserts)
 
-## Status (Jan 29, 2026)
+## Implemented
+- Added cache module and types:
+  - `src/server/cache.rs`
+  - `src/server/mod.rs` exports `cache`
+- Added `ApiState` cache fields:
+  - `overview_stats`
+  - `table_cache`
+  - in `src/server/handlers.rs`
+- Startup wiring:
+  - precompute overview stats
+  - build table cache
+  - in `src/main.rs`
+- Request path wiring:
+  - `get_stats()` now returns `overview_stats`
+  - table server functions use cached wrappers
+  - REST table handlers use cached wrappers
+  - in `src/server/functions.rs`, `src/server/common.rs`, `src/server/handlers.rs`
+- Added normalization tests in `src/server/cache.rs`.
 
-- VOTable parsing/loader/conversion moved into `exo-cli`.
-- `exo-core` restored table modules + metadata helpers; web + CLI separated.
+## Pending
+- Required startup prewarm before serving requests:
+  - overview is precomputed already
+  - still need prewarm for initial table pages (`page=1`, `limit=50`, default columns, no sort/filter)
+- Additional tests:
+  - explicit hit/miss cache behavior
+  - restart rebuild behavior
+  - prewarm population checks
 
-## Next Task: Per-Column Filters in Tables
+## Next Session Summary
+Start from these concrete tasks:
 
-**Scope (high-level)**
-- Frontend: render a filter row aligned to columns; persist filters in URL/state.
-- Backend: accept filters in handlers; apply filters before totals/pagination.
+1. Implement startup prewarm in `src/main.rs`:
+- call cached table loaders for both tables using initial query parameters
+- run before server starts listening
 
-**Decisions needed**
-- Filter format in URL.
-- Filter semantics for strings/numbers.
+2. Add tests for cache behavior:
+- first request miss + second request hit (same normalized key)
+- prewarm inserts expected keys
+- restart semantics (new empty cache on new `ApiState`)
 
-**Acceptance criteria**
-- Each visible column has a filter input directly beneath the header.
-- Filters update rows + totals and persist across sort/paging.
-- Clearing filters restores the unfiltered dataset.
+3. Verify acceptance:
+- `cargo check`
+- targeted server tests
+- optional manual endpoint checks for both `/rest/*` and server functions
 
-**Notes**
-- Detailed refactor notes live in `specs/review.md`.
+4. Optional cleanup:
+- move cache size `400` to env/config
+- decide whether to use `moka::future::Cache::get_with` to avoid duplicate concurrent miss work

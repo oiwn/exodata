@@ -140,16 +140,22 @@ pub fn StellarHostsTablePage() -> impl IntoView {
 
     // Update has_loaded and cached metadata when resource completes successfully
     Effect::new(move |_| {
-        if let Some(Ok(data)) = table_resource.get() {
-            set_is_loading.set(false);
-            if !has_loaded.get() {
-                set_has_loaded.set(true);
+        match table_resource.get() {
+            Some(Ok(data)) => {
+                set_is_loading.set(false);
+                if !has_loaded.get() {
+                    set_has_loaded.set(true);
+                }
+                // Avoid no-op writes that can retrigger reactive dependencies.
+                if cached_metadata.get() != data.metadata {
+                    set_cached_metadata.set(data.metadata.clone());
+                }
             }
-            // Update cached metadata so column selector stays populated during loading
-            set_cached_metadata.set(data.metadata.clone());
-        } else if table_resource.get().is_some() {
-            // Also clear loading on error
-            set_is_loading.set(false);
+            Some(Err(_)) => {
+                // Also clear loading on error
+                set_is_loading.set(false);
+            }
+            None => {}
         }
     });
 

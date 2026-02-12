@@ -12,14 +12,12 @@ use std::collections::HashMap;
 use crate::server::common;
 #[cfg(feature = "ssr")]
 use crate::server::handlers::ApiState;
-#[cfg(feature = "ssr")]
-use exo_core::tables::overview as aggregation;
 
 // NOTE: This is a temporary duplicate of exo_core::metadata::ColumnMetadata
 // to avoid bringing exo-core dependencies into the client WASM bundle.
 // This will be resolved in the future by restructuring exo-core with feature flags
 // or extracting shared types into a separate lightweight crate.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ColumnMetadata {
     pub name: String,
     pub description: Option<String>,
@@ -56,37 +54,7 @@ pub struct DataStats {
 pub async fn get_stats() -> Result<DataStats, ServerFnError> {
     // Get ApiState from leptos context
     let state = expect_context::<ApiState>();
-
-    // Get total counts
-    let (stellarhosts_total, exoplanets_total) = aggregation::get_total_counts(
-        &state.stellarhosts_df,
-        &state.exoplanets_df,
-    );
-
-    // Get average temperature (default to 0 if None)
-    let avg_stellar_temp =
-        aggregation::get_avg_temperature(&state.stellarhosts_df).unwrap_or(0.0);
-
-    // Get average distance (default to 0 if None)
-    let avg_stellar_distance =
-        aggregation::get_avg_distance(&state.stellarhosts_df).unwrap_or(0.0);
-
-    // Get top 10 discovery methods
-    let discovery_methods =
-        aggregation::get_discovery_methods(&state.exoplanets_df, 10);
-
-    // Get planet size categories
-    let planet_size_categories =
-        aggregation::get_planet_size_categories(&state.exoplanets_df);
-
-    Ok(DataStats {
-        stellarhosts_total,
-        exoplanets_total,
-        avg_stellar_temp,
-        avg_stellar_distance,
-        discovery_methods,
-        planet_size_categories,
-    })
+    Ok(state.overview_stats.as_ref().clone())
 }
 
 /// Table data structure for paginated tables
@@ -152,9 +120,10 @@ pub async fn get_stellarhosts_page(
 
     // Call the common business logic
     let (rows, total, total_all, columns, exo_metadata) =
-        common::get_stellarhosts_data(
+        common::get_stellarhosts_data_cached(
             &state.stellarhosts_df,
             &state.stellarhosts_metadata,
+            &state.table_cache,
             page,
             limit,
             sort_by,
@@ -162,6 +131,7 @@ pub async fn get_stellarhosts_page(
             selected_columns,
             filter,
         )
+        .await
         .map_err(|e: String| -> ServerFnError {
             ServerFnError::ServerError(e)
         })?;
@@ -210,9 +180,10 @@ pub async fn get_exoplanets_page(
 
     // Call the common business logic
     let (rows, total, total_all, columns, exo_metadata) =
-        common::get_exoplanets_data(
+        common::get_exoplanets_data_cached(
             &state.exoplanets_df,
             &state.exoplanets_metadata,
+            &state.table_cache,
             page,
             limit,
             sort_by,
@@ -220,6 +191,7 @@ pub async fn get_exoplanets_page(
             selected_columns,
             filter,
         )
+        .await
         .map_err(|e: String| -> ServerFnError {
             ServerFnError::ServerError(e)
         })?;

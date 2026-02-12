@@ -12,6 +12,8 @@ mod tests {
     use serde_json::Value;
     use tower::ServiceExt;
 
+    use crate::server::cache::build_table_cache;
+    use crate::server::functions::DataStats;
     use crate::server::handlers::{
         ApiState, get_exoplanets, get_exoplanets_schema, get_stellarhosts,
         get_stellarhosts_schema,
@@ -44,6 +46,15 @@ mod tests {
             exoplanets_df: Arc::new(exoplanets_df),
             stellarhosts_metadata: Arc::new(HashMap::new()),
             exoplanets_metadata: Arc::new(HashMap::new()),
+            overview_stats: Arc::new(DataStats {
+                stellarhosts_total: 0,
+                exoplanets_total: 0,
+                avg_stellar_temp: 0.0,
+                avg_stellar_distance: 0.0,
+                discovery_methods: Vec::new(),
+                planet_size_categories: Vec::new(),
+            }),
+            table_cache: build_table_cache(64),
         }
     }
 

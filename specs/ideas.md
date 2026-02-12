@@ -6,8 +6,9 @@
 - [ ] downloader and diffs for data extracted from caltech
 - [ ] table legend for err/lim indicators + collapsible columns list with descriptions (exclude err1/err2/lim)
 - [ ] REST endpoint for exoplanet detail by name (group duplicate rows)
+- [ ] cache cleanup strategies
 
-## From review (2026-01-30)
+## Doubts
 - [ ] shared table page state + query encode/decode (page/sort/columns/filters)
 - [ ] column metadata duplication (single shared type or feature-gated exo-core)
 - [ ] dataframe_to_json dtype coverage + more efficient iteration

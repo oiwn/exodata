@@ -37,9 +37,11 @@ comfy-table = { version = "7", optional = true }
 ratatui = { version = "0.29", features = ["all-widgets"], optional = true }
 crossterm = { version = "0.28", optional = true }
 indicatif = { version = "0.18", optional = true }
+uuid = { version = "1", features = ["js"] }
 utoipa = { version = "5.4", features = ["axum_extras"], optional = true }
 utoipa-swagger-ui = { version = "9.0", features = ["axum"], optional = true }
 sqlparser = { version = "0.60", optional = true }
+moka = { version = "0.12.13", features = ["future"] }
 
 # [build-dependencies]
 # markdown = "1.0.0-alpha"

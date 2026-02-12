@@ -3,6 +3,9 @@
 //! Leptos server functions and Axum REST handlers.
 //! It's server-only and contains no HTTP/Leptos dependencies.
 
+use super::cache::{
+    TableCache, TableCacheValue, TableKind, normalize_table_cache_key,
+};
 use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde_json::{Value, json};
@@ -251,6 +254,130 @@ pub fn get_exoplanets_data(
     )
 }
 
+fn table_result_from_cache_value(
+    cached: TableCacheValue,
+) -> (
+    Vec<Value>,
+    usize,
+    usize,
+    Vec<String>,
+    HashMap<String, ColumnMetadata>,
+) {
+    (
+        cached.rows,
+        cached.total,
+        cached.total_all,
+        cached.columns,
+        cached.metadata,
+    )
+}
+
+/// Cached variant of `get_stellarhosts_data`.
+pub async fn get_stellarhosts_data_cached(
+    df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    table_cache: &TableCache,
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+    selected_columns: Option<Vec<String>>,
+    filter: Option<String>,
+) -> StellarHostsResult {
+    let key = normalize_table_cache_key(
+        TableKind::StellarHosts,
+        page,
+        limit,
+        sort_by.clone(),
+        order.clone(),
+        selected_columns.clone(),
+        filter.clone(),
+    );
+
+    if let Some(cached) = table_cache.get(&key).await {
+        return Ok(table_result_from_cache_value(cached));
+    }
+
+    let (rows, total, total_all, columns, metadata) = get_stellarhosts_data(
+        df,
+        all_metadata,
+        page,
+        limit,
+        sort_by,
+        order,
+        selected_columns,
+        filter,
+    )?;
+
+    table_cache
+        .insert(
+            key,
+            TableCacheValue {
+                rows: rows.clone(),
+                columns: columns.clone(),
+                total,
+                total_all,
+                metadata: metadata.clone(),
+            },
+        )
+        .await;
+
+    Ok((rows, total, total_all, columns, metadata))
+}
+
+/// Cached variant of `get_exoplanets_data`.
+pub async fn get_exoplanets_data_cached(
+    df: &DataFrame,
+    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    table_cache: &TableCache,
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+    selected_columns: Option<Vec<String>>,
+    filter: Option<String>,
+) -> ExoplanetsResult {
+    let key = normalize_table_cache_key(
+        TableKind::Exoplanets,
+        page,
+        limit,
+        sort_by.clone(),
+        order.clone(),
+        selected_columns.clone(),
+        filter.clone(),
+    );
+
+    if let Some(cached) = table_cache.get(&key).await {
+        return Ok(table_result_from_cache_value(cached));
+    }
+
+    let (rows, total, total_all, columns, metadata) = get_exoplanets_data(
+        df,
+        all_metadata,
+        page,
+        limit,
+        sort_by,
+        order,
+        selected_columns,
+        filter,
+    )?;
+
+    table_cache
+        .insert(
+            key,
+            TableCacheValue {
+                rows: rows.clone(),
+                columns: columns.clone(),
+                total,
+                total_all,
+                metadata: metadata.clone(),
+            },
+        )
+        .await;
+
+    Ok((rows, total, total_all, columns, metadata))
+}
+
 /// Get all stellar host records for a given hostname
 ///
 /// Returns all columns for each matching stellar host row.
@@ -430,6 +557,9 @@ pub fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::server::cache::{
+        TableKind, build_table_cache, normalize_table_cache_key,
+    };
     use polars::df;
 
     #[test]
@@ -666,5 +796,187 @@ mod tests {
         assert_eq!(columns.len(), 2);
         assert!(columns.contains(&"hostname".to_string()));
         assert!(columns.contains(&"sy_dist".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_cached_stellarhosts_miss_then_hit_same_normalized_key() {
+        let df = df! {
+            "hostname" => &["Star A", "Star B", "Star C"],
+            "sy_dist" => &[10.5, 20.3, 15.7],
+            "st_teff" => &[5778.0, 6000.0, 5500.0],
+            "st_mass" => &[1.0, 1.2, 0.9],
+            "sy_pnum" => &[1i64, 2i64, 1i64],
+        }
+        .unwrap();
+
+        let metadata = Arc::new(HashMap::new());
+        let table_cache = build_table_cache(64);
+        let key = normalize_table_cache_key(
+            TableKind::StellarHosts,
+            1,
+            50,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        assert!(table_cache.get(&key).await.is_none());
+
+        let first = get_stellarhosts_data_cached(
+            &df,
+            &metadata,
+            &table_cache,
+            0,
+            50,
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert!(table_cache.get(&key).await.is_some());
+
+        let second = get_stellarhosts_data_cached(
+            &df,
+            &metadata,
+            &table_cache,
+            1,
+            50,
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(first.0, second.0);
+        assert_eq!(first.1, second.1);
+        assert_eq!(first.2, second.2);
+        assert_eq!(first.3, second.3);
+    }
+
+    #[tokio::test]
+    async fn test_table_cache_prewarm_populates_expected_default_keys() {
+        let stellarhosts_df = df! {
+            "hostname" => &["Star A", "Star B", "Star C"],
+            "sy_dist" => &[10.5, 20.3, 15.7],
+            "st_teff" => &[5778.0, 6000.0, 5500.0],
+            "st_mass" => &[1.0, 1.2, 0.9],
+            "sy_pnum" => &[1i64, 2i64, 1i64],
+        }
+        .unwrap();
+        let exoplanets_df = df! {
+            "pl_name" => &["Planet A", "Planet B", "Planet C"],
+            "hostname" => &["Star A", "Star B", "Star C"],
+            "discoverymethod" => &["Transit", "Transit", "Imaging"],
+            "disc_year" => &[2010i64, 2011i64, 2012i64],
+            "pl_orbper" => &[3.2, 4.1, 12.0],
+            "pl_rade" => &[1.1, 2.2, 3.3],
+            "pl_bmasse" => &[1.3, 2.4, 3.5],
+        }
+        .unwrap();
+
+        let metadata = Arc::new(HashMap::new());
+        let table_cache = build_table_cache(64);
+
+        let stellarhosts_key = normalize_table_cache_key(
+            TableKind::StellarHosts,
+            1,
+            50,
+            None,
+            None,
+            None,
+            None,
+        );
+        let exoplanets_key = normalize_table_cache_key(
+            TableKind::Exoplanets,
+            1,
+            50,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        assert!(table_cache.get(&stellarhosts_key).await.is_none());
+        assert!(table_cache.get(&exoplanets_key).await.is_none());
+
+        get_stellarhosts_data_cached(
+            &stellarhosts_df,
+            &metadata,
+            &table_cache,
+            1,
+            50,
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        get_exoplanets_data_cached(
+            &exoplanets_df,
+            &metadata,
+            &table_cache,
+            1,
+            50,
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert!(table_cache.get(&stellarhosts_key).await.is_some());
+        assert!(table_cache.get(&exoplanets_key).await.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_cache_restart_semantics_fresh_cache_starts_empty() {
+        let df = df! {
+            "hostname" => &["Star A", "Star B"],
+            "sy_dist" => &[10.5, 20.3],
+            "st_teff" => &[5778.0, 6000.0],
+            "st_mass" => &[1.0, 1.2],
+            "sy_pnum" => &[1i64, 2i64],
+        }
+        .unwrap();
+        let metadata = Arc::new(HashMap::new());
+
+        let warmed_cache = build_table_cache(64);
+        let key = normalize_table_cache_key(
+            TableKind::StellarHosts,
+            1,
+            50,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        get_stellarhosts_data_cached(
+            &df,
+            &metadata,
+            &warmed_cache,
+            1,
+            50,
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+        assert!(warmed_cache.get(&key).await.is_some());
+
+        let fresh_cache = build_table_cache(64);
+        assert!(fresh_cache.get(&key).await.is_none());
     }
 }
