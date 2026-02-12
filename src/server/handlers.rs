@@ -23,6 +23,8 @@ use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
 use super::common;
+use super::functions::DataStats;
+use crate::server::cache::TableCache;
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
@@ -30,6 +32,8 @@ pub struct ApiState {
     pub exoplanets_df: Arc<DataFrame>,
     pub stellarhosts_metadata: Arc<HashMap<String, ColumnMetadata>>,
     pub exoplanets_metadata: Arc<HashMap<String, ColumnMetadata>>,
+    pub overview_stats: Arc<DataStats>,
+    pub table_cache: TableCache,
 }
 
 /// Generic query parameters for data endpoints
@@ -209,9 +213,10 @@ pub async fn get_stellarhosts(
 
     // Use shared business logic from common.rs
     let (rows, total, total_all, columns, _metadata) =
-        common::get_stellarhosts_data(
+        common::get_stellarhosts_data_cached(
             &state.stellarhosts_df,
             &state.stellarhosts_metadata,
+            &state.table_cache,
             page,
             limit,
             params.sort_by,
@@ -219,6 +224,7 @@ pub async fn get_stellarhosts(
             selected_columns,
             params.filter,
         )
+        .await
         .map_err(|e| {
             tracing::error!("Failed to get stellarhosts data: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
@@ -264,9 +270,10 @@ pub async fn get_exoplanets(
 
     // Use shared business logic from common.rs
     let (rows, total, total_all, columns, _metadata) =
-        common::get_exoplanets_data(
+        common::get_exoplanets_data_cached(
             &state.exoplanets_df,
             &state.exoplanets_metadata,
+            &state.table_cache,
             page,
             limit,
             params.sort_by,
@@ -274,6 +281,7 @@ pub async fn get_exoplanets(
             selected_columns,
             params.filter,
         )
+        .await
         .map_err(|e| {
             tracing::error!("Failed to get exoplanets data: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
