@@ -1,4 +1,4 @@
-use crate::server::functions::TableData;
+use crate::server::functions::{ColumnMetadata, TableData};
 use crate::table::ColumnGroup;
 use leptos::ev::KeyboardEvent;
 use leptos::prelude::*;
@@ -42,6 +42,7 @@ pub fn Table(
     on_sort: Callback<String>,
     current_sort_column: Option<String>,
     current_sort_order: String,
+    column_metadata: HashMap<String, ColumnMetadata>,
     #[prop(optional)] column_descriptions: Option<HashMap<String, String>>,
     #[prop(optional)] display_columns: Option<Vec<String>>,
     #[prop(optional)] column_groups: Option<HashMap<String, ColumnGroup>>,
@@ -86,12 +87,11 @@ pub fn Table(
                                 .and_then(|descs| descs.get(&col_name))
                                 .cloned()
                                 .or_else(|| {
-                                    data.metadata
+                                    column_metadata
                                         .get(&col_name)
                                         .and_then(|m| m.description.clone())
                                 });
-                            let unit = data
-                                .metadata
+                            let unit = column_metadata
                                 .get(&col_name)
                                 .and_then(|m| m.unit.clone());
                             let title = build_column_title(description.clone(), unit);

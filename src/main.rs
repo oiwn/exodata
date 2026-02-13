@@ -18,9 +18,12 @@ async fn start_server() {
     use exo_core::tables::common as data_common;
     use exo_core::tables::overview as aggregation;
     use exoplanets_catalog::app::{App, shell};
+    use exoplanets_catalog::metadata::AppMetadata;
     use exoplanets_catalog::server::common as server_common;
     use exoplanets_catalog::server::{self, ApiState};
-    use exoplanets_catalog::server::functions::DataStats;
+    use exoplanets_catalog::server::functions::{
+        ColumnMetadata as UiColumnMetadata, DataStats,
+    };
     use leptos::prelude::{get_configuration, provide_context};
     use leptos_axum::{LeptosRoutes, generate_route_list};
     use std::path::Path;
@@ -54,6 +57,20 @@ async fn start_server() {
         Ok(meta) => Arc::new(meta),
         Err(e) => panic!("Failed to load exoplanets metadata: {}", e),
     };
+    let app_metadata = AppMetadata {
+        stellarhosts: stellarhosts_metadata
+            .as_ref()
+            .iter()
+            .map(|(k, v)| (k.clone(), UiColumnMetadata::from(v.clone())))
+            .collect(),
+        exoplanets: exoplanets_metadata
+            .as_ref()
+            .iter()
+            .map(|(k, v)| (k.clone(), UiColumnMetadata::from(v.clone())))
+            .collect(),
+    };
+    let metadata_json = leptos::serde_json::to_string(&app_metadata)
+        .expect("Failed to serialize metadata for hydration");
 
     // Precompute overview stats for cache-backed access.
     let (stellarhosts_total, exoplanets_total) = aggregation::get_total_counts(
@@ -143,8 +160,10 @@ async fn start_server() {
     // Create a shared context provider closure for both SSR and server functions
     let provide_api_state = {
         let api_state = api_state.clone();
+        let app_metadata = app_metadata.clone();
         move || {
             provide_context(api_state.clone());
+            provide_context(app_metadata.clone());
         }
     };
 
@@ -157,12 +176,26 @@ async fn start_server() {
             {
                 let leptos_options = leptos_options.clone();
                 let ga_measurement_id = ga_measurement_id.clone();
-                move || shell(leptos_options.clone(), ga_measurement_id.clone())
+                let metadata_json = metadata_json.clone();
+                move || {
+                    shell(
+                        leptos_options.clone(),
+                        ga_measurement_id.clone(),
+                        metadata_json.clone(),
+                    )
+                }
             },
         )
         .fallback(leptos_axum::file_and_error_handler({
             let ga_measurement_id = ga_measurement_id.clone();
-            move |options| shell(options, ga_measurement_id.clone())
+            let metadata_json = metadata_json.clone();
+            move |options| {
+                shell(
+                    options,
+                    ga_measurement_id.clone(),
+                    metadata_json.clone(),
+                )
+            }
         }))
         .with_state(leptos_options);
 

@@ -1,9 +1,9 @@
 # Data download commands
 download-stellarhosts:
-    curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts" -L --max-time 2000 > data/stellarhosts.vot
+    curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts" -L --max-time 3000 > data/stellarhosts.vot
 
 download-exoplanets:
-    curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+ps" -L --max-time 2000 > data/exoplanets.vot
+    curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+ps" -L --max-time 3000 > data/exoplanets.vot
 
 stellarhosts-metadata:
     cargo run -p exo-cli -- view-metadata --path data/stellarhosts.vot

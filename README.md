@@ -111,3 +111,50 @@ cargo test -p exo-cli
 # Run tests with output
 cargo test -p exo-cli -- --nocapture
 ```
+
+## E2E Tests (Playwright)
+
+End-to-end tests live in `end2end/tests` and currently cover 3 smoke flows:
+- SSR + hydration on `/stellarhosts`
+- SSR + hydration on `/exoplanets`
+- `/` -> client navigation to `/stellarhosts` (metadata available for column selector)
+
+### One-time setup
+
+```bash
+cd end2end
+npm ci
+npx playwright install chromium
+cd ..
+```
+
+### Run with one command (recommended)
+
+```bash
+cargo leptos end-to-end
+```
+
+This command builds the app, starts the SSR server, and runs the Playwright suite.
+
+### Run Playwright directly
+
+When running Playwright directly, start the app server in another terminal first:
+
+```bash
+# terminal 1
+cargo leptos watch
+
+# terminal 2
+cd end2end
+npx playwright test
+```
+
+### HTML report
+
+```bash
+cd end2end
+npx playwright test --reporter=html
+npx playwright show-report
+```
+
+`show-report` serves the report locally (default: `http://localhost:9323`) until you stop it with `Ctrl+C`.

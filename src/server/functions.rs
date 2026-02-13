@@ -66,7 +66,6 @@ pub struct TableData {
     pub total_all: usize, // Unfiltered count (entire dataset)
     pub page: usize,
     pub limit: usize,
-    pub metadata: HashMap<String, ColumnMetadata>, // Column metadata (name, unit, description)
 }
 
 /// Stellar host detail data structure
@@ -119,7 +118,7 @@ pub async fn get_stellarhosts_page(
     });
 
     // Call the common business logic
-    let (rows, total, total_all, columns, exo_metadata) =
+    let (rows, total, total_all, columns) =
         common::get_stellarhosts_data_cached(
             &state.stellarhosts_df,
             &state.stellarhosts_metadata,
@@ -136,12 +135,6 @@ pub async fn get_stellarhosts_page(
             ServerFnError::ServerError(e)
         })?;
 
-    // Convert exo-core metadata to our local ColumnMetadata
-    let metadata: HashMap<String, ColumnMetadata> = exo_metadata
-        .into_iter()
-        .map(|(key, val)| (key, val.into()))
-        .collect();
-
     // Wrap in TableData response
     Ok(TableData {
         rows,
@@ -150,7 +143,6 @@ pub async fn get_stellarhosts_page(
         total_all,
         page,
         limit,
-        metadata,
     })
 }
 
@@ -179,7 +171,7 @@ pub async fn get_exoplanets_page(
     });
 
     // Call the common business logic
-    let (rows, total, total_all, columns, exo_metadata) =
+    let (rows, total, total_all, columns) =
         common::get_exoplanets_data_cached(
             &state.exoplanets_df,
             &state.exoplanets_metadata,
@@ -196,12 +188,6 @@ pub async fn get_exoplanets_page(
             ServerFnError::ServerError(e)
         })?;
 
-    // Convert exo-core metadata to our local ColumnMetadata
-    let metadata: HashMap<String, ColumnMetadata> = exo_metadata
-        .into_iter()
-        .map(|(key, val)| (key, val.into()))
-        .collect();
-
     // Wrap in TableData response
     Ok(TableData {
         rows,
@@ -210,7 +196,6 @@ pub async fn get_exoplanets_page(
         total_all,
         page,
         limit,
-        metadata,
     })
 }
 

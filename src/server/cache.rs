@@ -1,9 +1,7 @@
 //! Cache types and key normalization helpers for server-side table caching.
 
-use exo_core::metadata::ColumnMetadata;
 use leptos::serde_json::Value;
 use moka::future::Cache;
-use std::collections::HashMap;
 
 /// Cache namespace for table datasets.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -38,7 +36,6 @@ pub struct TableCacheValue {
     pub columns: Vec<String>,
     pub total: usize,
     pub total_all: usize,
-    pub metadata: HashMap<String, ColumnMetadata>,
 }
 
 pub type TableCache = Cache<TableCacheKey, TableCacheValue>;

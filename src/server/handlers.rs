@@ -212,7 +212,7 @@ pub async fn get_stellarhosts(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns, _metadata) =
+    let (rows, total, total_all, columns) =
         common::get_stellarhosts_data_cached(
             &state.stellarhosts_df,
             &state.stellarhosts_metadata,
@@ -269,7 +269,7 @@ pub async fn get_exoplanets(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns, _metadata) =
+    let (rows, total, total_all, columns) =
         common::get_exoplanets_data_cached(
             &state.exoplanets_df,
             &state.exoplanets_metadata,
