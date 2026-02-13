@@ -1,5 +1,6 @@
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
+use crate::metadata::use_app_metadata_store;
 use crate::server::functions::get_exoplanets_page;
 use crate::table::{Table, build_column_model, build_table_query, is_err_or_lim};
 use leptos::prelude::*;
@@ -67,17 +68,15 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let (is_loading, set_is_loading) = signal(false);
     // Track if we've loaded data at least once (to avoid showing overlay on initial load)
     let (has_loaded, set_has_loaded) = signal(false);
-    // Cached metadata for column selector (persists while new data loads)
-    let (cached_metadata, set_cached_metadata) =
-        signal(std::collections::HashMap::<
-            String,
-            crate::server::functions::ColumnMetadata,
-        >::new());
+    let app_metadata = use_app_metadata_store();
+    let available_columns = Signal::derive(move || {
+        app_metadata.with(|m| m.exoplanets.clone())
+    });
 
     // Compute columns to fetch (base + err/lim companions)
     let fetch_columns = Signal::derive(move || {
         let all_columns: Vec<String> =
-            cached_metadata.get().keys().cloned().collect();
+            available_columns.get().keys().cloned().collect();
         build_column_model(&all_columns, &selected_columns.get()).fetch_columns
     });
 
@@ -140,17 +139,13 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
         },
     );
 
-    // Update has_loaded and cached metadata when resource completes successfully
+    // Update has_loaded when resource completes successfully.
     Effect::new(move |_| {
         match table_resource.get() {
-            Some(Ok(data)) => {
+            Some(Ok(_)) => {
                 set_is_loading.set(false);
                 if !has_loaded.get() {
                     set_has_loaded.set(true);
-                }
-                // Avoid no-op writes that can retrigger reactive dependencies.
-                if cached_metadata.get() != data.metadata {
-                    set_cached_metadata.set(data.metadata.clone());
                 }
             }
             Some(Err(_)) => {
@@ -313,7 +308,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
 
                 // Column Selector
                 <ColumnSelector
-                    available_columns=cached_metadata
+                    available_columns=available_columns
                     selected_columns=selected_columns
                     on_change=on_columns_change
                     is_open=selector_is_open
@@ -420,8 +415,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
 
                                             // Table
                                             {
-                                                let all_columns: Vec<String> = data
-                                                    .metadata
+                                                let table_metadata = available_columns.get();
+                                                let all_columns: Vec<String> = table_metadata
                                                     .keys()
                                                     .cloned()
                                                     .collect();
@@ -435,6 +430,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                         on_sort=on_sort
                                                         current_sort_column=sort_column.get()
                                                         current_sort_order=sort_order.get()
+                                                        column_metadata=table_metadata
                                                         display_columns=model.display_columns
                                                         column_groups=model.groups
                                                         filter_input=filter_input

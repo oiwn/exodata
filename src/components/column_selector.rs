@@ -163,7 +163,7 @@ fn SelectedColumnsList(
 /// List of available columns with search and checkboxes
 #[component]
 fn AvailableColumnsList(
-    available_columns: ReadSignal<HashMap<String, ColumnMetadata>>,
+    available_columns: Signal<HashMap<String, ColumnMetadata>>,
     selected_columns: ReadSignal<Vec<String>>,
     on_toggle: Callback<String>,
     on_select_all: Callback<()>,
@@ -262,7 +262,7 @@ fn AvailableColumnsList(
 #[component]
 pub fn ColumnSelector(
     /// All available columns with their metadata
-    available_columns: ReadSignal<HashMap<String, ColumnMetadata>>,
+    available_columns: Signal<HashMap<String, ColumnMetadata>>,
     /// Currently selected column names
     selected_columns: ReadSignal<Vec<String>>,
     /// Callback when selection changes

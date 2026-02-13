@@ -5,6 +5,7 @@ pub mod app;
 pub mod common;
 pub mod components;
 pub mod error_template;
+pub mod metadata;
 
 // Server module contains server functions that need to be
 // visible to both client and server.

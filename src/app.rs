@@ -7,6 +7,7 @@ use crate::components::overview::OverviewPage;
 use crate::components::stellarhost_detail::StellarHostDetailPage;
 use crate::components::stellarhosts_table::StellarHostsTablePage;
 use crate::error_template::{AppError, ErrorTemplate};
+use crate::metadata::{METADATA_SCRIPT_ID, provide_app_metadata_store};
 use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos::prelude::*;
@@ -18,13 +19,19 @@ use leptos_router::path;
 pub fn shell(
     options: LeptosOptions,
     ga_measurement_id: Option<String>,
+    metadata_json: String,
 ) -> impl IntoView {
+    let metadata_json = metadata_json.replace("</", "<\\/");
+
     view! {
         <!DOCTYPE html>
         <html lang="en">
             <head>
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <script id=METADATA_SCRIPT_ID type="application/json">
+                    {metadata_json}
+                </script>
                 <AutoReload options=options.clone() />
                 <HydrationScripts options=options.clone() />
                 {ga_measurement_id.map(|id| view! { <GoogleAnalytics measurement_id=id /> })}
@@ -52,6 +59,7 @@ pub fn TableWrapper() -> impl IntoView {
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
+    provide_app_metadata_store();
 
     view! {
         // injects a stylesheet into the document <head>

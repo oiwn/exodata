@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-02-13
+
+- Resolved metadata delivery overhead (Issue #15) by moving table metadata to one-time global hydration:
+  - Added shared metadata store/context in `src/metadata.rs`.
+  - Injected metadata JSON in SSR shell and initialized store app-wide (`src/app.rs`, `src/main.rs`).
+  - Kept metadata available across client navigation (including `/` -> table pages).
+- Converted table request path to data-only payloads:
+  - Removed metadata from `TableData` responses in `src/server/functions.rs`.
+  - Removed metadata from cached table values in `src/server/cache.rs`.
+  - Updated shared table loaders and REST handlers for data-only tuples (`src/server/common.rs`, `src/server/handlers.rs`).
+  - Updated table/selector components to read metadata from global store instead of per-response payloads.
+- Fixed hydration mismatch caused by metadata script placement:
+  - moved metadata script injection into `<head>` to avoid body hydration marker conflicts.
+- Added local Playwright e2e baseline:
+  - Added smoke suite (`end2end/tests/smoke.spec.ts`) with 3 flows:
+    - SSR + hydration `/stellarhosts`
+    - SSR + hydration `/exoplanets`
+    - `/` -> client navigation to `/stellarhosts` with metadata-backed column selector
+  - Added server readiness guard to avoid startup race (`ERR_CONNECTION_REFUSED`).
+  - Simplified local Playwright config to deterministic baseline (`chromium`, single worker, sequential).
+- Documented e2e setup/run/report workflow in `README.md`.
+
 ## 2026-02-12
 
 - Added backend cache wiring for overview and table responses:

@@ -84,61 +84,11 @@ Delete `src/stellarhosts.rs` entirely. It's legacy code from an earlier implemen
 
 Running `cargo clippy --all-targets` revealed multiple code quality issues:
 
-### 3.1 Collapsible `if` Statements
-
-Multiple locations have `if` statements that can be collapsed:
-- `src/server/common.rs` (多处)
-- `src/server/cache.rs`
-- `src/components/` (多个文件)
-
-**Example pattern:**
-```rust
-// Can be simplified
-if let Some(x) = some_value {
-    if condition {
-        do_something(x);
-    }
-}
-
-// To
-if let Some(x) = some_value.filter(|_| condition) {
-    do_something(x);
-}
-```
-
-### 3.2 Unnecessary `if let`
-
-Several places use `if let` when only the `Some` variant is used:
-- `src/table/table.rs`
-- `src/server/common.rs`
-
-### 3.3 Useless `vec!` Macro
-
-Clippy detected a `vec!` usage that could be replaced with `Vec::new()`.
-
-### 3.4 Manual `RangeInclusive::contains`
-
-**File:** `src/server/common.rs`
-
-The code manually implements range containment:
-```rust
-// Manual implementation found in several places
-if val >= min && val <= max { ... }
-```
-
-**Suggestion:**
-Use the built-in method:
-```rust
-if (min..=max).contains(&val) { ... }
-```
-
----
-
 ## 4. Known Technical Debt
 
 ### 4.1 Duplicate Type Definition
 
-**File:** `src/server/functions.rs` (lines 16-26)
+**File:** `src/server/functions.rs`
 
 ```rust
 // NOTE: This is a temporary duplicate of exo_core::metadata::ColumnMetadata
