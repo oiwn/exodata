@@ -21,6 +21,10 @@
   - Added server readiness guard to avoid startup race (`ERR_CONNECTION_REFUSED`).
   - Simplified local Playwright config to deterministic baseline (`chromium`, single worker, sequential).
 - Documented e2e setup/run/report workflow in `README.md`.
+- Added build-version footer for deployment verification:
+  - added a small global footer showing `CARGO_PKG_VERSION` on all routes
+  - enables quick confirmation that production is running the expected image/version
+  - in `src/components/footer.rs`, `src/components/mod.rs`, `src/app.rs`
 
 ## 2026-02-12
 

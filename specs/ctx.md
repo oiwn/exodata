@@ -68,6 +68,12 @@ Implement backend-only in-process caching so overview and table requests avoid r
   - README section added for e2e setup/run/report workflow
 - Build fix:
   - `cargo leptos build` wasm fix for `uuid` (`js` feature) in `Cargo.toml`
+- Deployment visibility:
+  - added a global app footer that displays `env!("CARGO_PKG_VERSION")` from `Cargo.toml`
+  - footer renders on all routes via `App` layout
+  - in `src/components/footer.rs`, `src/components/mod.rs`, `src/app.rs`
+- Local runtime spot-check:
+  - verified `/stellarhosts` returns complete chunked SSR HTML via curl (`HTTP 200`, full body)
 
 ## Pending
 - Formalize post-fix verification coverage:
@@ -84,7 +90,6 @@ Implement backend-only in-process caching so overview and table requests avoid r
 Start from these concrete tasks:
 
 1. Re-validate cache behavior after Task 0 changes:
-- `cargo check`
 - targeted server/cache tests
 - startup log shows prewarm completion before listener bind
 
