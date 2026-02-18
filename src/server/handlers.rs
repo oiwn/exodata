@@ -212,23 +212,22 @@ pub async fn get_stellarhosts(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns) =
-        common::get_stellarhosts_data_cached(
-            &state.stellarhosts_df,
-            &state.stellarhosts_metadata,
-            &state.table_cache,
-            page,
-            limit,
-            params.sort_by,
-            params.order,
-            selected_columns,
-            params.filter,
-        )
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to get stellarhosts data: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let (rows, total, total_all, columns) = common::get_stellarhosts_data_cached(
+        &state.stellarhosts_df,
+        &state.stellarhosts_metadata,
+        &state.table_cache,
+        page,
+        limit,
+        params.sort_by,
+        params.order,
+        selected_columns,
+        params.filter,
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to get stellarhosts data: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(ApiResponse {
         data: rows,
@@ -269,23 +268,22 @@ pub async fn get_exoplanets(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns) =
-        common::get_exoplanets_data_cached(
-            &state.exoplanets_df,
-            &state.exoplanets_metadata,
-            &state.table_cache,
-            page,
-            limit,
-            params.sort_by,
-            params.order,
-            selected_columns,
-            params.filter,
-        )
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to get exoplanets data: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let (rows, total, total_all, columns) = common::get_exoplanets_data_cached(
+        &state.exoplanets_df,
+        &state.exoplanets_metadata,
+        &state.table_cache,
+        page,
+        limit,
+        params.sort_by,
+        params.order,
+        selected_columns,
+        params.filter,
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to get exoplanets data: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(ApiResponse {
         data: rows,

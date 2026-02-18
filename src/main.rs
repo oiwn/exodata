@@ -20,10 +20,10 @@ async fn start_server() {
     use exoplanets_catalog::app::{App, shell};
     use exoplanets_catalog::metadata::AppMetadata;
     use exoplanets_catalog::server::common as server_common;
-    use exoplanets_catalog::server::{self, ApiState};
     use exoplanets_catalog::server::functions::{
         ColumnMetadata as UiColumnMetadata, DataStats,
     };
+    use exoplanets_catalog::server::{self, ApiState};
     use leptos::prelude::{get_configuration, provide_context};
     use leptos_axum::{LeptosRoutes, generate_route_list};
     use std::path::Path;
@@ -73,10 +73,8 @@ async fn start_server() {
         .expect("Failed to serialize metadata for hydration");
 
     // Precompute overview stats for cache-backed access.
-    let (stellarhosts_total, exoplanets_total) = aggregation::get_total_counts(
-        &stellarhosts_df,
-        &exoplanets_df,
-    );
+    let (stellarhosts_total, exoplanets_total) =
+        aggregation::get_total_counts(&stellarhosts_df, &exoplanets_df);
     let avg_stellar_temp =
         aggregation::get_avg_temperature(&stellarhosts_df).unwrap_or(0.0);
     let avg_stellar_distance =
@@ -120,7 +118,10 @@ async fn start_server() {
     )
     .await
     .unwrap_or_else(|e| {
-        panic!("Startup prewarm failed for stellarhosts default page: {}", e)
+        panic!(
+            "Startup prewarm failed for stellarhosts default page: {}",
+            e
+        )
     });
     server_common::get_exoplanets_data_cached(
         &api_state.exoplanets_df,
@@ -190,11 +191,7 @@ async fn start_server() {
             let ga_measurement_id = ga_measurement_id.clone();
             let metadata_json = metadata_json.clone();
             move |options| {
-                shell(
-                    options,
-                    ga_measurement_id.clone(),
-                    metadata_json.clone(),
-                )
+                shell(options, ga_measurement_id.clone(), metadata_json.clone())
             }
         }))
         .with_state(leptos_options);

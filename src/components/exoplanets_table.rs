@@ -69,9 +69,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     // Track if we've loaded data at least once (to avoid showing overlay on initial load)
     let (has_loaded, set_has_loaded) = signal(false);
     let app_metadata = use_app_metadata_store();
-    let available_columns = Signal::derive(move || {
-        app_metadata.with(|m| m.exoplanets.clone())
-    });
+    let available_columns =
+        Signal::derive(move || app_metadata.with(|m| m.exoplanets.clone()));
 
     // Compute columns to fetch (base + err/lim companions)
     let fetch_columns = Signal::derive(move || {
