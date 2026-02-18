@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-02-18 (Update 2)
+
+- Adjusted SSR mode for table pages in `src/app.rs`:
+  - set `/stellarhosts` route to `SsrMode::Async`
+  - set `/exoplanets` route to `SsrMode::Async`
+- Updated GitHub Actions flow:
+  - `tests.yml` and `code-quality.yml` now run on `pull_request` (to `main`) and manual dispatch
+  - `deploy.yml` now runs on `push` to `main` and manual dispatch
+  - deploy remains gated by version bump detection in `Cargo.toml`
+
 ## 2026-02-18
 
 - Added `tokio::task::spawn_blocking` for table cache-miss data requests in `src/server/common.rs`:
