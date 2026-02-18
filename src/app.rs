@@ -13,6 +13,7 @@ use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos::prelude::*;
 use leptos_meta::*;
+use leptos_router::SsrMode;
 use leptos_router::StaticSegment;
 use leptos_router::components::*;
 use leptos_router::path;
@@ -84,9 +85,17 @@ pub fn App() -> impl IntoView {
                 .into_view()
             }>
                 <Route path=StaticSegment("") view=OverviewPage/>
-                <Route path=StaticSegment("stellarhosts") view=StellarHostsTablePage/>
+                <Route
+                    path=StaticSegment("stellarhosts")
+                    view=StellarHostsTablePage
+                    ssr=SsrMode::Async
+                />
                 <Route path=path!("/stellarhosts/:hostname") view=StellarHostDetailPage/>
-                <Route path=StaticSegment("exoplanets") view=ExoplanetsTablePage/>
+                <Route
+                    path=StaticSegment("exoplanets")
+                    view=ExoplanetsTablePage
+                    ssr=SsrMode::Async
+                />
                 <Route path=path!("/exoplanets/:pl_name") view=ExoplanetDetailPage/>
                 <Route path=StaticSegment("about") view=AboutPage/>
                 <Route path=StaticSegment("table") view=TableWrapper/>
