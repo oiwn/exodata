@@ -1,41 +1,103 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: [Tests, Code Quality]
+    types: [completed]
     branches: [main]
-    paths: ['Cargo.toml']
   workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.event.workflow_run.head_sha || github.run_id }}
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  prerequisites:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    permissions:
+      actions: read
+    outputs:
+      ready: ${{ steps.gate.outputs.ready }}
+      sha: ${{ steps.gate.outputs.sha }}
+    steps:
+      - id: gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.eventName === "workflow_dispatch") {
+              core.setOutput("ready", "true");
+              core.setOutput("sha", "");
+              return;
+            }
+
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const sha = context.payload.workflow_run.head_sha;
+            const required = ["Tests", "Code Quality"];
+
+            const runs = await github.paginate(
+              github.rest.actions.listWorkflowRunsForRepo,
+              { owner, repo, head_sha: sha, per_page: 100 }
+            );
+
+            const conclusions = Object.fromEntries(
+              required.map((name) => [name, "missing"])
+            );
+
+            for (const run of runs) {
+              if (
+                required.includes(run.name) &&
+                run.status === "completed" &&
+                conclusions[run.name] === "missing"
+              ) {
+                conclusions[run.name] = run.conclusion;
+              }
+            }
+
+            const ready = required.every((name) => conclusions[name] === "success");
+            core.info(`Workflow conclusions for ${sha}: ${JSON.stringify(conclusions)}`);
+            core.setOutput("ready", ready ? "true" : "false");
+            core.setOutput("sha", sha);
+
   check:
     runs-on: ubuntu-latest
+    needs: prerequisites
+    if: needs.prerequisites.outputs.ready == 'true'
     outputs:
       version: ${{ steps.version.outputs.version }}
       changed: ${{ steps.version.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.prerequisites.outputs.sha || github.sha }}
           fetch-depth: 2
 
       - id: version
         run: |
           VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          git diff HEAD~1 HEAD -- Cargo.toml | grep -q '^+version' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            git diff HEAD~1 HEAD -- Cargo.toml | grep -q '^+version' && echo "changed=true" >> $GITHUB_OUTPUT || echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
   build:
     runs-on: ubuntu-latest
-    needs: check
-    if: needs.check.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+    needs: [prerequisites, check]
+    if: needs.prerequisites.outputs.ready == 'true' && (needs.check.outputs.changed == 'true' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prerequisites.outputs.sha || github.sha }}
 
       - uses: docker/setup-buildx-action@v3
 
