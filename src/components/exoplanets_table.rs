@@ -8,6 +8,8 @@ use leptos_router::NavigateOptions;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
 
+type TableQueryState = (usize, Option<String>, String, Vec<String>, String);
+
 #[component]
 pub fn ExoplanetsTablePage() -> impl IntoView {
     // Read URL query parameters
@@ -69,9 +71,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     // Track if we've loaded data at least once (to avoid showing overlay on initial load)
     let (has_loaded, set_has_loaded) = signal(false);
     let app_metadata = use_app_metadata_store();
-    let available_columns = Signal::derive(move || {
-        app_metadata.with(|m| m.exoplanets.clone())
-    });
+    let available_columns =
+        Signal::derive(move || app_metadata.with(|m| m.exoplanets.clone()));
 
     // Compute columns to fetch (base + err/lim companions)
     let fetch_columns = Signal::derive(move || {
@@ -115,29 +116,21 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     );
 
     // Track when resource source changes to set loading state
-    Effect::new(
-        move |prev: Option<(
-            usize,
-            Option<String>,
-            String,
-            Vec<String>,
-            String,
-        )>| {
-            let current = (
-                current_page.get(),
-                sort_column.get(),
-                sort_order.get(),
-                selected_columns.get(),
-                filter_text.get(),
-            );
-            if let Some(prev_val) = prev {
-                if prev_val != current {
-                    set_is_loading.set(true);
-                }
-            }
-            current
-        },
-    );
+    Effect::new(move |prev: Option<TableQueryState>| {
+        let current = (
+            current_page.get(),
+            sort_column.get(),
+            sort_order.get(),
+            selected_columns.get(),
+            filter_text.get(),
+        );
+        if let Some(prev_val) = prev
+            && prev_val != current
+        {
+            set_is_loading.set(true);
+        }
+        current
+    });
 
     // Update has_loaded when resource completes successfully.
     Effect::new(move |_| {
@@ -169,7 +162,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                 if data.limit == 0 {
                     1
                 } else {
-                    (data.total + data.limit - 1) / data.limit
+                    data.total.div_ceil(data.limit)
                 }
             })
             .unwrap_or(1)
@@ -234,10 +227,10 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
 
             // Clear sort if the sorted column is no longer in selected columns
             let current_sort = sort_column.get();
-            if let Some(ref sort_col) = current_sort {
-                if !columns.contains(sort_col) {
-                    set_sort_column.set(None);
-                }
+            if let Some(ref sort_col) = current_sort
+                && !columns.contains(sort_col)
+            {
+                set_sort_column.set(None);
             }
 
             // Update URL with new state

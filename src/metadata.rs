@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 pub const METADATA_SCRIPT_ID: &str = "__EXO_METADATA__";
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize,
+)]
 pub struct AppMetadata {
     pub stellarhosts: HashMap<String, ColumnMetadata>,
     pub exoplanets: HashMap<String, ColumnMetadata>,

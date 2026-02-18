@@ -23,6 +23,8 @@ pub type StellarHostsResult = TableResult;
 /// Result type for exoplanets data operations
 /// Returns: (rows, filtered_total, unfiltered_total, columns)
 pub type ExoplanetsResult = TableResult;
+pub type HostPlanetsResult =
+    Result<(Vec<Value>, Vec<String>, HashMap<String, ColumnMetadata>), String>;
 
 /// Table configuration for generic data queries.
 pub struct TableConfig<'a> {
@@ -30,6 +32,7 @@ pub struct TableConfig<'a> {
 }
 
 /// Generic table data query with shared pagination/sort/select logic.
+#[allow(clippy::too_many_arguments)]
 pub fn get_table_data(
     df: &DataFrame,
     _all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
@@ -52,7 +55,7 @@ pub fn get_table_data(
             .map(|s| s.as_str())
             .collect()
     } else {
-        config.default_columns.iter().copied().collect()
+        config.default_columns.to_vec()
     };
 
     // Ensure we have at least one column
@@ -71,52 +74,52 @@ pub fn get_table_data(
     // Apply first-column text filter if provided
     if let Some(filter_value) = filter {
         let needle = filter_value.trim().to_lowercase();
-        if !needle.is_empty() {
-            if let Some(first_col) = columns_to_select.first() {
-                let series = df.column(first_col).map_err(|e| {
-                    format!("Failed to read filter column: {}", e)
-                })?;
-                let series = if matches!(series.dtype(), DataType::String) {
-                    series.clone()
-                } else {
-                    series.cast(&DataType::String).map_err(|e| {
-                        format!("Failed to cast filter column: {}", e)
-                    })?
-                };
-                let utf8 = series.str().map_err(|e| {
-                    format!("Failed to read string column: {}", e)
-                })?;
-                let mask: BooleanChunked = utf8
-                    .into_iter()
-                    .map(|opt| opt.map(|s| s.to_lowercase().contains(&needle)))
-                    .collect();
-                df = df
-                    .filter(&mask)
-                    .map_err(|e| format!("Failed to apply filter: {}", e))?;
-            }
+        if !needle.is_empty()
+            && let Some(first_col) = columns_to_select.first()
+        {
+            let series = df
+                .column(first_col)
+                .map_err(|e| format!("Failed to read filter column: {}", e))?;
+            let series = if matches!(series.dtype(), DataType::String) {
+                series.clone()
+            } else {
+                series
+                    .cast(&DataType::String)
+                    .map_err(|e| format!("Failed to cast filter column: {}", e))?
+            };
+            let utf8 = series
+                .str()
+                .map_err(|e| format!("Failed to read string column: {}", e))?;
+            let mask: BooleanChunked = utf8
+                .into_iter()
+                .map(|opt| opt.map(|s| s.to_lowercase().contains(&needle)))
+                .collect();
+            df = df
+                .filter(&mask)
+                .map_err(|e| format!("Failed to apply filter: {}", e))?;
         }
     }
 
     // Apply sorting with null filtering if requested
     // Only sort if the sort column is actually in the selected columns
-    if let Some(sort_col) = &sort_by {
-        if columns_to_select.contains(&sort_col.as_str()) {
-            // Filter out rows where sort column is null using LazyFrame
-            df = df
-                .lazy()
-                .filter(col(sort_col).is_not_null())
-                .collect()
-                .map_err(|e| format!("Failed to filter nulls: {}", e))?;
+    if let Some(sort_col) = &sort_by
+        && columns_to_select.contains(&sort_col.as_str())
+    {
+        // Filter out rows where sort column is null using LazyFrame
+        df = df
+            .lazy()
+            .filter(col(sort_col).is_not_null())
+            .collect()
+            .map_err(|e| format!("Failed to filter nulls: {}", e))?;
 
-            // Then sort
-            let descending = order.as_deref().unwrap_or("asc") == "desc";
-            let options =
-                SortMultipleOptions::new().with_order_descending(descending);
+        // Then sort
+        let descending = order.as_deref().unwrap_or("asc") == "desc";
+        let options =
+            SortMultipleOptions::new().with_order_descending(descending);
 
-            df = df
-                .sort([sort_col.as_str()], options)
-                .map_err(|e| format!("Failed to sort: {}", e))?;
-        }
+        df = df
+            .sort([sort_col.as_str()], options)
+            .map_err(|e| format!("Failed to sort: {}", e))?;
         // If sort column is not in selected columns, silently ignore the sort
     }
 
@@ -161,6 +164,7 @@ pub fn get_table_data(
 ///
 /// # Returns
 /// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names)
+#[allow(clippy::too_many_arguments)]
 pub fn get_stellarhosts_data(
     df: &DataFrame,
     all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
@@ -205,6 +209,7 @@ pub fn get_stellarhosts_data(
 ///
 /// # Returns
 /// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names)
+#[allow(clippy::too_many_arguments)]
 pub fn get_exoplanets_data(
     df: &DataFrame,
     all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
@@ -247,6 +252,7 @@ fn table_result_from_cache_value(
 }
 
 /// Cached variant of `get_stellarhosts_data`.
+#[allow(clippy::too_many_arguments)]
 pub async fn get_stellarhosts_data_cached(
     df: &DataFrame,
     all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
@@ -272,16 +278,25 @@ pub async fn get_stellarhosts_data_cached(
         return Ok(table_result_from_cache_value(cached));
     }
 
-    let (rows, total, total_all, columns) = get_stellarhosts_data(
-        df,
-        all_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,
-        filter,
-    )?;
+    let df = df.clone();
+    let all_metadata = Arc::clone(all_metadata);
+    let (rows, total, total_all, columns) =
+        tokio::task::spawn_blocking(move || {
+            get_stellarhosts_data(
+                &df,
+                &all_metadata,
+                page,
+                limit,
+                sort_by,
+                order,
+                selected_columns,
+                filter,
+            )
+        })
+        .await
+        .map_err(|e| {
+            format!("Failed to join stellarhosts blocking task: {}", e)
+        })??;
 
     table_cache
         .insert(
@@ -299,6 +314,7 @@ pub async fn get_stellarhosts_data_cached(
 }
 
 /// Cached variant of `get_exoplanets_data`.
+#[allow(clippy::too_many_arguments)]
 pub async fn get_exoplanets_data_cached(
     df: &DataFrame,
     all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
@@ -324,16 +340,25 @@ pub async fn get_exoplanets_data_cached(
         return Ok(table_result_from_cache_value(cached));
     }
 
-    let (rows, total, total_all, columns) = get_exoplanets_data(
-        df,
-        all_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,
-        filter,
-    )?;
+    let df = df.clone();
+    let all_metadata = Arc::clone(all_metadata);
+    let (rows, total, total_all, columns) =
+        tokio::task::spawn_blocking(move || {
+            get_exoplanets_data(
+                &df,
+                &all_metadata,
+                page,
+                limit,
+                sort_by,
+                order,
+                selected_columns,
+                filter,
+            )
+        })
+        .await
+        .map_err(|e| {
+            format!("Failed to join exoplanets blocking task: {}", e)
+        })??;
 
     table_cache
         .insert(
@@ -405,9 +430,9 @@ pub fn get_planets_by_hostname(
     df: &DataFrame,
     all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
     hostname: &str,
-) -> Result<(Vec<Value>, Vec<String>, HashMap<String, ColumnMetadata>), String> {
+) -> HostPlanetsResult {
     // Columns to show for planets in detail view
-    let columns = vec![
+    let columns = [
         "pl_name",
         "discoverymethod",
         "disc_year",

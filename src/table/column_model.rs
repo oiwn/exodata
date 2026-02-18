@@ -73,11 +73,11 @@ pub fn build_column_model(
     let mut fetch_columns = display_columns.clone();
     for base in &display_columns {
         if let Some(group) = groups.get(base) {
-            for extra in [&group.err1, &group.err2, &group.lim] {
-                if let Some(col) = extra {
-                    if !fetch_columns.contains(col) {
-                        fetch_columns.push(col.clone());
-                    }
+            for col in
+                [&group.err1, &group.err2, &group.lim].into_iter().flatten()
+            {
+                if !fetch_columns.contains(col) {
+                    fetch_columns.push(col.clone());
                 }
             }
         }

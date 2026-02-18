@@ -50,10 +50,11 @@ pub fn get_columns_metadata(
             let mut description = meta.description.clone().unwrap_or_default();
 
             // Append unit if available
-            if let Some(unit) = &meta.unit {
-                if !description.contains('[') && !unit.is_empty() {
-                    description = format!("{} [{}]", description, unit);
-                }
+            if let Some(unit) = &meta.unit
+                && !description.contains('[')
+                && !unit.is_empty()
+            {
+                description = format!("{} [{}]", description, unit);
             }
 
             result.insert(col_name.to_string(), description);

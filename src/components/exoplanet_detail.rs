@@ -8,17 +8,17 @@ use crate::server::functions::{ExoplanetDetail, get_exoplanet_detail};
 #[component]
 pub fn ExoplanetDetailPage() -> impl IntoView {
     let params = use_params_map();
-    let pl_name = move || {
+    let pl_name = Memo::new(move |_| {
         params
             .read()
             .get("pl_name")
             .unwrap_or_default()
             .replace("%20", " ")
             .replace("%23", "#")
-    };
+    });
 
     let detail_resource = Resource::new(
-        move || pl_name(),
+        move || pl_name.get(),
         move |name| async move { get_exoplanet_detail(name).await },
     );
 
@@ -39,7 +39,7 @@ pub fn ExoplanetDetailPage() -> impl IntoView {
                     <div class="text-center space-y-2">
                         <div class="text-6xl mb-4">"🪐"</div>
                         <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-                            {pl_name}
+                            {move || pl_name.get()}
                         </h1>
                         <p class="text-lg text-gray-400">"Exoplanet Records"</p>
                     </div>
@@ -97,7 +97,7 @@ fn PlanetSummary(detail: ExoplanetDetail) -> impl IntoView {
     let record = detail.records.first().cloned().unwrap_or(Value::Null);
     let metadata = detail.metadata.clone();
 
-    let key_properties = vec![
+    let key_properties = [
         ("hostname", "Host Star", "", "from-blue-600 to-cyan-500"),
         (
             "discoverymethod",

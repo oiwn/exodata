@@ -10,24 +10,24 @@ use crate::server::functions::{
 #[component]
 pub fn StellarHostDetailPage() -> impl IntoView {
     let params = use_params_map();
-    let hostname = move || {
+    let hostname = Memo::new(move |_| {
         params
             .read()
             .get("hostname")
             .unwrap_or_default()
             .replace("%20", " ")
             .replace("%23", "#")
-    };
+    });
 
     // Fetch stellar host details
     let host_resource = Resource::new(
-        move || hostname(),
+        move || hostname.get(),
         move |name| async move { get_stellar_host_detail(name).await },
     );
 
     // Fetch planets for this host
     let planets_resource = Resource::new(
-        move || hostname(),
+        move || hostname.get(),
         move |name| async move { get_planets_for_host(name).await },
     );
 
@@ -50,7 +50,7 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                     <div class="text-center space-y-2">
                         <div class="text-6xl mb-4">"⭐"</div>
                         <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400">
-                            {hostname}
+                            {move || hostname.get()}
                         </h1>
                         <p class="text-lg text-gray-400">"Stellar Host System"</p>
                     </div>
@@ -118,7 +118,7 @@ fn HostSummary(host: StellarHostDetail) -> impl IntoView {
     let record = host.records.first().cloned().unwrap_or(Value::Null);
     let metadata = host.metadata.clone();
 
-    let key_properties = vec![
+    let key_properties = [
         ("sy_dist", "Distance", "pc", "from-blue-600 to-cyan-500"),
         ("st_teff", "Temperature", "K", "from-orange-600 to-red-500"),
         ("st_mass", "Mass", "M☉", "from-purple-600 to-pink-500"),

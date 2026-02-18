@@ -1,5 +1,4 @@
 use leptos::prelude::*;
-use leptos_router::components::A;
 
 // Import server function and types - #[server] macro handles client/server compilation
 use crate::server::functions::{DataStats, get_stats};
@@ -51,18 +50,6 @@ pub fn OverviewPage() -> impl IntoView {
                                 <div class="space-y-10">
                                     <StatsOverview stats=stats.clone()/>
                                     <DetailedStats stats=stats/>
-
-                                    // Link to stellar hosts table
-                                    <div class="text-center">
-                                        <A
-                                            href="/stellarhosts"
-                                            attr:class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                                        >
-                                            <span>"⭐"</span>
-                                            <span>"Browse Stellar Hosts Catalog"</span>
-                                            <span>"→"</span>
-                                        </A>
-                                    </div>
                                 </div>
                             }),
                             Err(err) => {

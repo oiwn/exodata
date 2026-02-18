@@ -22,7 +22,7 @@ pub fn detect_nullable_columns(path: &str) -> HashSet<usize> {
     let mut votable_it = VOTableIterator::from_file(path).unwrap();
 
     while let Some(row_it) = votable_it.next_table_row_value_iter().unwrap() {
-        for (_, row) in row_it.enumerate() {
+        for row in row_it {
             match row {
                 Ok(r) => {
                     for (i, field) in r.iter().enumerate() {

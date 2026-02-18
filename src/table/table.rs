@@ -162,7 +162,7 @@ pub fn Table(
                             </tr>
                         }.into_any()
                     } else {
-                        view! { <></> }.into_any()
+                        ().into_any()
                     }}
                 </thead>
                 <tbody>
@@ -269,11 +269,11 @@ pub fn build_table_query(
         query_params.push(format!("sort={}", col));
         query_params.push(format!("order={}", order));
     }
-    if let Some(cols) = columns {
-        if !cols.is_empty() {
-            let encoded = encode_query_value(&cols.join(","));
-            query_params.push(format!("columns={}", encoded));
-        }
+    if let Some(cols) = columns
+        && !cols.is_empty()
+    {
+        let encoded = encode_query_value(&cols.join(","));
+        query_params.push(format!("columns={}", encoded));
     }
     if let Some(value) = filter {
         let trimmed = value.trim();
