@@ -14,7 +14,7 @@
   - `tests.yml` now runs only `cargo test`
   - `code-quality.yml` handles formatting, clippy, and typos checks
   - `deploy.yml` now runs as the final stage after successful `Tests` and `Code Quality` workflows for the same `main` commit SHA
-- Added typos dictionary config in `.typos.toml` to allow domain/tooling terms (`rade`, `ratatui`) and fixed `README_LEPTOS.md` typo (`Addtionally` -> `Additionally`).
+- Added typos dictionary config in `.typos.toml` to allow domain/tooling terms
 - Resolved strict clippy warnings across the workspace and verified with:
   - `cargo clippy --all-features --workspace -- -D warnings`
 
