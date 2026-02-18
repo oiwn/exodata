@@ -323,22 +323,22 @@ pub fn ColumnSelector(
     // Move column up
     let on_move_up = Callback::new(move |column_name: String| {
         let mut current = selected_columns.get();
-        if let Some(idx) = current.iter().position(|c| c == &column_name) {
-            if idx > 0 {
-                current.swap(idx, idx - 1);
-                on_change.run(current);
-            }
+        if let Some(idx) = current.iter().position(|c| c == &column_name)
+            && idx > 0
+        {
+            current.swap(idx, idx - 1);
+            on_change.run(current);
         }
     });
 
     // Move column down
     let on_move_down = Callback::new(move |column_name: String| {
         let mut current = selected_columns.get();
-        if let Some(idx) = current.iter().position(|c| c == &column_name) {
-            if idx < current.len() - 1 {
-                current.swap(idx, idx + 1);
-                on_change.run(current);
-            }
+        if let Some(idx) = current.iter().position(|c| c == &column_name)
+            && idx < current.len() - 1
+        {
+            current.swap(idx, idx + 1);
+            on_change.run(current);
         }
     });
 

@@ -86,7 +86,7 @@ fn main() {
             limit,
             category,
         } => {
-            let cat = category.as_ref().map(|s| s.as_str());
+            let cat = category.as_deref();
             if let Err(e) =
                 commands::view_stellarhosts_samples(Path::new(&path), limit, cat)
             {
@@ -103,7 +103,7 @@ fn main() {
             limit,
             category,
         } => {
-            let cat = category.as_ref().map(|s| s.as_str());
+            let cat = category.as_deref();
             if let Err(e) = commands::view_exoplanets_samples(&path, limit, cat) {
                 eprintln!("Error viewing exoplanets samples: {}", e);
             }

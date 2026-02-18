@@ -16,14 +16,8 @@ pub fn print_votable_headers(path: &str) {
     let mut row = votable_it.next_table_row_value_iter().unwrap().unwrap();
     let table_ref_mut = row.table();
     for elem in table_ref_mut.elems.iter() {
-        match elem {
-            TableElem::Field(field) => {
-                println!(
-                    "FIELD. name: {}; datatype: {}",
-                    field.name, field.datatype
-                );
-            }
-            _ => {}
+        if let TableElem::Field(field) = elem {
+            println!("FIELD. name: {}; datatype: {}", field.name, field.datatype);
         }
     }
 }
@@ -35,7 +29,7 @@ pub fn detect_nullable_columns(path: &str) -> HashSet<usize> {
     let mut votable_it = VOTableIterator::from_file(path).unwrap();
 
     while let Some(row_it) = votable_it.next_table_row_value_iter().unwrap() {
-        for (_, row) in row_it.enumerate() {
+        for row in row_it {
             match row {
                 Ok(r) => {
                     // Now iterate over row elements

@@ -1,4 +1,5 @@
 pub mod column_model;
+#[allow(clippy::module_inception)]
 pub mod table;
 
 pub use column_model::{

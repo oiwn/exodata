@@ -8,6 +8,8 @@ use leptos_router::NavigateOptions;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
 
+type TableQueryState = (usize, Option<String>, String, Vec<String>, String);
+
 #[component]
 pub fn StellarHostsTablePage() -> impl IntoView {
     // Read URL query parameters
@@ -112,29 +114,21 @@ pub fn StellarHostsTablePage() -> impl IntoView {
     );
 
     // Track when resource source changes to set loading state
-    Effect::new(
-        move |prev: Option<(
-            usize,
-            Option<String>,
-            String,
-            Vec<String>,
-            String,
-        )>| {
-            let current = (
-                current_page.get(),
-                sort_column.get(),
-                sort_order.get(),
-                selected_columns.get(),
-                filter_text.get(),
-            );
-            if let Some(prev_val) = prev {
-                if prev_val != current {
-                    set_is_loading.set(true);
-                }
-            }
-            current
-        },
-    );
+    Effect::new(move |prev: Option<TableQueryState>| {
+        let current = (
+            current_page.get(),
+            sort_column.get(),
+            sort_order.get(),
+            selected_columns.get(),
+            filter_text.get(),
+        );
+        if let Some(prev_val) = prev
+            && prev_val != current
+        {
+            set_is_loading.set(true);
+        }
+        current
+    });
 
     // Update has_loaded when resource completes successfully.
     Effect::new(move |_| {
@@ -166,7 +160,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                 if data.limit == 0 {
                     1
                 } else {
-                    (data.total + data.limit - 1) / data.limit
+                    data.total.div_ceil(data.limit)
                 }
             })
             .unwrap_or(1)
@@ -231,10 +225,10 @@ pub fn StellarHostsTablePage() -> impl IntoView {
 
             // Clear sort if the sorted column is no longer in selected columns
             let current_sort = sort_column.get();
-            if let Some(ref sort_col) = current_sort {
-                if !columns.contains(sort_col) {
-                    set_sort_column.set(None);
-                }
+            if let Some(ref sort_col) = current_sort
+                && !columns.contains(sort_col)
+            {
+                set_sort_column.set(None);
             }
 
             // Update URL with new state
@@ -414,8 +408,8 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                             {
                                                 let table_metadata = available_columns.get();
                                                 let all_columns: Vec<String> = table_metadata
-                                                    .iter()
-                                                    .map(|(k, _)| k.clone())
+                                                    .keys()
+                                                    .cloned()
                                                     .collect::<Vec<_>>();
                                                 let model = build_column_model(
                                                     &all_columns,

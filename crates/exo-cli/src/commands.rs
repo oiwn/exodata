@@ -27,13 +27,13 @@ pub fn view_stellarhosts_samples(
     let preview_df = df.slice(0, limit);
 
     // Define column categories based on field names we observed
-    let basic_cols = vec!["hostname", "hd_name", "hip_name", "tic_id"];
-    let position_cols = vec!["ra", "dec", "rastr", "decstr", "glon", "glat"];
+    let basic_cols = ["hostname", "hd_name", "hip_name", "tic_id"];
+    let position_cols = ["ra", "dec", "rastr", "decstr", "glon", "glat"];
     let stellar_props_cols = vec![
         "st_teff", "st_mass", "st_rad", "st_logg", "st_lum", "st_age", "st_met",
         "st_radv", "st_vsin",
     ];
-    let photometry_cols = vec![
+    let photometry_cols = [
         "sy_vmag",
         "sy_bmag",
         "sy_jmag",
@@ -253,15 +253,15 @@ pub fn view_exoplanets_samples(
     let preview_df = df.slice(0, limit);
 
     // Define column categories based on exoplanet fields we observed
-    let basic_cols = vec!["pl_name", "pl_letter", "hostname", "disc_year"];
-    let discovery_cols = vec![
+    let basic_cols = ["pl_name", "pl_letter", "hostname", "disc_year"];
+    let discovery_cols = [
         "discoverymethod",
         "disc_facility",
         "disc_instrument",
         "disc_telescope",
     ];
-    let orbital_cols = vec!["pl_orbper", "pl_orbsmax", "pl_orbeccen", "pl_eqt"];
-    let physical_cols = vec!["pl_massj", "pl_masse", "pl_rade", "pl_radj"];
+    let orbital_cols = ["pl_orbper", "pl_orbsmax", "pl_orbeccen", "pl_eqt"];
+    let physical_cols = ["pl_massj", "pl_masse", "pl_rade", "pl_radj"];
 
     // Select which columns to display based on category
     let cols_to_show = match category {
@@ -501,7 +501,7 @@ pub fn view_metadata(path: &str, columns: Option<&str>) -> Result<(), Error> {
     println!("Loading metadata from: {}\n", path);
 
     let all_metadata =
-        parse_votable_metadata(path).map_err(|e| anyhow::Error::msg(e))?;
+        parse_votable_metadata(path).map_err(anyhow::Error::msg)?;
 
     if let Some(col_filter) = columns {
         // Filter to specific columns

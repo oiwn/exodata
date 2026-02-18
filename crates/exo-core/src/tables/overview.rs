@@ -57,42 +57,39 @@ pub struct BandStats {
 /// Compute temperature distribution histogram
 /// Creates bins from 3000K to 10000K in 1000K increments
 pub fn temperature_distribution(df: &DataFrame) -> Vec<TemperatureBin> {
-    if let Ok(st_teff_col) = df.column("st_teff") {
-        if let Some(st_teff_series) = st_teff_col.as_series() {
-            if let Ok(st_teff_data) = st_teff_series.f64() {
-                let total_stars = st_teff_data.len() as f64;
-                let mut bin_counts = vec![0; 7]; // 7 bins from 3000-10000K
+    if let Ok(st_teff_col) = df.column("st_teff")
+        && let Some(st_teff_series) = st_teff_col.as_series()
+        && let Ok(st_teff_data) = st_teff_series.f64()
+    {
+        let total_stars = st_teff_data.len() as f64;
+        let mut bin_counts = [0; 7]; // 7 bins from 3000-10000K
 
-                // Count values in each bin
-                for opt_temp in st_teff_data.into_iter() {
-                    if let Some(temp) = opt_temp {
-                        if temp >= 3000.0 && temp <= 10000.0 {
-                            let bin_index = ((temp - 3000.0) / 1000.0) as usize;
-                            if bin_index < 7 {
-                                bin_counts[bin_index] += 1;
-                            }
-                        }
-                    }
+        // Count values in each bin
+        for temp in st_teff_data.into_iter().flatten() {
+            if (3000.0..=10000.0).contains(&temp) {
+                let bin_index = ((temp - 3000.0) / 1000.0) as usize;
+                if bin_index < 7 {
+                    bin_counts[bin_index] += 1;
                 }
-
-                // Create bins
-                let mut bins = Vec::new();
-                for (i, &count) in bin_counts.iter().enumerate() {
-                    let min_temp = 3000.0 + (i as f64) * 1000.0;
-                    let max_temp = min_temp + 1000.0;
-
-                    bins.push(TemperatureBin {
-                        range: format!("{:.0}-{:.0}K", min_temp, max_temp),
-                        min_temp,
-                        max_temp,
-                        star_count: count as u32,
-                        percentage: (count as f64 / total_stars) * 100.0,
-                    });
-                }
-
-                return bins;
             }
         }
+
+        // Create bins
+        let mut bins = Vec::new();
+        for (i, &count) in bin_counts.iter().enumerate() {
+            let min_temp = 3000.0 + (i as f64) * 1000.0;
+            let max_temp = min_temp + 1000.0;
+
+            bins.push(TemperatureBin {
+                range: format!("{:.0}-{:.0}K", min_temp, max_temp),
+                min_temp,
+                max_temp,
+                star_count: count as u32,
+                percentage: (count as f64 / total_stars) * 100.0,
+            });
+        }
+
+        return bins;
     }
 
     vec![]
@@ -105,77 +102,61 @@ pub fn discovery_timeline(df: &DataFrame) -> Vec<DecadeData> {
         df.column("disc_year"),
         df.column("st_teff"),
         df.column("hostname"),
-    ) {
-        if let (
-            Some(disc_year_series),
-            Some(st_teff_series),
-            Some(_hostname_series),
-        ) = (
-            disc_year_col.as_series(),
-            st_teff_col.as_series(),
-            hostname_col.as_series(),
-        ) {
-            if let Ok(disc_year_data) = disc_year_series.f64() {
-                if let Ok(st_teff_data) = st_teff_series.f64() {
-                    let mut decade_map: HashMap<i32, (u32, Vec<f64>)> =
-                        HashMap::new();
+    ) && let (Some(disc_year_series), Some(st_teff_series)) =
+        (disc_year_col.as_series(), st_teff_col.as_series())
+        && hostname_col.as_series().is_some()
+        && let Ok(disc_year_data) = disc_year_series.f64()
+        && let Ok(st_teff_data) = st_teff_series.f64()
+    {
+        let mut decade_map: HashMap<i32, (u32, Vec<f64>)> = HashMap::new();
 
-                    // Group by decade and collect temperatures
-                    for (i, opt_year) in disc_year_data.into_iter().enumerate() {
-                        if let Some(year) = opt_year {
-                            let decade = (year as i32 / 10) * 10;
+        // Group by decade and collect temperatures
+        for (i, opt_year) in disc_year_data.into_iter().enumerate() {
+            if let Some(year) = opt_year {
+                let decade = (year as i32 / 10) * 10;
 
-                            if i < st_teff_data.len() {
-                                let opt_temp = st_teff_data.get(i);
-                                if let Some(temp) = opt_temp {
-                                    if temp > 0.0 {
-                                        let entry = decade_map
-                                            .entry(decade)
-                                            .or_insert((0, Vec::new()));
-                                        entry.0 += 1;
-                                        entry.1.push(temp);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Create result
-                    let mut result = Vec::new();
-                    for (decade, (count, temps)) in decade_map {
-                        // Calculate median temperature
-                        let median_temp = if !temps.is_empty() {
-                            let mut sorted_temps = temps;
-                            sorted_temps
-                                .sort_by(|a, b| a.partial_cmp(b).unwrap());
-                            let len = sorted_temps.len();
-                            if len % 2 == 0 {
-                                Some(
-                                    (sorted_temps[len / 2 - 1]
-                                        + sorted_temps[len / 2])
-                                        / 2.0,
-                                )
-                            } else {
-                                Some(sorted_temps[len / 2])
-                            }
-                        } else {
-                            None
-                        };
-
-                        result.push(DecadeData {
-                            decade,
-                            stars_discovered: count,
-                            discovery_methods: HashMap::new(), // Simplified for now
-                            median_temp,
-                        });
-                    }
-
-                    // Sort by decade
-                    result.sort_by_key(|d| d.decade);
-                    return result;
+                if i < st_teff_data.len()
+                    && let Some(temp) = st_teff_data.get(i)
+                    && temp > 0.0
+                {
+                    let entry =
+                        decade_map.entry(decade).or_insert((0, Vec::new()));
+                    entry.0 += 1;
+                    entry.1.push(temp);
                 }
             }
         }
+
+        // Create result
+        let mut result = Vec::new();
+        for (decade, (count, temps)) in decade_map {
+            // Calculate median temperature
+            let median_temp = if !temps.is_empty() {
+                let mut sorted_temps = temps;
+                sorted_temps.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                let len = sorted_temps.len();
+                if len % 2 == 0 {
+                    Some(
+                        (sorted_temps[len / 2 - 1] + sorted_temps[len / 2]) / 2.0,
+                    )
+                } else {
+                    Some(sorted_temps[len / 2])
+                }
+            } else {
+                None
+            };
+
+            result.push(DecadeData {
+                decade,
+                stars_discovered: count,
+                discovery_methods: HashMap::new(), // Simplified for now
+                median_temp,
+            });
+        }
+
+        // Sort by decade
+        result.sort_by_key(|d| d.decade);
+        return result;
     }
 
     vec![]
@@ -188,10 +169,10 @@ pub fn catalog_crossmatch(df: &DataFrame) -> CatalogStats {
 
     // Count non-null values for each catalog
     let count_column = |col_name: &str| -> u32 {
-        if let Ok(col) = df.column(col_name) {
-            if let Some(series) = col.as_series() {
-                return (series.len() - series.null_count()) as u32;
-            }
+        if let Ok(col) = df.column(col_name)
+            && let Some(series) = col.as_series()
+        {
+            return (series.len() - series.null_count()) as u32;
         }
         0
     };
@@ -254,28 +235,27 @@ pub fn photometric_statistics(df: &DataFrame) -> PhotometricStats {
 
 /// Compute statistics for a specific photometric band
 fn compute_band_stats(df: &DataFrame, column: &str) -> Option<BandStats> {
-    if let Ok(col) = df.column(column) {
-        if let Some(series) = col.as_series() {
-            if let Ok(f64_series) = series.f64() {
-                let count = f64_series.len() as u32;
-                if count > 0 {
-                    let mean_mag = f64_series.mean().unwrap_or(0.0);
-                    let median_mag = f64_series.median().unwrap_or(0.0);
-                    let std_mag = f64_series.std(0).unwrap_or(0.0);
-                    let min_mag = f64_series.min().unwrap_or(0.0);
-                    let max_mag = f64_series.max().unwrap_or(0.0);
+    if let Ok(col) = df.column(column)
+        && let Some(series) = col.as_series()
+        && let Ok(f64_series) = series.f64()
+    {
+        let count = f64_series.len() as u32;
+        if count > 0 {
+            let mean_mag = f64_series.mean().unwrap_or(0.0);
+            let median_mag = f64_series.median().unwrap_or(0.0);
+            let std_mag = f64_series.std(0).unwrap_or(0.0);
+            let min_mag = f64_series.min().unwrap_or(0.0);
+            let max_mag = f64_series.max().unwrap_or(0.0);
 
-                    return Some(BandStats {
-                        band_name: column.to_string(),
-                        count,
-                        mean_mag,
-                        median_mag,
-                        std_mag,
-                        min_mag,
-                        max_mag,
-                    });
-                }
-            }
+            return Some(BandStats {
+                band_name: column.to_string(),
+                count,
+                mean_mag,
+                median_mag,
+                std_mag,
+                min_mag,
+                max_mag,
+            });
         }
     }
 
@@ -315,13 +295,11 @@ pub fn get_discovery_methods(
 ) -> Vec<(String, usize)> {
     let mut methods = HashMap::new();
 
-    if let Ok(col) = df.column("discoverymethod") {
-        if let Ok(str_col) = col.str() {
-            for i in 0..str_col.len() {
-                if let Some(method) = str_col.get(i) {
-                    *methods.entry(method.to_string()).or_insert(0) += 1;
-                }
-            }
+    if let Ok(col) = df.column("discoverymethod")
+        && let Ok(str_col) = col.str()
+    {
+        for method in str_col.into_iter().flatten() {
+            *methods.entry(method.to_string()).or_insert(0) += 1;
         }
     }
 
@@ -335,24 +313,22 @@ pub fn get_discovery_methods(
 pub fn get_planet_size_categories(df: &DataFrame) -> Vec<(String, usize)> {
     let mut categories = HashMap::new();
 
-    if let Ok(col) = df.column("pl_rade") {
-        if let Ok(f64_col) = col.f64() {
-            for i in 0..f64_col.len() {
-                if let Some(radius) = f64_col.get(i) {
-                    let category = if radius < 1.0 {
-                        "Sub-Earth (< 1 R⊕)"
-                    } else if radius < 1.5 {
-                        "Earth-like (1-1.5 R⊕)"
-                    } else if radius < 2.5 {
-                        "Super-Earth (1.5-2.5 R⊕)"
-                    } else if radius < 4.0 {
-                        "Neptune-like (2.5-4 R⊕)"
-                    } else {
-                        "Jupiter-like (> 4 R⊕)"
-                    };
-                    *categories.entry(category.to_string()).or_insert(0) += 1;
-                }
-            }
+    if let Ok(col) = df.column("pl_rade")
+        && let Ok(f64_col) = col.f64()
+    {
+        for radius in f64_col.into_iter().flatten() {
+            let category = if radius < 1.0 {
+                "Sub-Earth (< 1 R⊕)"
+            } else if radius < 1.5 {
+                "Earth-like (1-1.5 R⊕)"
+            } else if radius < 2.5 {
+                "Super-Earth (1.5-2.5 R⊕)"
+            } else if radius < 4.0 {
+                "Neptune-like (2.5-4 R⊕)"
+            } else {
+                "Jupiter-like (> 4 R⊕)"
+            };
+            *categories.entry(category.to_string()).or_insert(0) += 1;
         }
     }
 

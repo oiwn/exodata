@@ -34,16 +34,14 @@ pub fn count_non_null_values(
     df: &DataFrame,
     col_name: &str,
 ) -> Result<usize, Error> {
-    if let Ok(col) = df.column(col_name) {
-        if let Some(series) = col.as_series() {
-            if let Ok(f64_series) = series.f64() {
-                Ok(f64_series.len())
-            } else {
-                // For non-float columns, count non-null values
-                Ok(series.len() - series.null_count())
-            }
+    if let Ok(col) = df.column(col_name)
+        && let Some(series) = col.as_series()
+    {
+        if let Ok(f64_series) = series.f64() {
+            Ok(f64_series.len())
         } else {
-            Ok(0)
+            // For non-float columns, count non-null values
+            Ok(series.len() - series.null_count())
         }
     } else {
         Ok(0)
@@ -55,21 +53,19 @@ pub fn get_numeric_stats(
     df: &DataFrame,
     col_name: &str,
 ) -> Result<Option<NumericStats>, Error> {
-    if let Ok(col) = df.column(col_name) {
-        if let Some(series) = col.as_series() {
-            if let Ok(f64_series) = series.f64() {
-                if f64_series.len() > 0 {
-                    return Ok(Some(NumericStats {
-                        count: f64_series.len(),
-                        mean: f64_series.mean().unwrap_or(0.0),
-                        median: f64_series.median().unwrap_or(0.0),
-                        std: f64_series.std(0).unwrap_or(0.0),
-                        min: f64_series.min().unwrap_or(0.0),
-                        max: f64_series.max().unwrap_or(0.0),
-                    }));
-                }
-            }
-        }
+    if let Ok(col) = df.column(col_name)
+        && let Some(series) = col.as_series()
+        && let Ok(f64_series) = series.f64()
+        && !f64_series.is_empty()
+    {
+        return Ok(Some(NumericStats {
+            count: f64_series.len(),
+            mean: f64_series.mean().unwrap_or(0.0),
+            median: f64_series.median().unwrap_or(0.0),
+            std: f64_series.std(0).unwrap_or(0.0),
+            min: f64_series.min().unwrap_or(0.0),
+            max: f64_series.max().unwrap_or(0.0),
+        }));
     }
     Ok(None)
 }
@@ -92,44 +88,40 @@ pub fn create_histogram(
     max_val: f64,
     bins: usize,
 ) -> Result<Vec<HistogramBin>, Error> {
-    if let Ok(col) = df.column(col_name) {
-        if let Some(series) = col.as_series() {
-            if let Ok(f64_series) = series.f64() {
-                let bin_width = (max_val - min_val) / bins as f64;
-                let mut bin_counts = vec![0; bins];
-                let mut bin_edges = Vec::new();
+    if let Ok(col) = df.column(col_name)
+        && let Some(series) = col.as_series()
+        && let Ok(f64_series) = series.f64()
+    {
+        let bin_width = (max_val - min_val) / bins as f64;
+        let mut bin_counts = vec![0; bins];
+        let mut bin_edges = Vec::new();
 
-                // Create bin edges
-                for i in 0..=bins {
-                    bin_edges.push(min_val + i as f64 * bin_width);
+        // Create bin edges
+        for i in 0..=bins {
+            bin_edges.push(min_val + i as f64 * bin_width);
+        }
+
+        // Count values in each bin
+        for val in f64_series.into_iter().flatten() {
+            if (min_val..=max_val).contains(&val) {
+                let bin_index = ((val - min_val) / bin_width) as usize;
+                if bin_index < bins {
+                    bin_counts[bin_index] += 1;
                 }
-
-                // Count values in each bin
-                for opt_val in f64_series.into_iter() {
-                    if let Some(val) = opt_val {
-                        if val >= min_val && val <= max_val {
-                            let bin_index =
-                                ((val - min_val) / bin_width) as usize;
-                            if bin_index < bins {
-                                bin_counts[bin_index] += 1;
-                            }
-                        }
-                    }
-                }
-
-                // Create histogram bins
-                let mut histogram = Vec::new();
-                for i in 0..bins {
-                    histogram.push(HistogramBin {
-                        min: bin_edges[i],
-                        max: bin_edges[i + 1],
-                        count: bin_counts[i],
-                    });
-                }
-
-                return Ok(histogram);
             }
         }
+
+        // Create histogram bins
+        let mut histogram = Vec::new();
+        for i in 0..bins {
+            histogram.push(HistogramBin {
+                min: bin_edges[i],
+                max: bin_edges[i + 1],
+                count: bin_counts[i],
+            });
+        }
+
+        return Ok(histogram);
     }
 
     Ok(vec![])

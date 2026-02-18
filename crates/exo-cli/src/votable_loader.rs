@@ -73,65 +73,64 @@ pub fn load_votable_with_progress_timed(
         })
         .collect();
 
-    if let Some(data) = &table.data {
-        if let DataElem::TableData(table_data) = &data.data {
-            let rows_to_process = if let Some(limit) = limit {
-                std::cmp::min(limit, table_data.content.rows.len())
-            } else {
-                table_data.content.rows.len()
-            };
+    if let Some(data) = &table.data
+        && let DataElem::TableData(table_data) = &data.data
+    {
+        let rows_to_process = if let Some(limit) = limit {
+            std::cmp::min(limit, table_data.content.rows.len())
+        } else {
+            table_data.content.rows.len()
+        };
 
-            if let Some(pb) = progress {
-                pb.set_length(rows_to_process as u64);
-                pb.set_position(0);
-                pb.set_message("Reading rows");
-            }
-
-            let mut processed = 0;
-            const CHUNK: usize = 500;
-            let row_start = std::time::Instant::now();
-
-            for row in &table_data.content.rows[..rows_to_process] {
-                for (i, cell) in row.iter().enumerate() {
-                    if i < column_buffers.len() {
-                        column_buffers[i].push(cell)?;
-                    }
-                }
-                processed += 1;
-
-                if let Some(pb) = progress {
-                    if processed % CHUNK == 0 || processed == rows_to_process {
-                        pb.set_position(processed as u64);
-                    }
-                }
-            }
-
-            if let Some(pb) = progress {
-                pb.set_position(rows_to_process as u64);
-            }
-
-            let rows_elapsed = row_start.elapsed();
-
-            let series_vec: Result<Vec<Series>, Error> = column_buffers
-                .into_iter()
-                .zip(field_names.iter())
-                .map(|(buffer, name)| buffer.to_series(name))
-                .collect();
-
-            let series = series_vec?;
-            let columns: Vec<Column> =
-                series.into_iter().map(Column::from).collect();
-            let df = DataFrame::new(columns)
-                .map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
-
-            return Ok((
-                df,
-                LoadTiming {
-                    metadata: metadata_elapsed,
-                    rows: rows_elapsed,
-                },
-            ));
+        if let Some(pb) = progress {
+            pb.set_length(rows_to_process as u64);
+            pb.set_position(0);
+            pb.set_message("Reading rows");
         }
+
+        let mut processed = 0;
+        const CHUNK: usize = 500;
+        let row_start = std::time::Instant::now();
+
+        for row in &table_data.content.rows[..rows_to_process] {
+            for (i, cell) in row.iter().enumerate() {
+                if i < column_buffers.len() {
+                    column_buffers[i].push(cell)?;
+                }
+            }
+            processed += 1;
+
+            if let Some(pb) = progress
+                && (processed % CHUNK == 0 || processed == rows_to_process)
+            {
+                pb.set_position(processed as u64);
+            }
+        }
+
+        if let Some(pb) = progress {
+            pb.set_position(rows_to_process as u64);
+        }
+
+        let rows_elapsed = row_start.elapsed();
+
+        let series_vec: Result<Vec<Series>, Error> = column_buffers
+            .into_iter()
+            .zip(field_names.iter())
+            .map(|(buffer, name)| buffer.into_series(name))
+            .collect();
+
+        let series = series_vec?;
+        let columns: Vec<Column> = series.into_iter().map(Column::from).collect();
+        let df = DataFrame::new(columns)
+            .map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
+
+        return Ok((
+            df,
+            LoadTiming {
+                metadata: metadata_elapsed,
+                rows: rows_elapsed,
+            },
+        ));
     }
 
     Err(anyhow!("No table data found in VOTable"))
@@ -197,7 +196,7 @@ impl ColumnData {
         Ok(())
     }
 
-    fn to_series(self, name: &str) -> Result<Series, Error> {
+    fn into_series(self, name: &str) -> Result<Series, Error> {
         let series = match self {
             ColumnData::Float64(v) => Series::new(name.into(), v),
             ColumnData::Float32(v) => Series::new(name.into(), v),
