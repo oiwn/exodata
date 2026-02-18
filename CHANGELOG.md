@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-02-18
+
+- Added `tokio::task::spawn_blocking` for table cache-miss data requests in `src/server/common.rs`:
+  - `get_stellarhosts_data_cached`
+  - `get_exoplanets_data_cached`
+- Improved footer readability and content in `src/components/footer.rs`:
+  - increased contrast and updated version badge styling
+  - added `Developed by imscraping.ninja` link
+  - removed link underline
+- Removed redundant overview CTA (`Browse Stellar Hosts Catalog`) from `src/components/overview.rs` to keep navigation centered in the floating header.
+- Simplified and reorganized GitHub Actions workflows:
+  - `tests.yml` now runs only `cargo test`
+  - `code-quality.yml` handles formatting, clippy, and typos checks
+  - `deploy.yml` now runs as the final stage after successful `Tests` and `Code Quality` workflows for the same `main` commit SHA
+- Added typos dictionary config in `.typos.toml` to allow domain/tooling terms
+- Resolved strict clippy warnings across the workspace and verified with:
+  - `cargo clippy --all-features --workspace -- -D warnings`
+
 ## 2026-02-13
 
 - Resolved metadata delivery overhead (Issue #15) by moving table metadata to one-time global hydration:
