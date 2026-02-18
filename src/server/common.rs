@@ -272,16 +272,24 @@ pub async fn get_stellarhosts_data_cached(
         return Ok(table_result_from_cache_value(cached));
     }
 
-    let (rows, total, total_all, columns) = get_stellarhosts_data(
-        df,
-        all_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,
-        filter,
-    )?;
+    let df = df.clone();
+    let all_metadata = Arc::clone(all_metadata);
+    let (rows, total, total_all, columns) = tokio::task::spawn_blocking(
+        move || {
+            get_stellarhosts_data(
+                &df,
+                &all_metadata,
+                page,
+                limit,
+                sort_by,
+                order,
+                selected_columns,
+                filter,
+            )
+        },
+    )
+    .await
+    .map_err(|e| format!("Failed to join stellarhosts blocking task: {}", e))??;
 
     table_cache
         .insert(
@@ -324,16 +332,24 @@ pub async fn get_exoplanets_data_cached(
         return Ok(table_result_from_cache_value(cached));
     }
 
-    let (rows, total, total_all, columns) = get_exoplanets_data(
-        df,
-        all_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,
-        filter,
-    )?;
+    let df = df.clone();
+    let all_metadata = Arc::clone(all_metadata);
+    let (rows, total, total_all, columns) = tokio::task::spawn_blocking(
+        move || {
+            get_exoplanets_data(
+                &df,
+                &all_metadata,
+                page,
+                limit,
+                sort_by,
+                order,
+                selected_columns,
+                filter,
+            )
+        },
+    )
+    .await
+    .map_err(|e| format!("Failed to join exoplanets blocking task: {}", e))??;
 
     table_cache
         .insert(
