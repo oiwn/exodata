@@ -1,7 +1,7 @@
 #![recursion_limit = "256"]
 
 #[cfg(feature = "ssr")]
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     start_server().await;
 }
