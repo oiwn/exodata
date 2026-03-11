@@ -14,9 +14,6 @@ pub mod server;
 
 pub mod table;
 
-#[cfg(feature = "ssr")]
-pub mod stellarhosts;
-
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
