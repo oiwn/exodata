@@ -34,6 +34,7 @@ pub fn shell(
                 <script id=METADATA_SCRIPT_ID type="application/json">
                     {metadata_json}
                 </script>
+                <script>"document.documentElement.classList.add('pre-hydration')"</script>
                 <AutoReload options=options.clone() />
                 <HydrationScripts options=options.clone() />
                 {ga_measurement_id.map(|id| view! { <GoogleAnalytics measurement_id=id /> })}
@@ -88,13 +89,13 @@ pub fn App() -> impl IntoView {
                 <Route
                     path=StaticSegment("stellarhosts")
                     view=StellarHostsTablePage
-                    ssr=SsrMode::Async
+                    ssr=SsrMode::OutOfOrder
                 />
                 <Route path=path!("/stellarhosts/:hostname") view=StellarHostDetailPage/>
                 <Route
                     path=StaticSegment("exoplanets")
                     view=ExoplanetsTablePage
-                    ssr=SsrMode::Async
+                    ssr=SsrMode::OutOfOrder
                 />
                 <Route path=path!("/exoplanets/:pl_name") view=ExoplanetDetailPage/>
                 <Route path=StaticSegment("about") view=AboutPage/>

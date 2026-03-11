@@ -1,104 +1,76 @@
 # Current Context
 
-## Goal
-Implement backend-only in-process caching so overview and table requests avoid repeated heavy computations.
+## Active Tasks
 
-## Key Decisions
-- Cache library: `moka` (`future` feature), server side only.
-- Frontend does not use `moka`; keep lightweight Leptos resource/signal state.
-- Cache invalidation model: process-local cache, rebuilt on service restart.
-- No dedicated metadata endpoint in this phase.
+### Task 1: Fix Hydration Overlay (Issue #26) ✓ DONE
 
-## Cache Design (Current)
-- Overview cache:
-  - precompute `DataStats` at startup
-  - store in `ApiState.overview_stats`
-  - `get_stats()` returns cached value directly
-- Table cache:
-  - bounded in-memory cache (`max_entries = 400`)
-  - key fields: `table`, `page`, `limit`, `sort_by`, `order`, `columns`, `filter`
-  - key normalization: trim/lowercase for sort/filter, normalize empty values, keep column order
-  - value fields: `rows`, `columns`, `total`, `total_all`
-  - behavior: read-through (hit returns cached value, miss computes + inserts)
-  - startup prewarm: defaults for both tables (`page=1`, `limit=50`, no sort/filter/columns)
-  - startup prewarm policy: fail-fast if either prewarm call fails
+**Solution**: `pre-hydration` class added to `<html>` via inline script before body parses.
+CSS blocks interaction and shows overlay+spinner via `body::before` / `body::after`.
+Class removed by WASM after `hydrate_body()` completes.
 
-## Implemented
-- Added cache module and types:
-  - `src/server/cache.rs`
-  - `src/server/mod.rs` exports `cache`
-- Added `ApiState` cache fields:
-  - `overview_stats`
-  - `table_cache`
-  - in `src/server/handlers.rs`
-- Startup wiring:
-  - precompute overview stats
-  - build table cache
-  - prewarm default table entries before listener bind
-  - in `src/main.rs`
-- Request path wiring:
-  - `get_stats()` now returns `overview_stats`
-  - table server functions use cached wrappers
-  - REST table handlers use cached wrappers
-  - in `src/server/functions.rs`, `src/server/common.rs`, `src/server/handlers.rs`
-- Issue #15 metadata delivery refactor (resolved):
-  - server injects metadata JSON in global shell (`<script type="application/json">`)
-  - client initializes shared metadata store once at app startup
-  - table server-function responses are data-only (no metadata field)
-  - table cache values are data-only (no metadata field)
-  - table components read metadata from global hydrated store for selector/tooltips
-  - metadata stays available on client navigation from `/` to table pages
-  - in `src/app.rs`, `src/main.rs`, `src/metadata.rs`, `src/server/cache.rs`, `src/server/common.rs`, `src/server/functions.rs`, `src/components/*table*.rs`, `src/table/table.rs`, `src/components/column_selector.rs`
-- SSR hydration stability fix:
-  - moved metadata JSON script injection into `<head>` to avoid body hydration marker mismatch
-  - avoids `failed_to_cast_marker_node` / unrecoverable hydration panic caused by extra body node
-- Added cache tests:
-  - key normalization tests in `src/server/cache.rs`
-  - miss/hit behavior in `src/server/common.rs`
-  - prewarm key population checks in `src/server/common.rs`
-  - restart semantics (fresh cache starts empty) in `src/server/common.rs`
-- Baseline e2e test integration (local):
-  - Playwright smoke suite added under `end2end/tests/smoke.spec.ts`
-  - 3 tests:
-    - SSR + hydration `/stellarhosts`
-    - SSR + hydration `/exoplanets`
-    - `/` -> client navigation to `/stellarhosts` keeps metadata available
-  - readiness guard added to avoid startup race (`ERR_CONNECTION_REFUSED`)
-  - Playwright config narrowed to deterministic local baseline (`chromium`, `workers=1`, `fullyParallel=false`)
-  - README section added for e2e setup/run/report workflow
-- Build fix:
-  - `cargo leptos build` wasm fix for `uuid` (`js` feature) in `Cargo.toml`
-- Deployment visibility:
-  - added a global app footer that displays `env!("CARGO_PKG_VERSION")` from `Cargo.toml`
-  - footer renders on all routes via `App` layout
-  - in `src/components/footer.rs`, `src/components/mod.rs`, `src/app.rs`
-- Local runtime spot-check:
-  - verified `/stellarhosts` returns complete chunked SSR HTML via curl (`HTTP 200`, full body)
+**What didn't work during implementation**:
+- `html::before` pseudo-element — doesn't render; use `html.pre-hydration body::before` instead
+- `html.pre-hydration *` cursor/pointer-events works fine
 
-## Pending
-- Formalize post-fix verification coverage:
-  - scripted checks for explicit-query SSR routes and plain SSR routes in one pass
-  - scripted checks for REST table endpoints in same verification run
-- Expand e2e coverage incrementally:
-  - payload regression checks (table responses remain metadata-free)
-  - optional CI integration after local flow is stable for team usage
-- Optional cleanup:
-  - move cache size `400` to env/config
-  - evaluate `moka::future::Cache::get_with` to deduplicate concurrent misses
+**Files changed**:
+- `src/app.rs` — inline `<script>` in `shell()` head
+- `src/lib.rs` — `web_sys` class removal after hydration
+- `style/tailwind.css` — overlay + spinner via `body::before` / `body::after`
+- `Cargo.toml` — `web-sys` added with features, scoped to `hydrate`
 
-## Next Session Summary
-Start from these concrete tasks:
+---
 
-1. Re-validate cache behavior after Task 0 changes:
-- targeted server/cache tests
-- startup log shows prewarm completion before listener bind
+### Task 2: Fix SSR 504 on Table Routes
 
-2. Add scripted runtime verification:
-- plain SSR routes: `/stellarhosts`, `/exoplanets`
-- explicit-query SSR routes for both pages
-- REST endpoints: `/rest/stellarhosts`, `/rest/exoplanets`
-- confirm no chunked-encoding SSR failures in these checks
+See `specs/ssr-streaming-issue.md` for full details.
 
-3. Extend e2e suite (post-baseline):
-- add payload regression assertions (metadata not present in table responses)
-- consider CI wiring after local baseline remains stable
+**TL;DR**: `/exoplanets` and `/stellarhosts` routes use `SsrMode::Async` which holds the HTTP
+connection open until all resources resolve. On a 1-vCPU DO droplet this exceeds Nginx's
+`proxy_read_timeout`, causing 504. `spawn_blocking` for Polars is **already implemented**
+(common.rs:283-299, 345-361) — that was never the root cause.
+
+**Chosen fix**: Change `ssr=SsrMode::Async` to `ssr=SsrMode::OutOfOrder` in `src/app.rs:91,97`.
+This sends the HTML shell immediately and streams resource data in, eliminating the timeout.
+
+**Status**: Implemented (`src/app.rs:91,97`). Needs production verification.
+
+---
+
+### Task 3: Lazy Routes (Future / Post-hydration-fix)
+
+**Concept**: Split WASM bundle by route using `#[lazy]` / `cargo leptos --split`.
+Only load WASM for a route when navigated to.
+
+**Candidates** (high value routes):
+- `/exoplanets` — heavy table + column selector
+- `/stellarhosts` — heavy table + column selector
+- `/exoplanets/:pl_name` — detail view
+- `/stellarhosts/:hostname` — detail view
+
+**Why defer**: Leptos 0.8 lazy routes have known instabilities (panic on multiple loads,
+hydration fallback bugs). Also requires switching `hydrate_body()` → `hydrate_lazy()` in
+`lib.rs`, which interacts with the overlay fix. Do after Tasks 1 and 2 are stable.
+
+**Note**: WASM size optimization is already maxed (`opt-level='z'`, `lto=true`,
+`codegen-units=1`, `wasm-release` profile). Lazy routes would give the next meaningful
+reduction.
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/app.rs` | Shell (head/body), App component, route definitions |
+| `src/lib.rs` | WASM hydration entry point (`hydrate_body`) |
+| `src/server/common.rs` | Polars data logic + cached variants with `spawn_blocking` |
+| `src/server/functions.rs` | Leptos server functions (thin wrappers over common.rs) |
+| `src/server/handlers.rs` | Axum REST handlers + `ApiState` struct |
+| `src/main.rs` | Server startup, data loading, prewarm, Axum router setup |
+| `style/tailwind.css` | Tailwind CSS input file |
+| `Cargo.toml` | `wasm-release` profile, `hydrate`/`ssr` features |
+
+## References
+- Issue #26: https://github.com/oiwn/exoplanets-catalog/issues/26
+- Leptos hydration docs: https://book.leptos.dev/ssr/24_hydration_bugs.html
+- Leptos lazy routes example: https://github.com/leptos-rs/leptos/tree/main/examples/lazy_routes
