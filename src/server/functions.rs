@@ -107,7 +107,7 @@ pub async fn get_stellarhosts_page(
     columns: Option<String>,
     filter: Option<String>,
 ) -> Result<TableData, ServerFnError> {
-    // Get ApiState from leptos context
+    tracing::info!("get_stellarhosts_page called: page={page} columns={columns:?}");
     let state = expect_context::<ApiState>();
 
     // Parse columns parameter (comma-separated column names)
@@ -132,7 +132,7 @@ pub async fn get_stellarhosts_page(
     .await
     .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
 
-    // Wrap in TableData response
+    tracing::info!("get_stellarhosts_page done: total={total}");
     Ok(TableData {
         rows,
         columns,

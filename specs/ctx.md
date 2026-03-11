@@ -2,23 +2,23 @@
 
 ## Active Tasks
 
-### Task 1: Fix Hydration Overlay (Issue #26) ✓ DONE
+### Task 1: Proper logging
 
-**Solution**: `pre-hydration` class added to `<html>` via inline script before body parses.
-CSS blocks interaction and shows overlay+spinner via `body::before` / `body::after`.
-Class removed by WASM after `hydrate_body()` completes.
+Add `tracing` instrumentation to the server-side data path to diagnose the SSR streaming failure.
+Without logs we can't tell whether the server function is called, completes, panics, or is never invoked.
 
-**What didn't work during implementation**:
-- `html::before` pseudo-element — doesn't render; use `html.pre-hydration body::before` instead
-- `html.pre-hydration *` cursor/pointer-events works fine
+**Already done**:
+- `get_stellarhosts_page` — logs entry (`page`, `columns`) and exit (`total`) via `tracing::info!`
 
-**Files changed**:
-- `src/app.rs` — inline `<script>` in `shell()` head
-- `src/lib.rs` — `web_sys` class removal after hydration
-- `style/tailwind.css` — overlay + spinner via `body::before` / `body::after`
-- `Cargo.toml` — `web-sys` added with features, scoped to `hydrate`
+**Still needed**:
+- `get_exoplanets_page` — same entry/exit pattern
+- `get_stellarhosts_data_cached` / `get_exoplanets_data_cached` — log cache hit vs miss
+- Any panic/error paths in server functions should log via `tracing::error!`
 
----
+**What to look for in production logs after deploy**:
+1. Neither log line → server function never called → Leptos SSR not resolving resource
+2. Entry logged, exit not → panic or error inside the function body
+3. Both logged → function is fine, problem is in Leptos streaming/serialization layer
 
 ### Task 2: Fix SSR 504 on Table Routes
 
