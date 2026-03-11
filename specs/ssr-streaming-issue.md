@@ -2,86 +2,110 @@
 
 ## Problem
 
-Browser shows `net::ERR_INCOMPLETE_CHUNKED_ENCODING 200 (OK)` when loading `/exoplanets` or `/stellarhosts` in production. Response stream starts with 200 and chunked transfer, sends partial body (~49KB), then stalls until timeout.
+Browser shows 504 Gateway Time-out on `/exoplanets` or `/stellarhosts` in production.
+Previously was `net::ERR_INCOMPLETE_CHUNKED_ENCODING` (stalling at ~49KB), now escalated to
+full timeout.
 
 ## Environment
 
 - DigitalOcean droplet: s-1vcpu-2gb (1 vCPU, 2GB RAM)
-- Docker, Nginx reverse proxy -> 127.0.0.1:3000
-- Axum + Leptos 0.8 SSR with streaming
+- Docker, Nginx reverse proxy → 127.0.0.1:3000
+- Axum + Leptos 0.8 SSR
 
-## Key Observations
+## Root Cause (Revised)
 
-| Symptom | Observation |
-|---------|-------------|
-| Direct curl to app also stalls | Issue is in app, not Nginx |
-| REST API returns instantly | `/rest/exoplanets?page=1&limit=50` returns in ~1.7ms |
-| ~49KB partial response | Shell renders, then stalls waiting for Resource |
-| Cache prewarm works | Runs at startup with no SSR contention |
-| Works in dev | More resources, different timing |
+**`SsrMode::Async` holds the HTTP connection open until all resources resolve.**
 
-## Root Cause
-
-CPU-bound Polars operations in `get_table_data()` (src/server/common.rs:33-146) run synchronously on the async executor during SSR streaming. On a single-vCPU machine, this blocks the tokio runtime during the critical SSR rendering phase.
-
-**Why REST works but SSR hangs:**
-- REST: Simple request -> await result -> return JSON
-- SSR: Complex streaming pipeline where Leptos coordinates rendering while resolving `Resource` futures. When Polars hogs the executor, the streaming stalls.
-
-## Solutions
-
-### Solution 1: Wrap Polars in `spawn_blocking` (Recommended)
-
-In `src/server/common.rs`, wrap the calls inside `get_*_data_cached()` functions:
-
+In `src/app.rs:91,97`:
 ```rust
-let df = df.clone();
-let all_metadata = all_metadata.clone();
-let sort_by_clone = sort_by.clone();
-let order_clone = order.clone();
-let selected_columns_clone = selected_columns.clone();
-let filter_clone = filter.clone();
-
-let result = tokio::task::spawn_blocking(move || {
-    get_stellarhosts_data(
-        &df,
-        &all_metadata,
-        page,
-        limit,
-        sort_by_clone,
-        order_clone,
-        selected_columns_clone,
-        filter_clone,
-    )
-})
-.await
-.map_err(|e| format!("spawn_blocking error: {}", e))?;
+<Route path=StaticSegment("stellarhosts") view=StellarHostsTablePage ssr=SsrMode::Async />
+<Route path=StaticSegment("exoplanets")   view=ExoplanetsTablePage   ssr=SsrMode::Async />
 ```
 
-This offloads CPU work to the blocking thread pool, keeping the async executor free for SSR streaming.
+`SsrMode::Async` tells Leptos: wait for ALL resources to resolve before sending any HTML.
+On a 1-vCPU machine, under any load or contention, this can easily exceed Nginx's default
+`proxy_read_timeout` (60s), producing a 504.
 
-### Solution 2: Increase blocking thread pool
+**Why `spawn_blocking` wasn't the fix:**
+`spawn_blocking` for Polars is already implemented (`server/common.rs:283-299, 345-361`).
+It offloads CPU work but doesn't change the fundamental problem: `SsrMode::Async` still
+holds the connection open waiting for the result before sending a single byte.
 
-In `src/main.rs`, configure tokio with more threads:
+**Why REST API works fine:**
+REST handlers at `/rest/exoplanets` return a simple JSON response — no SSR streaming
+pipeline, no Leptos resource coordination overhead.
+
+## Chosen Solution: Change to `SsrMode::OutOfOrder`
+
+**File**: `src/app.rs`, lines 91 and 97.
 
 ```rust
-#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+// Before:
+<Route path=StaticSegment("stellarhosts") view=StellarHostsTablePage ssr=SsrMode::Async />
+<Route path=StaticSegment("exoplanets")   view=ExoplanetsTablePage   ssr=SsrMode::Async />
+
+// After:
+<Route path=StaticSegment("stellarhosts") view=StellarHostsTablePage ssr=SsrMode::OutOfOrder />
+<Route path=StaticSegment("exoplanets")   view=ExoplanetsTablePage   ssr=SsrMode::OutOfOrder />
 ```
 
-Or use `tokio::runtime::Builder` to increase `max_blocking_threads`.
+`SsrMode::OutOfOrder`:
+- Sends the HTML shell immediately (no 504 possible)
+- Streams resource data into `<Suspense>` placeholders as resources resolve
+- Client patches the DOM when chunks arrive
+- Requires `<Suspense>` wrappers around resource-dependent UI (check table components)
 
-### Solution 3: Upgrade droplet
+**Risk**: Low. The table components likely already have `<Suspense>` since they show loading
+states. If not, adding `<Suspense fallback=...>` around the table body is straightforward.
 
-The s-1vcpu-2gb is marginal for SSR + Polars. A 2-vCPU instance would give the runtime more breathing room.
+## Alternative Solutions
+
+### Alt 1: `SsrMode::InOrder`
+Like OutOfOrder but streams in document order (simpler mental model, slightly slower). Same
+benefit of immediate shell response. Good fallback if OutOfOrder causes issues.
+
+### Alt 2: Increase Nginx `proxy_read_timeout`
+```nginx
+proxy_read_timeout 120s;
+```
+Band-aid only — doesn't fix the underlying stall, just gives more rope.
+
+### Alt 3: Increase tokio blocking threads
+In `src/main.rs`, replace `#[tokio::main]` with a custom runtime:
+```rust
+fn main() {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .max_blocking_threads(8)
+        .build()
+        .unwrap()
+        .block_on(start_server());
+}
+```
+Helps if spawn_blocking is queuing up, but doesn't address the SsrMode issue.
+
+### Alt 4: Verify cache prewarm key matches SSR request
+The prewarm at startup uses `page=1, limit=50, None, None, None, None`. If the table
+component's initial Resource call uses different defaults (e.g., different limit), every SSR
+request is a cache miss. Add tracing to `get_stellarhosts_data_cached` and check logs.
 
 ## Files Affected
 
-- `src/server/common.rs` - cached data functions
-- `src/server/functions.rs` - Leptos server functions (callers)
-- `src/server/handlers.rs` - REST handlers (callers, already use spawn_blocking for SQL)
+- `src/app.rs` — change `SsrMode::Async` → `SsrMode::OutOfOrder` (2 lines)
+- `src/components/stellarhosts_table.rs` — verify `<Suspense>` wraps resource-dependent UI
+- `src/components/exoplanets_table.rs` — same
 
 ## Status
 
-- [ ] Implement Solution 1 (spawn_blocking)
-- [ ] Test locally with production build
+- [x] `spawn_blocking` implemented (already done in common.rs)
+- [ ] Change `SsrMode::Async` → `SsrMode::OutOfOrder`
+- [ ] Verify `<Suspense>` wrappers in table components
+- [ ] Test locally with `cargo leptos build --release`
 - [ ] Deploy and verify on production
+
+## History
+
+- **Initial failure**: `ERR_INCOMPLETE_CHUNKED_ENCODING` — stream stalled at ~49KB
+- **After spawn_blocking added**: Escalated to 504 Gateway Time-out (Nginx gave up waiting)
+- **2026-02-18**: Still unresolved, 504 confirmed in production
+- **2026-03-10**: Root cause reidentified as `SsrMode::Async` + Nginx timeout interaction

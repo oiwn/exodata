@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-03-11
+
+- Fixed hydration gap (Issue #26): users could interact with SSR content before WASM hydration completed
+  - Added inline `<script>` to `shell()` head that sets `pre-hydration` class on `<html>` before body parses (`src/app.rs`)
+  - CSS blocks interaction and shows dark overlay + spinner via `body::before` / `body::after` while class is present (`style/tailwind.css`)
+  - WASM removes the class after `hydrate_body()` completes (`src/lib.rs`)
+  - Added `web-sys` dependency scoped to `hydrate` feature only (`Cargo.toml`)
+- Fixed SSR 504 on table routes: changed `SsrMode::Async` → `SsrMode::OutOfOrder` for `/stellarhosts` and `/exoplanets` in `src/app.rs`
+  - `Async` held the HTTP connection open until resources resolved, exceeding Nginx `proxy_read_timeout`
+  - `OutOfOrder` sends the HTML shell immediately and streams resource data into `<Transition>` boundaries
+- Updated Polars from 0.52 to 0.53 (`Cargo.toml`)
+  - aligned `[dependencies]` and `[dev-dependencies]` to 0.53 with consistent feature flags
+  - replaced removed `get_column_names_str()` with `get_column_names()` in `src/stellarhosts.rs`
+
 ## 2026-02-18 (Update 2)
 
 - Adjusted SSR mode for table pages in `src/app.rs`:

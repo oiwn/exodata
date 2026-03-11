@@ -23,4 +23,8 @@ pub fn hydrate() {
     use crate::app::App;
     console_error_panic_hook::set_once();
     leptos::mount::hydrate_body(App);
+    let _ = web_sys::window()
+        .and_then(|w| w.document())
+        .and_then(|d| d.document_element())
+        .map(|el| el.class_list().remove_1("pre-hydration").ok());
 }

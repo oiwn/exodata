@@ -11,9 +11,9 @@ pub async fn get_exoplanet_data() -> Result<String, ServerFnError> {
         Ok(df) => {
             // Get column names
             let columns: Vec<String> = df
-                .get_column_names_str()
+                .get_column_names()
                 .iter()
-                .map(|&name| name.to_string())
+                .map(|name| name.to_string())
                 .collect();
 
             // Get first few rows as a preview (limit to 10 rows)
@@ -28,8 +28,8 @@ pub async fn get_exoplanet_data() -> Result<String, ServerFnError> {
             for i in 0..preview.height() {
                 let row_values: Vec<String> = (0..preview.width())
                     .map(|j| {
-                        let col_name = preview.get_column_names_str()[j];
-                        let col = preview.column(col_name).unwrap();
+                        let col_name = preview.get_column_names()[j].to_string();
+                        let col = preview.column(&col_name).unwrap();
                         match col.get(i) {
                             Ok(val) => format!("{:?}", val),
                             Err(_) => "null".to_string(),
