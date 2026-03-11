@@ -121,7 +121,7 @@ pub fn load_votable_with_progress_timed(
 
         let series = series_vec?;
         let columns: Vec<Column> = series.into_iter().map(Column::from).collect();
-        let df = DataFrame::new(columns)
+        let df = DataFrame::new(rows_to_process, columns)
             .map_err(|e| anyhow!("Failed to create DataFrame: {}", e))?;
 
         return Ok((
