@@ -1,14 +1,13 @@
-use crate::components::about::AboutPage;
-use crate::components::exoplanet_detail::ExoplanetDetailPage;
-use crate::components::exoplanets_table::ExoplanetsTablePage;
-use crate::components::footer::VersionFooter;
-use crate::components::google_analytics::GoogleAnalytics;
-use crate::components::navbar::Navbar;
-use crate::components::overview::OverviewPage;
-use crate::components::stellarhost_detail::StellarHostDetailPage;
-use crate::components::stellarhosts_table::StellarHostsTablePage;
+use crate::components::{
+    about::AboutPage, exoplanet_detail::ExoplanetDetailPage,
+    exoplanets_table::ExoplanetsTablePage, footer::VersionFooter,
+    google_analytics::GoogleAnalytics, navbar::Navbar, overview::OverviewPage,
+    stellarhost_detail::StellarHostDetailPage,
+    stellarhosts_table::StellarHostsTablePage,
+};
 use crate::error_template::{AppError, ErrorTemplate};
 use crate::metadata::{METADATA_SCRIPT_ID, provide_app_metadata_store};
+
 use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos::prelude::*;

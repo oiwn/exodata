@@ -2,8 +2,6 @@
 
 ## Active Tasks
 
-### Task 0: removing obsolete code!
-
 ### Task 1: Proper logging
 
 Add `tracing` instrumentation to the server-side data path to diagnose the SSR streaming failure.

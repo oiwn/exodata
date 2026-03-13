@@ -10,19 +10,10 @@ use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde_json::{Value, json};
 use std::collections::HashMap;
-use std::sync::Arc;
 
-/// Result type for stellarhosts data operations
+/// Result type for table data operations.
 /// Returns: (rows, filtered_total, unfiltered_total, columns)
 pub type TableResult = Result<(Vec<Value>, usize, usize, Vec<String>), String>;
-
-/// Result type for stellarhosts data operations
-/// Returns: (rows, filtered_total, unfiltered_total, columns)
-pub type StellarHostsResult = TableResult;
-
-/// Result type for exoplanets data operations
-/// Returns: (rows, filtered_total, unfiltered_total, columns)
-pub type ExoplanetsResult = TableResult;
 pub type HostPlanetsResult =
     Result<(Vec<Value>, Vec<String>, HashMap<String, ColumnMetadata>), String>;
 
@@ -31,19 +22,30 @@ pub struct TableConfig<'a> {
     pub default_columns: &'a [&'a str],
 }
 
+/// Query parameters for paginated table data requests.
+pub struct TableQuery {
+    pub page: usize,
+    pub limit: usize,
+    pub sort_by: Option<String>,
+    pub order: Option<String>,
+    pub selected_columns: Option<Vec<String>>,
+    pub filter: Option<String>,
+}
+
 /// Generic table data query with shared pagination/sort/select logic.
-#[allow(clippy::too_many_arguments)]
 pub fn get_table_data(
     df: &DataFrame,
-    _all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-    selected_columns: Option<Vec<String>>,
-    filter: Option<String>,
+    query: TableQuery,
     config: TableConfig<'_>,
 ) -> TableResult {
+    let TableQuery {
+        page,
+        limit,
+        sort_by,
+        order,
+        selected_columns,
+        filter,
+    } = query;
     // Clone the dataframe to work with it
     let mut df = df.clone();
 
@@ -148,79 +150,23 @@ pub fn get_table_data(
     Ok((rows, total, total_all, columns))
 }
 
-/// Get paginated stellar hosts data with sorting
-///
+/// Get paginated stellar hosts data with sorting.
 /// This is the core business logic that both server functions and REST handlers use.
-/// It performs Polars operations and returns the data in a simple format.
-///
-/// # Arguments
-/// * `df` - Reference to the stellarhosts DataFrame
-/// * `all_metadata` - Reference to all column metadata
-/// * `page` - Page number (1-indexed)
-/// * `limit` - Number of rows per page
-/// * `sort_by` - Optional column name to sort by
-/// * `order` - Sort order ("asc" or "desc")
-/// * `selected_columns` - Optional list of column names to display
-///
-/// # Returns
-/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names)
-#[allow(clippy::too_many_arguments)]
-pub fn get_stellarhosts_data(
-    df: &DataFrame,
-    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-    selected_columns: Option<Vec<String>>,
-    filter: Option<String>,
-) -> StellarHostsResult {
-    // Define default columns if none specified
+pub fn get_stellarhosts_data(df: &DataFrame, query: TableQuery) -> TableResult {
     let default_columns =
         vec!["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
     get_table_data(
         df,
-        all_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,
-        filter,
+        query,
         TableConfig {
             default_columns: &default_columns,
         },
     )
 }
 
-/// Get paginated exoplanets data with sorting
-///
+/// Get paginated exoplanets data with sorting.
 /// This is the core business logic that both server functions and REST handlers use.
-/// It performs Polars operations and returns the data in a simple format.
-///
-/// # Arguments
-/// * `df` - Reference to the exoplanets DataFrame
-/// * `all_metadata` - Reference to all column metadata
-/// * `page` - Page number (1-indexed)
-/// * `limit` - Number of rows per page
-/// * `sort_by` - Optional column name to sort by
-/// * `order` - Sort order ("asc" or "desc")
-/// * `selected_columns` - Optional list of column names to display
-///
-/// # Returns
-/// A tuple of (rows as JSON, filtered_total, unfiltered_total, column names)
-#[allow(clippy::too_many_arguments)]
-pub fn get_exoplanets_data(
-    df: &DataFrame,
-    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-    selected_columns: Option<Vec<String>>,
-    filter: Option<String>,
-) -> ExoplanetsResult {
-    // Define default columns if none specified
+pub fn get_exoplanets_data(df: &DataFrame, query: TableQuery) -> TableResult {
     let default_columns = vec![
         "pl_name",
         "hostname",
@@ -232,13 +178,7 @@ pub fn get_exoplanets_data(
     ];
     get_table_data(
         df,
-        all_metadata,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,
-        filter,
+        query,
         TableConfig {
             default_columns: &default_columns,
         },
@@ -252,26 +192,19 @@ fn table_result_from_cache_value(
 }
 
 /// Cached variant of `get_stellarhosts_data`.
-#[allow(clippy::too_many_arguments)]
 pub async fn get_stellarhosts_data_cached(
     df: &DataFrame,
-    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
     table_cache: &TableCache,
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-    selected_columns: Option<Vec<String>>,
-    filter: Option<String>,
-) -> StellarHostsResult {
+    query: TableQuery,
+) -> TableResult {
     let key = normalize_table_cache_key(
         TableKind::StellarHosts,
-        page,
-        limit,
-        sort_by.clone(),
-        order.clone(),
-        selected_columns.clone(),
-        filter.clone(),
+        query.page,
+        query.limit,
+        query.sort_by.clone(),
+        query.order.clone(),
+        query.selected_columns.clone(),
+        query.filter.clone(),
     );
 
     if let Some(cached) = table_cache.get(&key).await {
@@ -279,24 +212,12 @@ pub async fn get_stellarhosts_data_cached(
     }
 
     let df = df.clone();
-    let all_metadata = Arc::clone(all_metadata);
     let (rows, total, total_all, columns) =
-        tokio::task::spawn_blocking(move || {
-            get_stellarhosts_data(
-                &df,
-                &all_metadata,
-                page,
-                limit,
-                sort_by,
-                order,
-                selected_columns,
-                filter,
-            )
-        })
-        .await
-        .map_err(|e| {
-            format!("Failed to join stellarhosts blocking task: {}", e)
-        })??;
+        tokio::task::spawn_blocking(move || get_stellarhosts_data(&df, query))
+            .await
+            .map_err(|e| {
+                format!("Failed to join stellarhosts blocking task: {}", e)
+            })??;
 
     table_cache
         .insert(
@@ -314,26 +235,19 @@ pub async fn get_stellarhosts_data_cached(
 }
 
 /// Cached variant of `get_exoplanets_data`.
-#[allow(clippy::too_many_arguments)]
 pub async fn get_exoplanets_data_cached(
     df: &DataFrame,
-    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
     table_cache: &TableCache,
-    page: usize,
-    limit: usize,
-    sort_by: Option<String>,
-    order: Option<String>,
-    selected_columns: Option<Vec<String>>,
-    filter: Option<String>,
-) -> ExoplanetsResult {
+    query: TableQuery,
+) -> TableResult {
     let key = normalize_table_cache_key(
         TableKind::Exoplanets,
-        page,
-        limit,
-        sort_by.clone(),
-        order.clone(),
-        selected_columns.clone(),
-        filter.clone(),
+        query.page,
+        query.limit,
+        query.sort_by.clone(),
+        query.order.clone(),
+        query.selected_columns.clone(),
+        query.filter.clone(),
     );
 
     if let Some(cached) = table_cache.get(&key).await {
@@ -341,24 +255,12 @@ pub async fn get_exoplanets_data_cached(
     }
 
     let df = df.clone();
-    let all_metadata = Arc::clone(all_metadata);
     let (rows, total, total_all, columns) =
-        tokio::task::spawn_blocking(move || {
-            get_exoplanets_data(
-                &df,
-                &all_metadata,
-                page,
-                limit,
-                sort_by,
-                order,
-                selected_columns,
-                filter,
-            )
-        })
-        .await
-        .map_err(|e| {
-            format!("Failed to join exoplanets blocking task: {}", e)
-        })??;
+        tokio::task::spawn_blocking(move || get_exoplanets_data(&df, query))
+            .await
+            .map_err(|e| {
+                format!("Failed to join exoplanets blocking task: {}", e)
+            })??;
 
     table_cache
         .insert(
@@ -380,7 +282,7 @@ pub async fn get_exoplanets_data_cached(
 /// Returns all columns for each matching stellar host row.
 pub fn get_stellar_host_by_name(
     df: &DataFrame,
-    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    all_metadata: &HashMap<String, ColumnMetadata>,
     hostname: &str,
 ) -> Result<(Vec<Value>, HashMap<String, ColumnMetadata>), String> {
     let filtered = df
@@ -396,7 +298,7 @@ pub fn get_stellar_host_by_name(
 
     let rows = dataframe_to_json(&filtered)?;
 
-    Ok((rows, all_metadata.as_ref().clone()))
+    Ok((rows, all_metadata.clone()))
 }
 
 /// Get all exoplanet records for a given planet name
@@ -404,7 +306,7 @@ pub fn get_stellar_host_by_name(
 /// Returns all columns for each matching exoplanet row.
 pub fn get_exoplanet_by_name(
     df: &DataFrame,
-    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    all_metadata: &HashMap<String, ColumnMetadata>,
     pl_name: &str,
 ) -> Result<(Vec<Value>, HashMap<String, ColumnMetadata>), String> {
     let filtered = df
@@ -420,7 +322,7 @@ pub fn get_exoplanet_by_name(
 
     let rows = dataframe_to_json(&filtered)?;
 
-    Ok((rows, all_metadata.as_ref().clone()))
+    Ok((rows, all_metadata.clone()))
 }
 
 /// Get planets for a given hostname
@@ -428,7 +330,7 @@ pub fn get_exoplanet_by_name(
 /// Returns planets with selected columns for display.
 pub fn get_planets_by_hostname(
     df: &DataFrame,
-    all_metadata: &Arc<HashMap<String, ColumnMetadata>>,
+    all_metadata: &HashMap<String, ColumnMetadata>,
     hostname: &str,
 ) -> HostPlanetsResult {
     // Columns to show for planets in detail view
@@ -571,29 +473,53 @@ mod tests {
         }
         .unwrap();
 
-        // Create empty metadata for testing
-        let metadata = Arc::new(HashMap::new());
-
         // Test first page
-        let (rows, total, total_all, _cols) =
-            get_stellarhosts_data(&df, &metadata, 1, 2, None, None, None, None)
-                .unwrap();
+        let (rows, total, total_all, _cols) = get_stellarhosts_data(
+            &df,
+            TableQuery {
+                page: 1,
+                limit: 2,
+                sort_by: None,
+                order: None,
+                selected_columns: None,
+                filter: None,
+            },
+        )
+        .unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
 
         // Test second page
-        let (rows, total, total_all, _cols) =
-            get_stellarhosts_data(&df, &metadata, 2, 2, None, None, None, None)
-                .unwrap();
+        let (rows, total, total_all, _cols) = get_stellarhosts_data(
+            &df,
+            TableQuery {
+                page: 2,
+                limit: 2,
+                sort_by: None,
+                order: None,
+                selected_columns: None,
+                filter: None,
+            },
+        )
+        .unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
 
         // Test last page (partial)
-        let (rows, total, total_all, _cols) =
-            get_stellarhosts_data(&df, &metadata, 3, 2, None, None, None, None)
-                .unwrap();
+        let (rows, total, total_all, _cols) = get_stellarhosts_data(
+            &df,
+            TableQuery {
+                page: 3,
+                limit: 2,
+                sort_by: None,
+                order: None,
+                selected_columns: None,
+                filter: None,
+            },
+        )
+        .unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(total, 5);
         assert_eq!(total_all, 5);
@@ -610,19 +536,17 @@ mod tests {
         }
         .unwrap();
 
-        // Create empty metadata for testing
-        let metadata = Arc::new(HashMap::new());
-
         // Test ascending sort
         let (rows, _, _, _) = get_stellarhosts_data(
             &df,
-            &metadata,
-            1,
-            10,
-            Some("hostname".to_string()),
-            Some("asc".to_string()),
-            None,
-            None,
+            TableQuery {
+                page: 1,
+                limit: 10,
+                sort_by: Some("hostname".to_string()),
+                order: Some("asc".to_string()),
+                selected_columns: None,
+                filter: None,
+            },
         )
         .unwrap();
         assert_eq!(rows[0]["hostname"], "Star A");
@@ -632,13 +556,14 @@ mod tests {
         // Test descending sort
         let (rows, _, _, _) = get_stellarhosts_data(
             &df,
-            &metadata,
-            1,
-            10,
-            Some("sy_dist".to_string()),
-            Some("desc".to_string()),
-            None,
-            None,
+            TableQuery {
+                page: 1,
+                limit: 10,
+                sort_by: Some("sy_dist".to_string()),
+                order: Some("desc".to_string()),
+                selected_columns: None,
+                filter: None,
+            },
         )
         .unwrap();
         assert_eq!(rows[0]["sy_dist"], 20.3);
@@ -695,20 +620,19 @@ mod tests {
         }
         .unwrap();
 
-        let metadata = Arc::new(HashMap::new());
-
         // Request only specific columns
         let selected_columns =
             vec!["hostname".to_string(), "sy_dist".to_string()];
         let (rows, _, _, columns) = get_stellarhosts_data(
             &df,
-            &metadata,
-            1,
-            10,
-            None,
-            None,
-            Some(selected_columns),
-            None,
+            TableQuery {
+                page: 1,
+                limit: 10,
+                sort_by: None,
+                order: None,
+                selected_columns: Some(selected_columns),
+                filter: None,
+            },
         )
         .unwrap();
 
@@ -737,20 +661,19 @@ mod tests {
         }
         .unwrap();
 
-        let metadata = Arc::new(HashMap::new());
-
         // Request invalid columns
         let selected_columns =
             vec!["invalid_col1".to_string(), "invalid_col2".to_string()];
         let result = get_stellarhosts_data(
             &df,
-            &metadata,
-            1,
-            10,
-            None,
-            None,
-            Some(selected_columns),
-            None,
+            TableQuery {
+                page: 1,
+                limit: 10,
+                sort_by: None,
+                order: None,
+                selected_columns: Some(selected_columns),
+                filter: None,
+            },
         );
 
         // Should return error for no valid columns
@@ -769,8 +692,6 @@ mod tests {
         }
         .unwrap();
 
-        let metadata = Arc::new(HashMap::new());
-
         // Request mix of valid and invalid columns
         let selected_columns = vec![
             "hostname".to_string(),
@@ -779,13 +700,14 @@ mod tests {
         ];
         let (_rows, _, _, columns) = get_stellarhosts_data(
             &df,
-            &metadata,
-            1,
-            10,
-            None,
-            None,
-            Some(selected_columns),
-            None,
+            TableQuery {
+                page: 1,
+                limit: 10,
+                sort_by: None,
+                order: None,
+                selected_columns: Some(selected_columns),
+                filter: None,
+            },
         )
         .unwrap();
 
@@ -806,7 +728,6 @@ mod tests {
         }
         .unwrap();
 
-        let metadata = Arc::new(HashMap::new());
         let table_cache = build_table_cache(64);
         let key = normalize_table_cache_key(
             TableKind::StellarHosts,
@@ -822,14 +743,15 @@ mod tests {
 
         let first = get_stellarhosts_data_cached(
             &df,
-            &metadata,
             &table_cache,
-            0,
-            50,
-            None,
-            None,
-            None,
-            None,
+            TableQuery {
+                page: 0,
+                limit: 50,
+                sort_by: None,
+                order: None,
+                selected_columns: None,
+                filter: None,
+            },
         )
         .await
         .unwrap();
@@ -838,14 +760,15 @@ mod tests {
 
         let second = get_stellarhosts_data_cached(
             &df,
-            &metadata,
             &table_cache,
-            1,
-            50,
-            None,
-            None,
-            None,
-            None,
+            TableQuery {
+                page: 1,
+                limit: 50,
+                sort_by: None,
+                order: None,
+                selected_columns: None,
+                filter: None,
+            },
         )
         .await
         .unwrap();
@@ -877,7 +800,6 @@ mod tests {
         }
         .unwrap();
 
-        let metadata = Arc::new(HashMap::new());
         let table_cache = build_table_cache(64);
 
         let stellarhosts_key = normalize_table_cache_key(
@@ -904,28 +826,30 @@ mod tests {
 
         get_stellarhosts_data_cached(
             &stellarhosts_df,
-            &metadata,
             &table_cache,
-            1,
-            50,
-            None,
-            None,
-            None,
-            None,
+            TableQuery {
+                page: 1,
+                limit: 50,
+                sort_by: None,
+                order: None,
+                selected_columns: None,
+                filter: None,
+            },
         )
         .await
         .unwrap();
 
         get_exoplanets_data_cached(
             &exoplanets_df,
-            &metadata,
             &table_cache,
-            1,
-            50,
-            None,
-            None,
-            None,
-            None,
+            TableQuery {
+                page: 1,
+                limit: 50,
+                sort_by: None,
+                order: None,
+                selected_columns: None,
+                filter: None,
+            },
         )
         .await
         .unwrap();
@@ -944,7 +868,6 @@ mod tests {
             "sy_pnum" => &[1i64, 2i64],
         }
         .unwrap();
-        let metadata = Arc::new(HashMap::new());
 
         let warmed_cache = build_table_cache(64);
         let key = normalize_table_cache_key(
@@ -959,14 +882,15 @@ mod tests {
 
         get_stellarhosts_data_cached(
             &df,
-            &metadata,
             &warmed_cache,
-            1,
-            50,
-            None,
-            None,
-            None,
-            None,
+            TableQuery {
+                page: 1,
+                limit: 50,
+                sort_by: None,
+                order: None,
+                selected_columns: None,
+                filter: None,
+            },
         )
         .await
         .unwrap();
