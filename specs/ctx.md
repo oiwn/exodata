@@ -2,6 +2,8 @@
 
 ## Active Tasks
 
+### Task 0: removing obsolete code!
+
 ### Task 1: Proper logging
 
 Add `tracing` instrumentation to the server-side data path to diagnose the SSR streaming failure.
@@ -20,23 +22,7 @@ Without logs we can't tell whether the server function is called, completes, pan
 2. Entry logged, exit not → panic or error inside the function body
 3. Both logged → function is fine, problem is in Leptos streaming/serialization layer
 
-### Task 2: Fix SSR 504 on Table Routes
-
-See `specs/ssr-streaming-issue.md` for full details.
-
-**TL;DR**: `/exoplanets` and `/stellarhosts` routes use `SsrMode::Async` which holds the HTTP
-connection open until all resources resolve. On a 1-vCPU DO droplet this exceeds Nginx's
-`proxy_read_timeout`, causing 504. `spawn_blocking` for Polars is **already implemented**
-(common.rs:283-299, 345-361) — that was never the root cause.
-
-**Chosen fix**: Change `ssr=SsrMode::Async` to `ssr=SsrMode::OutOfOrder` in `src/app.rs:91,97`.
-This sends the HTML shell immediately and streams resource data in, eliminating the timeout.
-
-**Status**: Implemented (`src/app.rs:91,97`). Needs production verification.
-
----
-
-### Task 3: Lazy Routes (Future / Post-hydration-fix)
+### Task 2: Lazy Routes (Future / Post-hydration-fix)
 
 **Concept**: Split WASM bundle by route using `#[lazy]` / `cargo leptos --split`.
 Only load WASM for a route when navigated to.
@@ -55,22 +41,3 @@ hydration fallback bugs). Also requires switching `hydrate_body()` → `hydrate_
 `codegen-units=1`, `wasm-release` profile). Lazy routes would give the next meaningful
 reduction.
 
----
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `src/app.rs` | Shell (head/body), App component, route definitions |
-| `src/lib.rs` | WASM hydration entry point (`hydrate_body`) |
-| `src/server/common.rs` | Polars data logic + cached variants with `spawn_blocking` |
-| `src/server/functions.rs` | Leptos server functions (thin wrappers over common.rs) |
-| `src/server/handlers.rs` | Axum REST handlers + `ApiState` struct |
-| `src/main.rs` | Server startup, data loading, prewarm, Axum router setup |
-| `style/tailwind.css` | Tailwind CSS input file |
-| `Cargo.toml` | `wasm-release` profile, `hydrate`/`ssr` features |
-
-## References
-- Issue #26: https://github.com/oiwn/exoplanets-catalog/issues/26
-- Leptos hydration docs: https://book.leptos.dev/ssr/24_hydration_bugs.html
-- Leptos lazy routes example: https://github.com/leptos-rs/leptos/tree/main/examples/lazy_routes

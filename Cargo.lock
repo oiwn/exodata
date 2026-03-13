@@ -1171,7 +1171,7 @@ dependencies = [
  "rand",
  "ratatui",
  "serde_json",
- "votable 0.7.0",
+ "votable",
 ]
 
 [[package]]
@@ -1215,7 +1215,6 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "uuid",
- "votable 0.6.3",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -5168,29 +5167,6 @@ name = "virtue"
 version = "0.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "051eb1abcf10076295e815102942cc58f9d5e3b4560e46e53c21e8ff6f3af7b1"
-
-[[package]]
-name = "votable"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09f16ea2dbc26833f31ea310fb21a7c7422632f759976054d432f0296f6c45bc"
-dependencies = [
- "base64",
- "bitvec",
- "bstringify",
- "byteorder",
- "log",
- "memchr",
- "once_cell",
- "paste",
- "quick-error",
- "quick-xml 0.23.1",
- "serde",
- "serde_json",
- "serde_yaml",
- "toml 0.8.23",
- "ucs2",
-]
 
 [[package]]
 name = "votable"
