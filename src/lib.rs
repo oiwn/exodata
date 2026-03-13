@@ -1,8 +1,6 @@
 #![recursion_limit = "256"]
 
 pub mod app;
-#[cfg(feature = "ssr")]
-pub mod common;
 pub mod components;
 pub mod error_template;
 pub mod metadata;
@@ -11,7 +9,6 @@ pub mod metadata;
 // visible to both client and server.
 // The #[server] macro handles conditional compilation
 pub mod server;
-
 pub mod table;
 
 #[cfg(feature = "hydrate")]

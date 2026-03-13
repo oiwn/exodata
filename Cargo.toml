@@ -1,6 +1,6 @@
 [package]
 name = "exoplanets-catalog"
-version = "0.1.19"
+version = "0.1.20"
 edition = "2024"
 
 [workspace]
@@ -30,8 +30,6 @@ tracing = { version = "0.1", optional = true }
 clap = { version = "4.5", features = ["derive"], optional = true }
 serde = { version = "1", features = ["derive"] }
 exo-core = { path = "crates/exo-core", optional = true }
-votable = { version = "0.6", optional = true  }
-anyhow = { version = "1.0", optional = true }
 polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"], optional = true }
 serde_json = { version = "1", optional = true }
 comfy-table = { version = "7", optional = true }
@@ -71,10 +69,8 @@ ssr = [
     "dep:tracing",
     # data processing
     "dep:exo-core",
-    "dep:anyhow",
     "dep:polars",
     "dep:serde_json",
-    "dep:votable",
     "dep:indicatif",
     "dep:sqlparser",
     # OpenAPI / Swagger

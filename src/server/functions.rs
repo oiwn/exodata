@@ -122,14 +122,15 @@ pub async fn get_stellarhosts_page(
     // Call the common business logic
     let (rows, total, total_all, columns) = common::get_stellarhosts_data_cached(
         &state.stellarhosts_df,
-        &state.stellarhosts_metadata,
         &state.table_cache,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,
-        filter,
+        common::TableQuery {
+            page,
+            limit,
+            sort_by,
+            order,
+            selected_columns,
+            filter,
+        },
     )
     .await
     .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
@@ -172,14 +173,15 @@ pub async fn get_exoplanets_page(
     // Call the common business logic
     let (rows, total, total_all, columns) = common::get_exoplanets_data_cached(
         &state.exoplanets_df,
-        &state.exoplanets_metadata,
         &state.table_cache,
-        page,
-        limit,
-        sort_by,
-        order,
-        selected_columns,
-        filter,
+        common::TableQuery {
+            page,
+            limit,
+            sort_by,
+            order,
+            selected_columns,
+            filter,
+        },
     )
     .await
     .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;

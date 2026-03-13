@@ -109,14 +109,15 @@ async fn start_server() {
     let prewarm_started = Instant::now();
     server_common::get_stellarhosts_data_cached(
         &api_state.stellarhosts_df,
-        &api_state.stellarhosts_metadata,
         &api_state.table_cache,
-        1,
-        50,
-        None,
-        None,
-        None,
-        None,
+        server_common::TableQuery {
+            page: 1,
+            limit: 50,
+            sort_by: None,
+            order: None,
+            selected_columns: None,
+            filter: None,
+        },
     )
     .await
     .unwrap_or_else(|e| {
@@ -127,14 +128,15 @@ async fn start_server() {
     });
     server_common::get_exoplanets_data_cached(
         &api_state.exoplanets_df,
-        &api_state.exoplanets_metadata,
         &api_state.table_cache,
-        1,
-        50,
-        None,
-        None,
-        None,
-        None,
+        server_common::TableQuery {
+            page: 1,
+            limit: 50,
+            sort_by: None,
+            order: None,
+            selected_columns: None,
+            filter: None,
+        },
     )
     .await
     .unwrap_or_else(|e| {

@@ -1,14 +1,13 @@
-use crate::components::about::AboutPage;
-use crate::components::exoplanet_detail::ExoplanetDetailPage;
-use crate::components::exoplanets_table::ExoplanetsTablePage;
-use crate::components::footer::VersionFooter;
-use crate::components::google_analytics::GoogleAnalytics;
-use crate::components::navbar::Navbar;
-use crate::components::overview::OverviewPage;
-use crate::components::stellarhost_detail::StellarHostDetailPage;
-use crate::components::stellarhosts_table::StellarHostsTablePage;
+use crate::components::{
+    about::AboutPage, exoplanet_detail::ExoplanetDetailPage,
+    exoplanets_table::ExoplanetsTablePage, footer::VersionFooter,
+    google_analytics::GoogleAnalytics, navbar::Navbar, overview::OverviewPage,
+    stellarhost_detail::StellarHostDetailPage,
+    stellarhosts_table::StellarHostsTablePage,
+};
 use crate::error_template::{AppError, ErrorTemplate};
 use crate::metadata::{METADATA_SCRIPT_ID, provide_app_metadata_store};
+
 use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos::prelude::*;
@@ -44,18 +43,6 @@ pub fn shell(
                 <App/>
             </body>
         </html>
-    }
-}
-
-#[component]
-pub fn TableWrapper() -> impl IntoView {
-    provide_meta_context();
-
-    view! {
-        <main>
-            <h1>"Table here!"</h1>
-            <p>"Data loading functionality implemented in CLI"</p>
-        </main>
     }
 }
 
@@ -99,29 +86,9 @@ pub fn App() -> impl IntoView {
                 />
                 <Route path=path!("/exoplanets/:pl_name") view=ExoplanetDetailPage/>
                 <Route path=StaticSegment("about") view=AboutPage/>
-                <Route path=StaticSegment("table") view=TableWrapper/>
             </Routes>
 
             <VersionFooter/>
         </Router>
-    }
-}
-
-/// Renders the home page of your application.
-#[component]
-fn HomePage() -> impl IntoView {
-    // Creates a reactive value to update the button
-    let (count, set_count) = signal(0);
-    static BTN_CLASS: &str = "flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 \
-        text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline \
-        focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600";
-
-    let on_click = move |_| set_count.update(|count| *count += 1);
-
-    view! {
-        <main>
-            <h1>"Website!"</h1>
-            <button on:click=on_click class=BTN_CLASS>"Click Me: " {count}</button>
-        </main>
     }
 }
