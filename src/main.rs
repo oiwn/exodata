@@ -32,6 +32,13 @@ async fn start_server() {
     use std::sync::Arc;
     use std::time::Instant;
 
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
+
     // Load dataframes at startup
     let stellarhosts_df =
         match data_common::load_parquet("data/stellarhosts.parquet", None) {
@@ -142,7 +149,7 @@ async fn start_server() {
     .unwrap_or_else(|e| {
         panic!("Startup prewarm failed for exoplanets default page: {}", e)
     });
-    println!(
+    tracing::info!(
         "table cache prewarm complete in {:?}",
         prewarm_started.elapsed()
     );
@@ -206,7 +213,7 @@ async fn start_server() {
         .nest_service("/rest", server::api_routes(api_state)); // REST API at /rest/*
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    println!("listening on http://{}", &addr);
+    tracing::info!("listening on http://{}", &addr);
     axum::serve(listener, app.into_make_service())
         .await
         .unwrap();

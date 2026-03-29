@@ -27,6 +27,7 @@ tower-http = { version = "0.6", features = ["fs"], optional = true }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Window", "Document", "Element", "DomTokenList"], optional = true }
 tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 clap = { version = "4.5", features = ["derive"], optional = true }
 serde = { version = "1", features = ["derive"] }
 exo-core = { path = "crates/exo-core", optional = true }
@@ -67,6 +68,7 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:tracing",
+    "dep:tracing-subscriber",
     # data processing
     "dep:exo-core",
     "dep:polars",

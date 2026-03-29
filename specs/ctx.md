@@ -7,13 +7,13 @@
 Add `tracing` instrumentation to the server-side data path to diagnose the SSR streaming failure.
 Without logs we can't tell whether the server function is called, completes, panics, or is never invoked.
 
-**Already done**:
-- `get_stellarhosts_page` — logs entry (`page`, `columns`) and exit (`total`) via `tracing::info!`
-
-**Still needed**:
-- `get_exoplanets_page` — same entry/exit pattern
-- `get_stellarhosts_data_cached` / `get_exoplanets_data_cached` — log cache hit vs miss
-- Any panic/error paths in server functions should log via `tracing::error!`
+**Done**:
+- `tracing-subscriber` added with `env-filter`; initialized in `main.rs` (defaults to `info` level, overridable via `RUST_LOG`)
+- `get_stellarhosts_page` — entry/exit `info!` + error-path `error!`
+- `get_exoplanets_page` — same entry/exit + error-path pattern
+- `get_stellarhosts_data_cached` / `get_exoplanets_data_cached` — `debug!` cache hit vs miss
+- `get_stellar_host_detail`, `get_planets_for_host`, `get_exoplanet_detail` — entry `info!` + error `error!`
+- `main.rs` — `println!` replaced with `tracing::info!`
 
 **What to look for in production logs after deploy**:
 1. Neither log line → server function never called → Leptos SSR not resolving resource
@@ -21,6 +21,8 @@ Without logs we can't tell whether the server function is called, completes, pan
 3. Both logged → function is fine, problem is in Leptos streaming/serialization layer
 
 ### Task 2: Lazy Routes (Future / Post-hydration-fix)
+
+^^^ need to discuss it
 
 **Concept**: Split WASM bundle by route using `#[lazy]` / `cargo leptos --split`.
 Only load WASM for a route when navigated to.

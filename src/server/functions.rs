@@ -107,9 +107,7 @@ pub async fn get_stellarhosts_page(
     columns: Option<String>,
     filter: Option<String>,
 ) -> Result<TableData, ServerFnError> {
-    tracing::info!(
-        "get_stellarhosts_page called: page={page} columns={columns:?}"
-    );
+    tracing::info!("get_stellarhosts_page called: page={page} columns={columns:?}");
     let state = expect_context::<ApiState>();
 
     // Parse columns parameter (comma-separated column names)
@@ -133,7 +131,10 @@ pub async fn get_stellarhosts_page(
         },
     )
     .await
-    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+    .map_err(|e: String| -> ServerFnError {
+        tracing::error!("get_stellarhosts_page error: {e}");
+        ServerFnError::ServerError(e)
+    })?;
 
     tracing::info!("get_stellarhosts_page done: total={total}");
     Ok(TableData {
@@ -160,8 +161,8 @@ pub async fn get_exoplanets_page(
     columns: Option<String>,
     filter: Option<String>,
 ) -> Result<TableData, ServerFnError> {
-    // Get ApiState from leptos context
     let state = expect_context::<ApiState>();
+    tracing::info!("get_exoplanets_page called: page={page} columns={columns:?}");
 
     // Parse columns parameter (comma-separated column names)
     let selected_columns = columns.map(|s| {
@@ -184,8 +185,12 @@ pub async fn get_exoplanets_page(
         },
     )
     .await
-    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+    .map_err(|e: String| -> ServerFnError {
+        tracing::error!("get_exoplanets_page error: {e}");
+        ServerFnError::ServerError(e)
+    })?;
 
+    tracing::info!("get_exoplanets_page done: total={total}");
     // Wrap in TableData response
     Ok(TableData {
         rows,
@@ -202,6 +207,7 @@ pub async fn get_exoplanets_page(
 pub async fn get_stellar_host_detail(
     hostname: String,
 ) -> Result<StellarHostDetail, ServerFnError> {
+    tracing::info!("get_stellar_host_detail called: hostname={hostname}");
     let state = expect_context::<ApiState>();
 
     let (records, exo_metadata): (
@@ -212,7 +218,10 @@ pub async fn get_stellar_host_detail(
         &state.stellarhosts_metadata,
         &hostname,
     )
-    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+    .map_err(|e: String| -> ServerFnError {
+        tracing::error!("get_stellar_host_detail error: {e}");
+        ServerFnError::ServerError(e)
+    })?;
 
     let metadata: HashMap<String, ColumnMetadata> = exo_metadata
         .into_iter()
@@ -233,6 +242,7 @@ pub async fn get_stellar_host_detail(
 pub async fn get_planets_for_host(
     hostname: String,
 ) -> Result<HostPlanets, ServerFnError> {
+    tracing::info!("get_planets_for_host called: hostname={hostname}");
     let state = expect_context::<ApiState>();
 
     let (planets, columns, exo_metadata): (
@@ -244,7 +254,10 @@ pub async fn get_planets_for_host(
         &state.exoplanets_metadata,
         &hostname,
     )
-    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+    .map_err(|e: String| -> ServerFnError {
+        tracing::error!("get_planets_for_host error: {e}");
+        ServerFnError::ServerError(e)
+    })?;
 
     let metadata: HashMap<String, ColumnMetadata> = exo_metadata
         .into_iter()
@@ -266,6 +279,7 @@ pub async fn get_planets_for_host(
 pub async fn get_exoplanet_detail(
     pl_name: String,
 ) -> Result<ExoplanetDetail, ServerFnError> {
+    tracing::info!("get_exoplanet_detail called: pl_name={pl_name}");
     let state = expect_context::<ApiState>();
 
     let (records, exo_metadata): (
@@ -276,7 +290,10 @@ pub async fn get_exoplanet_detail(
         &state.exoplanets_metadata,
         &pl_name,
     )
-    .map_err(|e: String| -> ServerFnError { ServerFnError::ServerError(e) })?;
+    .map_err(|e: String| -> ServerFnError {
+        tracing::error!("get_exoplanet_detail error: {e}");
+        ServerFnError::ServerError(e)
+    })?;
 
     let metadata: HashMap<String, ColumnMetadata> = exo_metadata
         .into_iter()

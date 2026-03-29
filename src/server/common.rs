@@ -251,8 +251,11 @@ pub async fn get_exoplanets_data_cached(
     );
 
     if let Some(cached) = table_cache.get(&key).await {
+        tracing::debug!("exoplanets cache hit: {key:?}");
         return Ok(table_result_from_cache_value(cached));
     }
+
+    tracing::debug!("exoplanets cache miss: {key:?}");
 
     let df = df.clone();
     let (rows, total, total_all, columns) =

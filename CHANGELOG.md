@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-03-29
+
+- Added `tracing` instrumentation to server-side data path (Task 1):
+  - Added `tracing-subscriber` with `env-filter` feature, gated behind `ssr` (`Cargo.toml`)
+  - Initialized subscriber in `src/main.rs` (defaults to `info`, overridable via `RUST_LOG`)
+  - Replaced `println!` with `tracing::info!` in `src/main.rs`
+  - Added entry/exit `info!` and error-path `error!` to all 6 server functions (`src/server/functions.rs`)
+  - Added cache hit/miss `debug!` to both `get_stellarhosts_data_cached` and `get_exoplanets_data_cached` (`src/server/common.rs`)
+
 ## 2026-03-11
 
 - Fixed hydration gap (Issue #26): users could interact with SSR content before WASM hydration completed
