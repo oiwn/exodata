@@ -1,9 +1,29 @@
 use leptos::prelude::*;
 use leptos::serde_json::Value;
+use leptos_router::LazyRoute;
 use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
+use leptos_router::lazy_route;
 
 use crate::server::functions::{ExoplanetDetail, get_exoplanet_detail};
+
+// --- Lazy Route ---
+
+#[derive(Clone)]
+pub struct ExoplanetDetailLazy;
+
+#[lazy_route]
+impl LazyRoute for ExoplanetDetailLazy {
+    fn data() -> Self {
+        Self
+    }
+
+    fn view(_this: Self) -> AnyView {
+        view! { <ExoplanetDetailPage/> }.into_any()
+    }
+}
+
+// --- Component ---
 
 #[component]
 pub fn ExoplanetDetailPage() -> impl IntoView {

@@ -1,9 +1,10 @@
 use crate::components::{
-    about::AboutPage, exoplanet_detail::ExoplanetDetailPage,
-    exoplanets_table::ExoplanetsTablePage, footer::VersionFooter,
-    google_analytics::GoogleAnalytics, navbar::Navbar, overview::OverviewPage,
-    stellarhost_detail::StellarHostDetailPage,
-    stellarhosts_table::StellarHostsTablePage,
+    about::AboutLazy, exoplanet_detail::ExoplanetDetailLazy,
+    exoplanets_table::ExoplanetsTableLazy, footer::VersionFooter,
+    google_analytics::GoogleAnalytics, navbar::Navbar,
+    overview::OverviewLazy,
+    stellarhost_detail::StellarHostDetailLazy,
+    stellarhosts_table::StellarHostsTableLazy,
 };
 use crate::error_template::{AppError, ErrorTemplate};
 use crate::metadata::{METADATA_SCRIPT_ID, provide_app_metadata_store};
@@ -12,6 +13,7 @@ use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
 use leptos::prelude::*;
 use leptos_meta::*;
+use leptos_router::Lazy;
 use leptos_router::SsrMode;
 use leptos_router::StaticSegment;
 use leptos_router::components::*;
@@ -72,20 +74,20 @@ pub fn App() -> impl IntoView {
                 }
                 .into_view()
             }>
-                <Route path=StaticSegment("") view=OverviewPage/>
+                <Route path=StaticSegment("") view={Lazy::<OverviewLazy>::new()}/>
                 <Route
                     path=StaticSegment("stellarhosts")
-                    view=StellarHostsTablePage
+                    view={Lazy::<StellarHostsTableLazy>::new()}
                     ssr=SsrMode::OutOfOrder
                 />
-                <Route path=path!("/stellarhosts/:hostname") view=StellarHostDetailPage/>
+                <Route path=path!("/stellarhosts/:hostname") view={Lazy::<StellarHostDetailLazy>::new()}/>
                 <Route
                     path=StaticSegment("exoplanets")
-                    view=ExoplanetsTablePage
+                    view={Lazy::<ExoplanetsTableLazy>::new()}
                     ssr=SsrMode::OutOfOrder
                 />
-                <Route path=path!("/exoplanets/:pl_name") view=ExoplanetDetailPage/>
-                <Route path=StaticSegment("about") view=AboutPage/>
+                <Route path=path!("/exoplanets/:pl_name") view={Lazy::<ExoplanetDetailLazy>::new()}/>
+                <Route path=StaticSegment("about") view={Lazy::<AboutLazy>::new()}/>
             </Routes>
 
             <VersionFooter/>

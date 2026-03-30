@@ -4,11 +4,31 @@ use crate::metadata::use_app_metadata_store;
 use crate::server::functions::get_stellarhosts_page;
 use crate::table::{Table, build_column_model, build_table_query, is_err_or_lim};
 use leptos::prelude::*;
+use leptos_router::LazyRoute;
 use leptos_router::NavigateOptions;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
+use leptos_router::lazy_route;
 
 type TableQueryState = (usize, Option<String>, String, Vec<String>, String);
+
+// --- Lazy Route ---
+
+#[derive(Clone)]
+pub struct StellarHostsTableLazy;
+
+#[lazy_route]
+impl LazyRoute for StellarHostsTableLazy {
+    fn data() -> Self {
+        Self
+    }
+
+    fn view(_this: Self) -> AnyView {
+        view! { <StellarHostsTablePage/> }.into_any()
+    }
+}
+
+// --- Component ---
 
 #[component]
 pub fn StellarHostsTablePage() -> impl IntoView {

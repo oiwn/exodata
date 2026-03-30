@@ -213,10 +213,12 @@ pub struct StellarHostsTableLazy {
 
 | Stage | Main Bundle | Chunks | Total |
 |-------|:-----------:|:------:|:-----:|
-| Baseline (current) | ~1.2 MB | — | ~1.2 MB |
-| After Phase 1 (about + overview) | TBD | TBD | TBD |
-| After Phase 2 (tables) | TBD | TBD | TBD |
-| After Phase 3 (details) | TBD | TBD | TBD |
+| Baseline | ~1.2 MB | — | ~1.2 MB |
+| After Phase 1 (about + overview) | 1.1 MB | 110 KB | ~1.21 MB |
+| After Phase 2 (tables) | 803 KB | 365 KB | ~1.17 MB |
+| After Phase 3 (details) | 535 KB | 780 KB | ~1.31 MB |
+
+**Result**: 55% reduction in initial page load (1.2 MB → 535 KB). Chunks load on demand.
 
 ### Quick Reference
 
