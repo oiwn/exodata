@@ -1,8 +1,7 @@
 use crate::components::{
     about::AboutLazy, exoplanet_detail::ExoplanetDetailLazy,
     exoplanets_table::ExoplanetsTableLazy, footer::VersionFooter,
-    google_analytics::GoogleAnalytics, navbar::Navbar,
-    overview::OverviewLazy,
+    google_analytics::GoogleAnalytics, navbar::Navbar, overview::OverviewLazy,
     stellarhost_detail::StellarHostDetailLazy,
     stellarhosts_table::StellarHostsTableLazy,
 };

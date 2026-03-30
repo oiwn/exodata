@@ -107,7 +107,9 @@ pub async fn get_stellarhosts_page(
     columns: Option<String>,
     filter: Option<String>,
 ) -> Result<TableData, ServerFnError> {
-    tracing::info!("get_stellarhosts_page called: page={page} columns={columns:?}");
+    tracing::info!(
+        "get_stellarhosts_page called: page={page} columns={columns:?}"
+    );
     let state = expect_context::<ApiState>();
 
     // Parse columns parameter (comma-separated column names)
