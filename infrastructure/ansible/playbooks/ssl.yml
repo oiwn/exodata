@@ -22,12 +22,26 @@
 
     - name: Obtain SSL certificate
       ansible.builtin.command: >
-        certbot --nginx
+        certbot certonly --nginx
         -d {{ domain }}
         --non-interactive
         --agree-tos
         --email {{ admin_email }}
       when: not cert_file.stat.exists
+
+    - name: Create renewal deploy hook directory
+      ansible.builtin.file:
+        path: /etc/letsencrypt/renewal-hooks/deploy
+        state: directory
+        mode: '0755'
+
+    - name: Install nginx reload deploy hook
+      ansible.builtin.copy:
+        dest: /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          systemctl reload nginx
 
     - name: Enable certbot auto-renewal timer
       ansible.builtin.systemd:

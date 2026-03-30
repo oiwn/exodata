@@ -4,11 +4,18 @@
     name: nginx
     state: present
 
+- name: Check if SSL certificate exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ domain }}/fullchain.pem"
+  register: ssl_cert
+
 - name: Deploy Nginx site configuration
   ansible.builtin.template:
     src: exoplanets.conf.j2
     dest: /etc/nginx/sites-available/exoplanets
     mode: '0644'
+  vars:
+    ssl_enabled: "{{ ssl_cert.stat.exists }}"
   notify: Reload Nginx
 
 - name: Enable site

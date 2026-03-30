@@ -8,6 +8,15 @@
   - Replaced `println!` with `tracing::info!` in `src/main.rs`
   - Added entry/exit `info!` and error-path `error!` to all 6 server functions (`src/server/functions.rs`)
   - Added cache hit/miss `debug!` to both `get_stellarhosts_data_cached` and `get_exoplanets_data_cached` (`src/server/common.rs`)
+- Reduced WASM initial load by 55% (1.2 MB → 535 KB) via lazy route code splitting:
+  - Switched `hydrate_body` → `hydrate_lazy` (`src/lib.rs`)
+  - Added `#[lazy_route]` wrappers for all 6 routes (`src/components/*.rs`)
+  - Updated route declarations to `Lazy::<X>::new()` (`src/app.rs`)
+  - Build command now uses `--split` flag (`infrastructure/docker/Dockerfile`)
+- Added code coverage via `cargo-llvm-cov` + Codecov (`.github/workflows/coverage.yml`):
+  - Runs on push/PR to `main` and manual dispatch
+  - Uses `codecov/codecov-action@v5` with `CODECOV_TOKEN` secret
+  - Excludes frontend components, app shell, and metadata from coverage
 
 ## 2026-03-11
 
