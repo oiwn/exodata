@@ -1,12 +1,16 @@
 # Exoplanets Catalog
 
-![Exoplanets Catalog overview](screenshot.png)
+![Coverage](https://codecov.io/gh/oiwn/exoplanets-catalog/branch/main/graph/badge.svg)
+![Rust](https://img.shields.io/badge/rust-1.85%2B-orange?logo=rust)
+![Leptos](https://img.shields.io/badge/leptos-0.8-blue)
+![WASM](https://img.shields.io/badge/WASM-535KB-purple)
+![Deploy](https://img.shields.io/badge/deploy-DigitalOcean-blue?logo=digitalocean)
 
 A web application for exploring the NASA Exoplanet Archive data. Browse stellar hosts and exoplanets through an interactive UI or query the data programmatically via REST API.
 
-Built with Rust using [Leptos](https://github.com/leptos-rs/leptos) for the frontend, [Axum](https://github.com/tokio-rs/axum) for the backend, and [Polars](https://pola.rs/) for data processing.
+![Exoplanets Catalog overview](screenshot.png)
 
-For architecture details, see the [overview document](./specs/overview.md).
+Built with Rust using [Leptos](https://github.com/leptos-rs/leptos) for the frontend, [Axum](https://github.com/tokio-rs/axum) for the backend, and [Polars](https://pola.rs/) for data processing.
 
 Live site: https://exodata.space/
 
@@ -18,7 +22,7 @@ Live site: https://exodata.space/
 - **Swagger Documentation** - Interactive API docs at `/swagger-ui`
 - **Schema Introspection** - Get column metadata including descriptions and units
 
-## Running the Application
+## Quick Start
 
 ```bash
 cargo leptos watch
@@ -26,135 +30,12 @@ cargo leptos watch
 
 Open your browser to `http://127.0.0.1:3000`.
 
-## REST API
+## Documentation
 
-Base URL: `/rest`
-
-### Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /rest/stellarhosts` | Paginated stellar hosts data |
-| `GET /rest/exoplanets` | Paginated exoplanets data |
-| `GET /rest/stellarhosts/schema` | Column metadata for stellar hosts |
-| `GET /rest/exoplanets/schema` | Column metadata for exoplanets |
-| `GET /rest/query?sql=...` | Execute SQL SELECT queries |
-
-### Query Parameters
-
-- `page` - Page number (default: 1)
-- `limit` - Rows per page (default: 50, max: 1000)
-- `sort_by` - Column name to sort by
-- `order` - Sort order: `asc` or `desc`
-- `columns` - Comma-separated list of columns to return
-
-### SQL Query Examples
-
-```bash
-# Get 10 exoplanets discovered by transit method
-curl "http://localhost:3000/rest/query?sql=SELECT pl_name, hostname, disc_year FROM exoplanets WHERE discoverymethod = 'Transit' LIMIT 10"
-
-# Join stellar hosts with their planets
-curl "http://localhost:3000/rest/query?sql=SELECT s.hostname, s.st_teff, e.pl_name FROM stellarhosts s JOIN exoplanets e ON s.hostname = e.hostname LIMIT 10"
-```
-
-Available tables: `stellarhosts`, `exoplanets`
-
-### Swagger UI
-
-Interactive API documentation available at: `http://localhost:3000/swagger-ui`
-
-## CLI Tools
-
-The project includes command-line tools (`exo-cli`) for data exploration and metadata inspection.
-
-### View Column Metadata
-
-```bash
-# View all column metadata from exoplanets VOTable
-cargo run -p exo-cli -- view-metadata --path data/exoplanets.vot
-
-# View metadata for specific columns only
-cargo run -p exo-cli -- view-metadata --path data/exoplanets.vot --columns "pl_name,pl_orbper,pl_rade,pl_bmasse"
-
-# View metadata from stellar hosts VOTable
-cargo run -p exo-cli -- view-metadata --path data/stellarhosts.vot
-```
-
-### Other CLI Commands
-
-```bash
-# Execute SQL directly against parquet files
-cargo run -p exo-cli -- sql "SELECT hostname, COUNT(*) AS rows FROM stellarhosts WHERE LOWER(hostname) LIKE '%gliese%' GROUP BY hostname ORDER BY rows DESC"
-
-# View field information from VOTable
-cargo run -p exo-cli -- view-fields data/exoplanets.vot
-
-# View sample data
-cargo run -p exo-cli -- view-samples --limit 10
-cargo run -p exo-cli -- view-exoplanets-samples --limit 10
-
-# View statistics
-cargo run -p exo-cli -- view-stats
-cargo run -p exo-cli -- view-exoplanets-stats
-
-# Convert VOTable files to Parquet
-cargo run -p exo-cli -- convert-raw-files --data-dir data
-```
-
-## Testing
-
-```bash
-# Run all CLI tests
-cargo test -p exo-cli
-
-# Run tests with output
-cargo test -p exo-cli -- --nocapture
-```
-
-## E2E Tests (Playwright)
-
-End-to-end tests live in `end2end/tests` and currently cover 3 smoke flows:
-- SSR + hydration on `/stellarhosts`
-- SSR + hydration on `/exoplanets`
-- `/` -> client navigation to `/stellarhosts` (metadata available for column selector)
-
-### One-time setup
-
-```bash
-cd end2end
-npm ci
-npx playwright install chromium
-cd ..
-```
-
-### Run with one command (recommended)
-
-```bash
-cargo leptos end-to-end
-```
-
-This command builds the app, starts the SSR server, and runs the Playwright suite.
-
-### Run Playwright directly
-
-When running Playwright directly, start the app server in another terminal first:
-
-```bash
-# terminal 1
-cargo leptos watch
-
-# terminal 2
-cd end2end
-npx playwright test
-```
-
-### HTML report
-
-```bash
-cd end2end
-npx playwright test --reporter=html
-npx playwright show-report
-```
-
-`show-report` serves the report locally (default: `http://localhost:9323`) until you stop it with `Ctrl+C`.
+| Topic | Description |
+|-------|-------------|
+| [REST API](docs/api.md) | Endpoints, query parameters, SQL queries, response formats |
+| [CLI Tools](docs/cli.md) | `exo-cli` commands for data exploration and conversion |
+| [Testing](docs/testing.md) | Unit tests, Playwright e2e, code coverage |
+| [Deployment](DEPLOY.md) | Docker, Ansible, DigitalOcean setup |
+| [Architecture](specs/overview.md) | System design and component overview |
