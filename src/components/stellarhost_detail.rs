@@ -1,11 +1,31 @@
 use leptos::prelude::*;
 use leptos::serde_json::Value;
+use leptos_router::LazyRoute;
 use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
+use leptos_router::lazy_route;
 
 use crate::server::functions::{
     HostPlanets, StellarHostDetail, get_planets_for_host, get_stellar_host_detail,
 };
+
+// --- Lazy Route ---
+
+#[derive(Clone)]
+pub struct StellarHostDetailLazy;
+
+#[lazy_route]
+impl LazyRoute for StellarHostDetailLazy {
+    fn data() -> Self {
+        Self
+    }
+
+    fn view(_this: Self) -> AnyView {
+        view! { <StellarHostDetailPage/> }.into_any()
+    }
+}
+
+// --- Component ---
 
 #[component]
 pub fn StellarHostDetailPage() -> impl IntoView {

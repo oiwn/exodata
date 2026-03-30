@@ -360,6 +360,19 @@ The app uses environment variables for production configuration (set automatical
 
 In development, the app reads from `Cargo.toml` instead. See [leptos-rs/start-axum](https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain) for details.
 
+### Code Splitting (`--split`)
+
+The Dockerfile builds with `cargo leptos build --release --split`, which produces multiple WASM chunks in `target/site/pkg/`. Each lazy route gets its own `.wasm` file that loads on demand:
+
+| File | Description |
+|------|-------------|
+| `exoplanets-catalog.wasm` | Main bundle (535 KB) |
+| `split_*.wasm` | Per-route lazy chunks |
+| `chunk_*.wasm` | Shared dependency chunks |
+| `__wasm_split.______________________.js` | Chunk loader |
+
+The runtime stage copies the entire `target/site/` directory, so all chunks are served. Nginx serves all files from the `pkg/` directory — no whitelist, no config changes needed. Content-Type headers are set correctly for all `.wasm` files by the Axum static file handler.
+
 ---
 
 ## GitHub Actions

@@ -16,7 +16,7 @@ pub mod table;
 pub fn hydrate() {
     use crate::app::App;
     console_error_panic_hook::set_once();
-    leptos::mount::hydrate_body(App);
+    leptos::mount::hydrate_lazy(App);
     let _ = web_sys::window()
         .and_then(|w| w.document())
         .and_then(|d| d.document_element())

@@ -32,7 +32,7 @@ COPY style ./style
 COPY public ./public
 COPY tailwind.config.js ./
 
-RUN cargo leptos build --release
+RUN cargo leptos build --release --split
 
 # Debug: List where files actually are
 RUN echo "=== Listing target/release ===" && \

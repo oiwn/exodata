@@ -1,6 +1,8 @@
 use leptos::prelude::*;
+use leptos_router::LazyRoute;
 use leptos_router::components::A;
 use leptos_router::hooks::use_location;
+use leptos_router::lazy_route;
 
 // --- Content Constants ---
 
@@ -46,6 +48,22 @@ const API_EXAMPLES: &[(&str, &str, &str)] = &[
 
 const FOOTER_TEXT: &str =
     "Data: NASA Exoplanet Archive. Code: Rust, Leptos, Axum, Polars.";
+
+// --- Lazy Route ---
+
+#[derive(Clone)]
+pub struct AboutLazy;
+
+#[lazy_route]
+impl LazyRoute for AboutLazy {
+    fn data() -> Self {
+        Self
+    }
+
+    fn view(_this: Self) -> AnyView {
+        view! { <AboutPage/> }.into_any()
+    }
+}
 
 // --- Component ---
 

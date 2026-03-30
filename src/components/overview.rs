@@ -1,7 +1,25 @@
 use leptos::prelude::*;
+use leptos_router::LazyRoute;
+use leptos_router::lazy_route;
 
 // Import server function and types - #[server] macro handles client/server compilation
 use crate::server::functions::{DataStats, get_stats};
+
+// --- Lazy Route ---
+
+#[derive(Clone)]
+pub struct OverviewLazy;
+
+#[lazy_route]
+impl LazyRoute for OverviewLazy {
+    fn data() -> Self {
+        Self
+    }
+
+    fn view(_this: Self) -> AnyView {
+        view! { <OverviewPage/> }.into_any()
+    }
+}
 
 #[component]
 pub fn OverviewPage() -> impl IntoView {
