@@ -8,11 +8,11 @@
 
 A web application for exploring the NASA Exoplanet Archive data. Browse stellar hosts and exoplanets through an interactive UI or query the data programmatically via REST API.
 
+Live site: https://exodata.space/
+
 ![Exoplanets Catalog overview](screenshot.png)
 
 Built with Rust using [Leptos](https://github.com/leptos-rs/leptos) for the frontend, [Axum](https://github.com/tokio-rs/axum) for the backend, and [Polars](https://pola.rs/) for data processing.
-
-Live site: https://exodata.space/
 
 ## Features
 
