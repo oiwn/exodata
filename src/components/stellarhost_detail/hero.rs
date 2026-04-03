@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use super::format::{alias_label, format_numeric_primary, format_stable_value};
+use super::star_color::star_visual_tokens;
 use super::star_visual::HostStarVisual;
 use crate::server::functions::StellarHostDetail;
 
@@ -14,6 +15,8 @@ pub fn HostHeroSection(host: StellarHostDetail) -> impl IntoView {
         .unwrap_or_else(|| "Unclassified star".to_string());
     let distance = host.system.distance.as_ref().map(format_numeric_primary);
     let planet_count = host.system.planet_count.as_ref().map(format_stable_value);
+    let star_tokens =
+        star_visual_tokens(host.star.teff.as_ref().map(|teff| teff.value));
     let aliases = host
         .identity
         .aliases
@@ -76,7 +79,7 @@ pub fn HostHeroSection(host: StellarHostDetail) -> impl IntoView {
                 </div>
 
                 <div class="flex items-center justify-center">
-                    <HostStarVisual />
+                    <HostStarVisual tokens=star_tokens />
                 </div>
             </div>
         </section>

@@ -1,42 +1,5 @@
 # Current Context
 
-## Next Refactor
-
-Planned frontend split for stellar host detail:
-
-- create `src/components/stellarhost_detail/` as a dedicated submodule
-- move the current route/container logic into `page.rs`
-- move hero layout into `hero.rs`
-- move the star art into `star_visual.rs`
-- move canonical summary cards into `summary.rs`
-- move planets section into `planets.rs`
-- move provenance section into `provenance.rs`
-- move shared labels/formatting helpers into `format.rs`
-
-Target ownership:
-
-- `page.rs`
-  - route-level resource wiring only
-- `hero.rs`
-  - host identity copy, hero stats, alias chips, overall hero layout
-- `star_visual.rs`
-  - decorative/data-driven star rendering only
-- `summary.rs`
-  - canonical summary section and summary cards
-- `planets.rs`
-  - known-planets section and planet cards
-- `provenance.rs`
-  - evidence summary, observations table, reference-link rendering
-- `format.rs`
-  - shared formatting helpers and label helpers
-
-Reason for the split:
-
-- the current detail-page file has become CSS-heavy and section-dense
-- hero, provenance, and summary concerns are now large enough to evolve independently
-- the star visual should be isolated from text/layout concerns
-- future visual iterations will be safer if each section owns its own markup and helper logic
-
 ## Stellar Hosts
 
 ### Product Rule
@@ -121,36 +84,67 @@ The stellar host detail page should have three layers:
 ### Visual Rule
 
 - Detail page should feel like a host profile, not a raw record dump.
-- The hero may use an approximate illustrative star color derived from `st_teff`.
+- The hero should use an approximate illustrative star color derived from canonical `st_teff` when available.
 - Wording should frame this as approximate, not exact visible appearance.
 
-### Component Decomposition
+### Star Color
 
-- Keep the route container thin.
-- Keep section-level layout in `stellarhost_detail_sections`.
-- Move the hero star visual into its own component when the next hero pass happens.
+#### Product Framing
 
-Planned split:
+- Treat star color as illustrative display logic, not exact astrophysical appearance.
+- Use it to improve hero identity and visual differentiation between hosts.
+- Product wording should remain:
+  - `Approximate color from effective temperature`
 
-- `HostHeroSection`
-  - owns hero copy, adopted identity values, alias chips, and hero layout
-- `HostStarVisual`
-  - owns the decorative/illustrative star rendering only
-  - takes already-derived display inputs such as approximate color, size/emphasis, and optional label text
-  - should not know about raw records or canonicalization rules
+#### Data Input
 
-Rationale:
+- Use canonical host temperature, not raw row values.
+- Primary input is canonical `st_teff`.
+- If `st_teff` is missing, fall back to a neutral default hero color.
+- Do not use source-recency logic for color selection.
 
-- the star visual is presentation-only and should not be mixed with hero text/layout concerns
-- isolating it makes future visual iterations safer
-- this also makes it easier to swap the current static art for a more data-driven rendering later
+#### V1 Mapping Strategy
 
-Current action:
+- Prefer a hand-tuned temperature-to-color scale over pure blackbody rendering.
+- Use anchor temperatures with interpolation between anchors.
+- Keep solar-like stars near pale yellow-white rather than heavily saturated yellow.
+- Keep very hot stars blue-white, not neon blue.
+- Keep cool stars orange-red, but avoid oversaturated red UI.
 
-- keep the current implementation working
-- plan the next refactor around extracting the star visual into a dedicated component file or subcomponent
+Suggested display bands:
+
+- `< 3500 K`: deep orange-red
+- `3500-4500 K`: orange
+- `4500-5300 K`: warm yellow-orange
+- `5300-6000 K`: pale yellow-white
+- `6000-7500 K`: warm white
+- `7500-10000 K`: blue-white
+- `> 10000 K`: pale icy blue
+
+#### Rendering Rule
+
+- Do not use one raw color value everywhere.
+- Derive multiple presentation tokens from the mapped color:
+  - core star color
+  - outer glow color
+  - subtle panel/accent tint
+  - near-white highlight
+
+This keeps the hero visually controlled and avoids harsh or cartoonish output.
+
+#### Non-Goals For V1
+
+- do not attempt exact visible-color simulation
+- do not add `st_logg` or metallicity into color rendering yet
+- do not block the feature on scientific-model integration
+
+#### Future Option
+
+- If needed later, replace the curated mapping with a more physically informed model.
+- That should only happen if the visual result is clearly better and still product-usable.
 
 ### Status
 
-- Canonical stellar host detail implementation exists in code.
+- Canonical stellar host detail and component split exist in code.
+- Star-color rendering from canonical `st_teff` exists in code.
 - `specs/web-frontend.md` and `specs/web-backend.md` do not yet need duplication of this detail-page behavior unless the design stabilizes further.
