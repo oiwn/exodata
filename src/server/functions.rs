@@ -72,7 +72,12 @@ pub struct TableData {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct StellarHostDetail {
     pub hostname: String,
+    pub identity: HostIdentity,
+    pub system: HostSystemSummary,
+    pub star: HostStarSummary,
+    pub provenance: HostProvenanceSummary,
     pub records: Vec<Value>,
+    pub provenance_columns: Vec<String>,
     pub metadata: HashMap<String, ColumnMetadata>,
 }
 
@@ -91,6 +96,88 @@ pub struct ExoplanetDetail {
     pub pl_name: String,
     pub records: Vec<Value>,
     pub metadata: HashMap<String, ColumnMetadata>,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct HostIdentity {
+    pub hostname: String,
+    pub aliases: HashMap<String, Vec<String>>,
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct HostSystemSummary {
+    pub planet_count: Option<StableValueSummary>,
+    pub star_count: Option<StableValueSummary>,
+    pub moon_count: Option<StableValueSummary>,
+    pub distance: Option<NumericFieldSummary>,
+    pub parallax: Option<NumericFieldSummary>,
+}
+
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct HostStarSummary {
+    pub spectype: Option<CategoricalFieldSummary>,
+    pub teff: Option<NumericFieldSummary>,
+    pub mass: Option<NumericFieldSummary>,
+    pub radius: Option<NumericFieldSummary>,
+    pub age: Option<NumericFieldSummary>,
+    pub luminosity: Option<NumericFieldSummary>,
+    pub metallicity: Option<NumericFieldSummary>,
+    pub logg: Option<NumericFieldSummary>,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct NumericFieldSummary {
+    pub key: String,
+    pub label: String,
+    pub unit: Option<String>,
+    pub value: f64,
+    pub measurement_count: usize,
+    pub distinct_count: usize,
+    pub min: f64,
+    pub max: f64,
+    pub disputed: bool,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct StableValueSummary {
+    pub key: String,
+    pub label: String,
+    pub unit: Option<String>,
+    pub value: Value,
+    pub distinct_values: Vec<Value>,
+    pub disputed: bool,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct CategoricalValueCount {
+    pub value: String,
+    pub count: usize,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct CategoricalFieldSummary {
+    pub key: String,
+    pub label: String,
+    pub value: String,
+    pub counts: Vec<CategoricalValueCount>,
+    pub disputed: bool,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct ProvenanceStat {
+    pub key: String,
+    pub label: String,
+    pub measurement_count: usize,
+    pub distinct_count: usize,
+    pub disputed: bool,
+}
+
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct HostProvenanceSummary {
+    pub record_count: usize,
+    pub stellar_refs: Vec<String>,
+    pub system_refs: Vec<String>,
+    pub key_field_stats: Vec<ProvenanceStat>,
 }
 
 /// Server function to fetch paginated stellar hosts data
@@ -212,14 +299,16 @@ pub async fn get_stellar_host_detail(
     tracing::info!("get_stellar_host_detail called: hostname={hostname}");
     let state = expect_context::<ApiState>();
 
-    let (records, exo_metadata): (
-        Vec<Value>,
+    let (detail, exo_metadata): (
+        StellarHostDetail,
         HashMap<String, exo_core::metadata::ColumnMetadata>,
-    ) = common::get_stellar_host_by_name(
+    ) = common::get_stellar_host_detail_cached(
         &state.stellarhosts_df,
+        &state.host_detail_cache,
         &state.stellarhosts_metadata,
         &hostname,
     )
+    .await
     .map_err(|e: String| -> ServerFnError {
         tracing::error!("get_stellar_host_detail error: {e}");
         ServerFnError::ServerError(e)
@@ -232,11 +321,7 @@ pub async fn get_stellar_host_detail(
         })
         .collect();
 
-    Ok(StellarHostDetail {
-        hostname,
-        records,
-        metadata,
-    })
+    Ok(StellarHostDetail { metadata, ..detail })
 }
 
 /// Server function to fetch planets for a given stellar host

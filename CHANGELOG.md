@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-04-03
+
+- Reworked stellar host detail into a canonical host profile instead of a `first row wins` record view:
+  - added per-`hostname` canonicalization for identity, stable system values, median-based numeric summaries, categorical summaries, and provenance (`src/server/stellarhost_canonical.rs`, `src/server/common.rs`, `src/server/functions.rs`)
+  - added host-detail caching in server state (`src/server/cache.rs`, `src/server/handlers.rs`, `src/main.rs`)
+  - redesigned the detail page around hero, canonical summary, planets, and provenance sections
+  - converted provenance reference markup into real outbound links with `nofollow`
+- Refactored stellar host detail UI into a dedicated submodule:
+  - route container in `src/components/stellarhost_detail/page.rs`
+  - section files for hero, star visual, summary, planets, provenance, and shared formatting helpers
+- Added illustrative star-color rendering driven by canonical `st_teff`:
+  - introduced curated temperature-to-color mapping and derived hero visual tokens (`src/components/stellarhost_detail/star_color.rs`)
+  - wired hero star rendering to canonical temperature with neutral fallback when missing
+
 ## 2026-03-29
 
 - Added `tracing` instrumentation to server-side data path (Task 1):

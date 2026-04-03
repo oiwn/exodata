@@ -5,7 +5,7 @@ This file defines agent workflow and points to project specifications. Implement
 
 ## Read First
 - `specs/overview.md` — project status, entry points, and links to all specs
-- `specs/ctx.md` — current priorities and near-term plans
+- `specs/ctx.md` — current task context / working notes; treat it as temporary context for the active task and clean it up when the task is finished and the content is no longer needed
 - `specs/web-frontend.md` — UI/Leptos requirements
 - `specs/web-backend.md` — Axum/server requirements
 - `specs/cli.md` — CLI requirements
