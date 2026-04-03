@@ -102,6 +102,7 @@ async fn start_server() {
     });
 
     let table_cache = server::cache::build_table_cache(400);
+    let host_detail_cache = server::cache::build_host_detail_cache(512);
 
     let api_state = ApiState {
         stellarhosts_df,
@@ -110,6 +111,7 @@ async fn start_server() {
         exoplanets_metadata,
         overview_stats,
         table_cache,
+        host_detail_cache,
     };
 
     // Prewarm default table cache entries before serving any requests.

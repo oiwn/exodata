@@ -12,6 +12,9 @@ pub mod cache;
 #[cfg(feature = "ssr")]
 pub mod handlers;
 
+#[cfg(feature = "ssr")]
+pub mod stellarhost_canonical;
+
 #[cfg(test)]
 mod tests;
 

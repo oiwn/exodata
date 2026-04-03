@@ -24,7 +24,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use super::common;
 use super::functions::DataStats;
-use crate::server::cache::TableCache;
+use crate::server::cache::{HostDetailCache, TableCache};
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
@@ -34,6 +34,7 @@ pub struct ApiState {
     pub exoplanets_metadata: Arc<HashMap<String, ColumnMetadata>>,
     pub overview_stats: Arc<DataStats>,
     pub table_cache: TableCache,
+    pub host_detail_cache: HostDetailCache,
 }
 
 /// Generic query parameters for data endpoints

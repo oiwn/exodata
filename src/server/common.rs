@@ -4,8 +4,11 @@
 //! It's server-only and contains no HTTP/Leptos dependencies.
 
 use super::cache::{
-    TableCache, TableCacheValue, TableKind, normalize_table_cache_key,
+    HostDetailCache, TableCache, TableCacheValue, TableKind,
+    normalize_table_cache_key,
 };
+use super::stellarhost_canonical::build_canonical_host;
+use crate::server::functions::StellarHostDetail;
 use exo_core::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde_json::{Value, json};
@@ -304,6 +307,93 @@ pub fn get_stellar_host_by_name(
     Ok((rows, all_metadata.clone()))
 }
 
+/// Get canonical stellar host detail for a given hostname with caching.
+pub async fn get_stellar_host_detail_cached(
+    df: &DataFrame,
+    host_detail_cache: &HostDetailCache,
+    all_metadata: &HashMap<String, ColumnMetadata>,
+    hostname: &str,
+) -> Result<(StellarHostDetail, HashMap<String, ColumnMetadata>), String> {
+    if let Some(cached) = host_detail_cache.get(hostname).await {
+        return Ok((cached, all_metadata.clone()));
+    }
+
+    let filtered = df
+        .clone()
+        .lazy()
+        .filter(col("hostname").eq(lit(hostname)))
+        .collect()
+        .map_err(|e| format!("Failed to filter by hostname: {}", e))?;
+
+    if filtered.height() == 0 {
+        return Err(format!("Stellar host '{}' not found", hostname));
+    }
+
+    let canonical = build_canonical_host(hostname, &filtered, all_metadata)?;
+    let detail = StellarHostDetail {
+        hostname: canonical.hostname,
+        identity: crate::server::functions::HostIdentity {
+            hostname: canonical.identity.hostname,
+            aliases: canonical.identity.aliases,
+        },
+        system: crate::server::functions::HostSystemSummary {
+            planet_count: canonical
+                .system
+                .planet_count
+                .map(into_stable_value_summary),
+            star_count: canonical
+                .system
+                .star_count
+                .map(into_stable_value_summary),
+            moon_count: canonical
+                .system
+                .moon_count
+                .map(into_stable_value_summary),
+            distance: canonical.system.distance.map(into_numeric_field_summary),
+            parallax: canonical.system.parallax.map(into_numeric_field_summary),
+        },
+        star: crate::server::functions::HostStarSummary {
+            spectype: canonical.star.spectype.map(into_categorical_field_summary),
+            teff: canonical.star.teff.map(into_numeric_field_summary),
+            mass: canonical.star.mass.map(into_numeric_field_summary),
+            radius: canonical.star.radius.map(into_numeric_field_summary),
+            age: canonical.star.age.map(into_numeric_field_summary),
+            luminosity: canonical.star.luminosity.map(into_numeric_field_summary),
+            metallicity: canonical
+                .star
+                .metallicity
+                .map(into_numeric_field_summary),
+            logg: canonical.star.logg.map(into_numeric_field_summary),
+        },
+        provenance: crate::server::functions::HostProvenanceSummary {
+            record_count: canonical.provenance.record_count,
+            stellar_refs: canonical.provenance.stellar_refs,
+            system_refs: canonical.provenance.system_refs,
+            key_field_stats: canonical
+                .provenance
+                .key_field_stats
+                .into_iter()
+                .map(|stat| crate::server::functions::ProvenanceStat {
+                    key: stat.key,
+                    label: stat.label,
+                    measurement_count: stat.measurement_count,
+                    distinct_count: stat.distinct_count,
+                    disputed: stat.disputed,
+                })
+                .collect(),
+        },
+        records: canonical.records,
+        provenance_columns: canonical.provenance_columns,
+        metadata: HashMap::new(),
+    };
+
+    host_detail_cache
+        .insert(hostname.to_string(), detail.clone())
+        .await;
+
+    Ok((detail, all_metadata.clone()))
+}
+
 /// Get all exoplanet records for a given planet name
 ///
 /// Returns all columns for each matching exoplanet row.
@@ -454,6 +544,54 @@ pub fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, String> {
     }
 
     Ok(rows)
+}
+
+fn into_numeric_field_summary(
+    summary: super::stellarhost_canonical::NumericFieldSummary,
+) -> crate::server::functions::NumericFieldSummary {
+    crate::server::functions::NumericFieldSummary {
+        key: summary.key,
+        label: summary.label,
+        unit: summary.unit,
+        value: summary.value,
+        measurement_count: summary.measurement_count,
+        distinct_count: summary.distinct_count,
+        min: summary.min,
+        max: summary.max,
+        disputed: summary.disputed,
+    }
+}
+
+fn into_stable_value_summary(
+    summary: super::stellarhost_canonical::StableValueSummary,
+) -> crate::server::functions::StableValueSummary {
+    crate::server::functions::StableValueSummary {
+        key: summary.key,
+        label: summary.label,
+        unit: summary.unit,
+        value: summary.value,
+        distinct_values: summary.distinct_values,
+        disputed: summary.disputed,
+    }
+}
+
+fn into_categorical_field_summary(
+    summary: super::stellarhost_canonical::CategoricalFieldSummary,
+) -> crate::server::functions::CategoricalFieldSummary {
+    crate::server::functions::CategoricalFieldSummary {
+        key: summary.key,
+        label: summary.label,
+        value: summary.value,
+        counts: summary
+            .counts
+            .into_iter()
+            .map(|count| crate::server::functions::CategoricalValueCount {
+                value: count.value,
+                count: count.count,
+            })
+            .collect(),
+        disputed: summary.disputed,
+    }
 }
 
 #[cfg(test)]

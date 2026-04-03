@@ -1,5 +1,6 @@
 //! Cache types and key normalization helpers for server-side table caching.
 
+use crate::server::functions::StellarHostDetail;
 use leptos::serde_json::Value;
 use moka::future::Cache;
 
@@ -39,9 +40,15 @@ pub struct TableCacheValue {
 }
 
 pub type TableCache = Cache<TableCacheKey, TableCacheValue>;
+pub type HostDetailCache = Cache<String, StellarHostDetail>;
 
 /// Build a table cache with max-entry bounds.
 pub fn build_table_cache(max_entries: u64) -> TableCache {
+    Cache::builder().max_capacity(max_entries).build()
+}
+
+/// Build a host-detail cache with max-entry bounds.
+pub fn build_host_detail_cache(max_entries: u64) -> HostDetailCache {
     Cache::builder().max_capacity(max_entries).build()
 }
 

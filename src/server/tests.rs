@@ -12,7 +12,7 @@ mod tests {
     use serde_json::Value;
     use tower::ServiceExt;
 
-    use crate::server::cache::build_table_cache;
+    use crate::server::cache::{build_host_detail_cache, build_table_cache};
     use crate::server::functions::DataStats;
     use crate::server::handlers::{
         ApiState, get_exoplanets, get_exoplanets_schema, get_stellarhosts,
@@ -55,6 +55,7 @@ mod tests {
                 planet_size_categories: Vec::new(),
             }),
             table_cache: build_table_cache(64),
+            host_detail_cache: build_host_detail_cache(64),
         }
     }
 
