@@ -1,150 +1,80 @@
 # Current Context
 
-## Stellar Hosts
+## Component Styling Cleanup
 
-### Product Rule
+### Problem
 
-- `stellarhosts` table view remains a raw NASA-style record browser.
-- Stellar host detail view is a canonical per-`hostname` profile derived from all matching rows.
-- Raw source rows remain visible on the detail page as provenance, but they are secondary to the canonical summary.
+- Some frontend components, especially `stellarhost_detail`, now carry large amounts of inline Tailwind utility classes.
+- This makes Rust view code harder to scan and mixes structure, styling, and decorative art-direction too tightly.
+- The current issue is not functionality. It is readability and maintainability of existing component code.
 
-### Detail Page Shape
+### Goal
 
-The stellar host detail page should have three layers:
+- Refactor existing components to reduce very large inline class strings.
+- Keep component structure easier to read.
+- Preserve the current visual design while choosing a cleaner styling pattern.
+- Avoid unnecessary project-wide styling churn.
 
-1. Identity / hero
-   - `hostname`
-   - adopted spectral type if available
-   - adopted distance if available
-   - planet count if available
-   - strong visual star hero
-2. Canonical summary
-   - adopted values for key stellar/system properties
-   - disagreement shown via range, distinct count, and measurement count
-3. Provenance
-   - compact evidence summary
-   - compact observations table
-   - source/reference links
+### Possible Approaches
 
-### Canonicalization Rules
+#### 1. Tailwind + Semantic Classes
 
-#### Identity
+- Keep Tailwind in the project.
+- Move large section-level styling into semantic class names such as:
+  - `.host-hero`
+  - `.host-hero__title`
+  - `.host-provenance`
+  - `.star-visual`
+- Define those classes in CSS/SCSS files and use `@apply` where helpful.
 
-- `hostname` is the grouping key and canonical identifier.
-- `hd_name`, `hip_name`, and `tic_id` are aliases.
-- Aliases are collected as distinct non-null values.
+Pros:
 
-#### Stable System Fields
+- lowest disruption
+- works with the current stack
+- keeps utility classes available for simple layout/text tweaks
 
-- Applies to `sy_pnum`, `sy_snum`, `sy_mnum`.
-- If one non-null distinct value exists, use it directly.
-- If multiple distinct values exist, mark the field as disputed and expose all distinct values in provenance.
+Cons:
 
-#### Numeric Summary Fields
+- classes remain global unless naming stays disciplined
 
-- Applies to `sy_dist`, `sy_plx`, `st_teff`, `st_mass`, `st_rad`, `st_age`, `st_lum`, `st_logg`, `st_met`.
-- Canonical value is the median of non-null values.
-- Provenance should retain:
-  - measurement count
-  - distinct count
-  - min
-  - max
-  - disputed state
-- If all values are null, omit the field from the main summary.
+#### 2. Feature CSS Files Imported Into Main Stylesheet
 
-#### Categorical Summary Fields
+- Keep styling global, but split it into dedicated files such as:
+  - `style/components/stellarhost-detail.css`
+- Import those files into the main stylesheet bundle.
 
-- Applies to `st_spectype`.
-- Canonical value is the most common non-null value.
-- Provenance should retain distinct values and counts.
-- If multiple values exist, mark the field as disputed.
+Pros:
 
-### Provenance Rules
+- simple mental model
+- styles are easier to locate by feature
+- no new styling library required
 
-- Keep one row per raw source record for the selected `hostname`.
-- First-version observations table columns:
-  - `st_teff`
-  - `st_mass`
-  - `st_rad`
-  - `st_age`
-  - `st_lum`
-  - `st_spectype`
-  - `sy_dist`
-  - `st_refname`
-  - `sy_refname`
-- Reference fields should render as links when the dataset provides archive anchor markup.
+Cons:
 
-### In-Memory Rule
+- still global CSS
 
-- Do not build a second global canonical stellar-host dataset.
-- Keep the raw dataframe in memory.
-- Derive canonical host detail on demand per `hostname`.
-- Cache derived detail payloads per host.
+#### 3. Scoped Component Stylesheets
 
-### Visual Rule
+- Use a scoped styling approach such as Stylance.
+- Keep stylesheet files next to components, for example:
+  - `hero.rs`
+  - `hero.module.scss`
 
-- Detail page should feel like a host profile, not a raw record dump.
-- The hero should use an approximate illustrative star color derived from canonical `st_teff` when available.
-- Wording should frame this as approximate, not exact visible appearance.
+Pros:
 
-### Star Color
+- strongest component ownership
+- better isolation for complex feature UI
+- good fit for CSS-heavy sections
 
-#### Product Framing
+Cons:
 
-- Treat star color as illustrative display logic, not exact astrophysical appearance.
-- Use it to improve hero identity and visual differentiation between hosts.
-- Product wording should remain:
-  - `Approximate color from effective temperature`
+- introduces extra styling tooling and conventions
 
-#### Data Input
+### Current Direction
 
-- Use canonical host temperature, not raw row values.
-- Primary input is canonical `st_teff`.
-- If `st_teff` is missing, fall back to a neutral default hero color.
-- Do not use source-recency logic for color selection.
-
-#### V1 Mapping Strategy
-
-- Prefer a hand-tuned temperature-to-color scale over pure blackbody rendering.
-- Use anchor temperatures with interpolation between anchors.
-- Keep solar-like stars near pale yellow-white rather than heavily saturated yellow.
-- Keep very hot stars blue-white, not neon blue.
-- Keep cool stars orange-red, but avoid oversaturated red UI.
-
-Suggested display bands:
-
-- `< 3500 K`: deep orange-red
-- `3500-4500 K`: orange
-- `4500-5300 K`: warm yellow-orange
-- `5300-6000 K`: pale yellow-white
-- `6000-7500 K`: warm white
-- `7500-10000 K`: blue-white
-- `> 10000 K`: pale icy blue
-
-#### Rendering Rule
-
-- Do not use one raw color value everywhere.
-- Derive multiple presentation tokens from the mapped color:
-  - core star color
-  - outer glow color
-  - subtle panel/accent tint
-  - near-white highlight
-
-This keeps the hero visually controlled and avoids harsh or cartoonish output.
-
-#### Non-Goals For V1
-
-- do not attempt exact visible-color simulation
-- do not add `st_logg` or metallicity into color rendering yet
-- do not block the feature on scientific-model integration
-
-#### Future Option
-
-- If needed later, replace the curated mapping with a more physically informed model.
-- That should only happen if the visual result is clearly better and still product-usable.
-
-### Status
-
-- Canonical stellar host detail and component split exist in code.
-- Star-color rendering from canonical `st_teff` exists in code.
-- `specs/web-frontend.md` and `specs/web-backend.md` do not yet need duplication of this detail-page behavior unless the design stabilizes further.
+- No final choice yet.
+- The next refactor pass should compare:
+  - Tailwind + semantic classes
+  - feature CSS files imported into the main stylesheet
+  - scoped component styles for `stellarhost_detail`
+- Prefer the option that improves readability without adding unnecessary styling complexity.
