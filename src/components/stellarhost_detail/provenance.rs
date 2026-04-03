@@ -105,20 +105,18 @@ fn ProvenanceMetric(label: &'static str, value: String) -> impl IntoView {
 fn ProvenanceCell(column: String, value: Value) -> impl IntoView {
     let is_ref_column = matches!(column.as_str(), "st_refname" | "sy_refname");
 
-    if is_ref_column {
-        if let Some(link) = parse_archive_anchor(&value) {
-            return view! {
-                <a
-                    class="break-words text-sky-300 underline decoration-sky-400/40 underline-offset-4 hover:text-sky-200"
-                    href=link.href
-                    target="_blank"
-                    rel="nofollow noopener noreferrer"
-                >
-                    {link.label}
-                </a>
-            }
-            .into_any();
+    if is_ref_column && let Some(link) = parse_archive_anchor(&value) {
+        return view! {
+            <a
+                class="break-words text-sky-300 underline decoration-sky-400/40 underline-offset-4 hover:text-sky-200"
+                href=link.href
+                target="_blank"
+                rel="nofollow noopener noreferrer"
+            >
+                {link.label}
+            </a>
         }
+        .into_any();
     }
 
     view! {
