@@ -56,4 +56,4 @@ async fn main() {
 
 - [x] Root cause identified (tokio worker thread starvation)
 - [x] Fix implemented (`worker_threads = 4` in `src/main.rs`)
-- [ ] Verify fix in production
+- [x] Verify fix in production

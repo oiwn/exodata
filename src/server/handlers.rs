@@ -1,18 +1,19 @@
 // REST API handlers for the exoplanets catalog
 // These handlers use the shared business logic from common.rs
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::{
     Router,
     extract::{Query, State},
-    http::StatusCode,
-    response::Json,
+    http::{StatusCode, header},
+    response::{IntoResponse, Json},
     routing::get,
 };
 use exo_core::metadata::ColumnMetadata;
+use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use polars::prelude::*;
 use polars::sql::SQLContext;
 use serde::{Deserialize, Serialize};
@@ -28,6 +29,8 @@ use crate::server::cache::{HostDetailCache, TableCache};
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
+    pub site_url: Arc<String>,
+    pub sitemap_xml: Arc<String>,
     pub stellarhosts_df: Arc<DataFrame>,
     pub exoplanets_df: Arc<DataFrame>,
     pub stellarhosts_metadata: Arc<HashMap<String, ColumnMetadata>>,
@@ -179,9 +182,22 @@ pub fn api_routes(state: ApiState) -> Router {
         .with_state(state)
 }
 
+pub fn site_routes(state: ApiState) -> Router {
+    Router::new()
+        .route("/sitemap.xml", get(get_sitemap))
+        .with_state(state)
+}
+
 /// Returns the Swagger UI router (should be mounted at root level, not nested)
 pub fn swagger_ui() -> SwaggerUi {
     SwaggerUi::new("/swagger-ui").url("/rest/openapi.json", ApiDoc::openapi())
+}
+
+pub async fn get_sitemap(State(state): State<ApiState>) -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/xml; charset=utf-8")],
+        state.sitemap_xml.as_str().to_owned(),
+    )
 }
 
 /// Get stellar hosts data
@@ -459,4 +475,91 @@ fn build_schema_response(
         columns,
         total_rows: df.height(),
     }
+}
+
+// Generate sitemap
+// TODO: move to the another file
+pub fn build_sitemap_xml(
+    site_url: &str,
+    stellarhosts_df: &DataFrame,
+    exoplanets_df: &DataFrame,
+) -> Result<String, String> {
+    let site_url = site_url.trim_end_matches('/');
+    let mut urls = vec![
+        format!("{site_url}/"),
+        format!("{site_url}/about"),
+        format!("{site_url}/stellarhosts"),
+        format!("{site_url}/exoplanets"),
+    ];
+
+    urls.extend(build_detail_urls(
+        stellarhosts_df,
+        "hostname",
+        site_url,
+        "/stellarhosts/",
+    )?);
+    urls.extend(build_detail_urls(
+        exoplanets_df,
+        "pl_name",
+        site_url,
+        "/exoplanets/",
+    )?);
+
+    Ok(render_sitemap(&urls))
+}
+
+fn build_detail_urls(
+    df: &DataFrame,
+    column_name: &str,
+    site_url: &str,
+    route_prefix: &str,
+) -> Result<Vec<String>, String> {
+    let column = df
+        .column(column_name)
+        .map_err(|e| format!("Missing sitemap column '{column_name}': {e}"))?;
+    let series = column.as_materialized_series();
+
+    let mut unique_values = BTreeSet::new();
+    for idx in 0..series.len() {
+        if let Ok(value) = series.str_value(idx) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                unique_values.insert(trimmed.to_string());
+            }
+        }
+    }
+
+    Ok(unique_values
+        .into_iter()
+        .map(|value| {
+            format!(
+                "{site_url}{route_prefix}{}",
+                utf8_percent_encode(&value, NON_ALPHANUMERIC)
+            )
+        })
+        .collect())
+}
+
+fn render_sitemap(urls: &[String]) -> String {
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+    );
+
+    for url in urls {
+        xml.push_str("  <url><loc>");
+        xml.push_str(&escape_xml(url));
+        xml.push_str("</loc></url>\n");
+    }
+
+    xml.push_str("</urlset>\n");
+    xml
+}
+
+fn escape_xml(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
 }

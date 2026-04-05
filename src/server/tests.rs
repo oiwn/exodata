@@ -15,8 +15,8 @@ mod tests {
     use crate::server::cache::{build_host_detail_cache, build_table_cache};
     use crate::server::functions::DataStats;
     use crate::server::handlers::{
-        ApiState, get_exoplanets, get_exoplanets_schema, get_stellarhosts,
-        get_stellarhosts_schema,
+        ApiState, build_sitemap_xml, get_exoplanets, get_exoplanets_schema,
+        get_sitemap, get_stellarhosts, get_stellarhosts_schema,
     };
 
     fn create_test_state() -> ApiState {
@@ -41,7 +41,16 @@ mod tests {
         }
         .unwrap();
 
+        let sitemap_xml = build_sitemap_xml(
+            "https://example.com",
+            &stellarhosts_df,
+            &exoplanets_df,
+        )
+        .unwrap();
+
         ApiState {
+            site_url: Arc::new("https://example.com".to_string()),
+            sitemap_xml: Arc::new(sitemap_xml),
             stellarhosts_df: Arc::new(stellarhosts_df),
             exoplanets_df: Arc::new(exoplanets_df),
             stellarhosts_metadata: Arc::new(HashMap::new()),
@@ -62,6 +71,7 @@ mod tests {
     fn create_test_app() -> Router {
         let state = create_test_state();
         Router::new()
+            .route("/sitemap.xml", axum::routing::get(get_sitemap))
             .route("/rest/stellarhosts", axum::routing::get(get_stellarhosts))
             .route("/rest/exoplanets", axum::routing::get(get_exoplanets))
             .route(
@@ -351,5 +361,41 @@ mod tests {
 
         // Limit should be capped at 1000
         assert_eq!(json["limit"], 1000);
+    }
+
+    #[tokio::test]
+    async fn test_get_sitemap() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/sitemap.xml")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get("content-type").unwrap(),
+            "application/xml; charset=utf-8"
+        );
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let xml = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(xml.contains("<loc>https://example.com/</loc>"));
+        assert!(xml.contains("<loc>https://example.com/about</loc>"));
+        assert!(xml.contains("<loc>https://example.com/stellarhosts</loc>"));
+        assert!(xml.contains("<loc>https://example.com/exoplanets</loc>"));
+        assert!(
+            xml.contains(
+                "<loc>https://example.com/stellarhosts/HD%20189733</loc>"
+            )
+        );
+        assert!(xml.contains(
+            "<loc>https://example.com/exoplanets/HD%20189733%20b</loc>"
+        ));
     }
 }
