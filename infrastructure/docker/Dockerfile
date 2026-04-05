@@ -1,4 +1,4 @@
-FROM rust:bookworm as builder
+FROM rust:bookworm AS builder
 
 RUN apt-get update && apt-get install -y \
     pkg-config libssl-dev curl \
@@ -26,6 +26,7 @@ RUN ARCH=$(uname -m) && \
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
+COPY build.rs ./
 COPY crates ./crates
 COPY src ./src
 COPY style ./style
