@@ -103,8 +103,24 @@ async fn start_server() {
 
     let table_cache = server::cache::build_table_cache(400);
     let host_detail_cache = server::cache::build_host_detail_cache(512);
+    let site_url = Arc::new(
+        std::env::var("SITE_URL")
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| "https://exodata.space".to_string()),
+    );
+    let sitemap_xml = Arc::new(
+        server::handlers::build_sitemap_xml(
+            site_url.as_str(),
+            &stellarhosts_df,
+            &exoplanets_df,
+        )
+        .unwrap_or_else(|e| panic!("Failed to build sitemap.xml: {}", e)),
+    );
 
     let api_state = ApiState {
+        site_url,
+        sitemap_xml,
         stellarhosts_df,
         exoplanets_df,
         stellarhosts_metadata,
@@ -211,6 +227,7 @@ async fn start_server() {
 
     // Merge REST API and Swagger UI on top (these take priority over Leptos fallback)
     let app = app
+        .merge(server::site_routes(api_state.clone()))
         .merge(server::swagger_ui()) // Swagger UI at /swagger-ui
         .nest_service("/rest", server::api_routes(api_state)); // REST API at /rest/*
 

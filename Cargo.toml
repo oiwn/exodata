@@ -42,6 +42,7 @@ utoipa = { version = "5.4", features = ["axum_extras"], optional = true }
 utoipa-swagger-ui = { version = "9.0", features = ["axum"], optional = true }
 sqlparser = { version = "0.60", optional = true }
 moka = { version = "0.12", features = ["future"] }
+percent-encoding = { version = "2.3.2", optional = true }
 
 # [build-dependencies]
 # markdown = "1.0.0-alpha"
@@ -75,6 +76,7 @@ ssr = [
     "dep:serde_json",
     "dep:indicatif",
     "dep:sqlparser",
+    "dep:percent-encoding",
     # OpenAPI / Swagger
     "dep:utoipa",
     "dep:utoipa-swagger-ui",

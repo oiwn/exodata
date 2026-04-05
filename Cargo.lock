@@ -1216,6 +1216,7 @@ dependencies = [
  "leptos_meta",
  "leptos_router",
  "moka",
+ "percent-encoding",
  "polars",
  "rand 0.9.2",
  "ratatui",

@@ -31,6 +31,11 @@ pub fn api_routes(state: ApiState) -> Router {
 }
 
 #[cfg(feature = "ssr")]
+pub fn site_routes(state: ApiState) -> Router {
+    handlers::site_routes(state)
+}
+
+#[cfg(feature = "ssr")]
 pub fn swagger_ui() -> SwaggerUi {
     handlers::swagger_ui()
 }
