@@ -499,7 +499,7 @@ fn median_f64(values: &[f64]) -> Option<f64> {
     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let len = sorted.len();
 
-    if len % 2 == 0 {
+    if len.is_multiple_of(2) {
         Some((sorted[len / 2 - 1] + sorted[len / 2]) / 2.0)
     } else {
         Some(sorted[len / 2])

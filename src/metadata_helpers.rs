@@ -78,10 +78,10 @@ pub fn stellarhost_detail_description(host: &StellarHostDetail) -> String {
     if let Some(distance) = host.system.distance.as_ref() {
         parts.push(format!("Distance {:.1} pc.", distance.value));
     }
-    if let Some(planets) = host.system.planet_count.as_ref() {
-        if let Some(count) = value_as_usize(&planets.value) {
-            parts.push(format!("{count} confirmed planets in the system."));
-        }
+    if let Some(planets) = host.system.planet_count.as_ref()
+        && let Some(count) = value_as_usize(&planets.value)
+    {
+        parts.push(format!("{count} confirmed planets in the system."));
     }
 
     parts.join(" ")
