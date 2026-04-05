@@ -7,6 +7,7 @@ use crate::components::{
 };
 use crate::error_template::{AppError, ErrorTemplate};
 use crate::metadata::{METADATA_SCRIPT_ID, provide_app_metadata_store};
+use crate::metadata_helpers::SITE_NAME;
 
 use leptos::error::Errors;
 use leptos::hydration::HydrationScripts;
@@ -57,8 +58,7 @@ pub fn App() -> impl IntoView {
         // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/exoplanets-catalog.css"/>
 
-        // sets the document title
-        <Title text="Exoplanets Catalog"/>
+        <Title text=SITE_NAME/>
 
         // content for this welcome page
         <Router>

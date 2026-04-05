@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP");
 
 #[component]
 pub fn VersionFooter() -> impl IntoView {
@@ -10,6 +11,10 @@ pub fn VersionFooter() -> impl IntoView {
                 <span class="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-slate-900 px-3 py-1 text-sm font-medium text-slate-100">
                     <span class="text-slate-400">"Version"</span>
                     <span class="font-semibold text-cyan-300">{APP_VERSION}</span>
+                </span>
+                <span class="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-sm font-medium text-slate-100">
+                    <span class="text-slate-400">"Updated"</span>
+                    <span class="font-semibold text-slate-200">{BUILD_TIMESTAMP}</span>
                 </span>
                 <a
                     href="https://www.imscraping.ninja"

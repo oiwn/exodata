@@ -92,6 +92,10 @@ async fn start_server() {
         aggregation::get_discovery_methods(&exoplanets_df, 10);
     let planet_size_categories =
         aggregation::get_planet_size_categories(&exoplanets_df);
+    let discovery_years =
+        aggregation::get_discovery_year_counts(&exoplanets_df, 10);
+    let orbital_period_buckets =
+        aggregation::get_orbital_period_buckets(&exoplanets_df);
     let overview_stats = Arc::new(DataStats {
         stellarhosts_total,
         exoplanets_total,
@@ -99,6 +103,8 @@ async fn start_server() {
         avg_stellar_distance,
         discovery_methods,
         planet_size_categories,
+        discovery_years,
+        orbital_period_buckets,
     });
 
     let table_cache = server::cache::build_table_cache(400);

@@ -1,6 +1,6 @@
 [package]
 name = "exoplanets-catalog"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 
 [workspace]
@@ -33,6 +33,7 @@ serde = { version = "1", features = ["derive"] }
 exo-core = { path = "crates/exo-core", optional = true }
 polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"], optional = true }
 serde_json = { version = "1", optional = true }
+percent-encoding = "2.3.2"
 comfy-table = { version = "7", optional = true }
 ratatui = { version = "0.29", features = ["all-widgets"], optional = true }
 crossterm = { version = "0.28", optional = true }
@@ -42,7 +43,6 @@ utoipa = { version = "5.4", features = ["axum_extras"], optional = true }
 utoipa-swagger-ui = { version = "9.0", features = ["axum"], optional = true }
 sqlparser = { version = "0.60", optional = true }
 moka = { version = "0.12", features = ["future"] }
-percent-encoding = { version = "2.3.2", optional = true }
 
 # [build-dependencies]
 # markdown = "1.0.0-alpha"
@@ -76,7 +76,6 @@ ssr = [
     "dep:serde_json",
     "dep:indicatif",
     "dep:sqlparser",
-    "dep:percent-encoding",
     # OpenAPI / Swagger
     "dep:utoipa",
     "dep:utoipa-swagger-ui",

@@ -1,9 +1,14 @@
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
 use crate::metadata::use_app_metadata_store;
+use crate::metadata_helpers::{
+    canonical_url, stellarhosts_description, stellarhosts_title,
+};
 use crate::server::functions::get_stellarhosts_page;
+use crate::structured_data::{StructuredData, collection_page_schema};
 use crate::table::{Table, build_column_model, build_table_query, is_err_or_lim};
 use leptos::prelude::*;
+use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
 use leptos_router::NavigateOptions;
 use leptos_router::components::A;
@@ -300,6 +305,16 @@ pub fn StellarHostsTablePage() -> impl IntoView {
     });
 
     view! {
+        <Title text=stellarhosts_title()/>
+        <Meta name="description" content=stellarhosts_description()/>
+        <Link rel="canonical" href=canonical_url("/stellarhosts")/>
+        <StructuredData
+            value=collection_page_schema(
+                "Stellar Hosts",
+                &stellarhosts_description(),
+                "/stellarhosts",
+            )
+        />
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             // Header
             <div class="container mx-auto px-4 py-8">

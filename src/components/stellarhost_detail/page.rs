@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
 use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
@@ -8,7 +9,12 @@ use super::hero::HostHeroSection;
 use super::planets::PlanetsSection;
 use super::provenance::ProvenanceSection;
 use super::summary::CanonicalSummarySection;
+use crate::metadata_helpers::{
+    canonical_url, decode_path_segment, encode_path_segment,
+    stellarhost_detail_description, stellarhost_detail_title, title_with_site,
+};
 use crate::server::functions::{get_planets_for_host, get_stellar_host_detail};
+use crate::structured_data::{StructuredData, stellarhost_dataset_schema};
 
 #[derive(Clone)]
 pub struct StellarHostDetailLazy;
@@ -28,13 +34,22 @@ impl LazyRoute for StellarHostDetailLazy {
 pub fn StellarHostDetailPage() -> impl IntoView {
     let params = use_params_map();
     let hostname = Memo::new(move |_| {
-        params
-            .read()
-            .get("hostname")
-            .unwrap_or_default()
-            .replace("%20", " ")
-            .replace("%23", "#")
+        let raw = params.read().get("hostname").unwrap_or_default();
+        decode_path_segment(&raw)
     });
+
+    let fallback_title =
+        move || title_with_site(&format!("{} Stellar Host", hostname.get()));
+    let fallback_description = move || {
+        format!(
+            "Explore the stellar host profile, system summary, and planet list for {}.",
+            hostname.get()
+        )
+    };
+    let canonical_href = canonical_url(&format!(
+        "/stellarhosts/{}",
+        encode_path_segment(&hostname.get_untracked())
+    ));
 
     let host_resource = Resource::new(
         move || hostname.get(),
@@ -47,6 +62,9 @@ pub fn StellarHostDetailPage() -> impl IntoView {
     );
 
     view! {
+        <Title text=move || fallback_title()/>
+        <Meta name="description" content=move || fallback_description()/>
+        <Link rel="canonical" href=canonical_href.clone()/>
         <div class="min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#0f172a_45%,_#111827_100%)]">
             <div class="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
                 <A
@@ -71,6 +89,9 @@ pub fn StellarHostDetailPage() -> impl IntoView {
 
                         match (host_data, planets_data) {
                             (Some(Ok(host)), Some(Ok(planets))) => view! {
+                                <Title text=stellarhost_detail_title(&host)/>
+                                <Meta name="description" content=stellarhost_detail_description(&host)/>
+                                <StructuredData value=stellarhost_dataset_schema(&host)/>
                                 <div class="mt-6 space-y-10 pb-14">
                                     <HostHeroSection host=host.clone() />
                                     <CanonicalSummarySection host=host.clone() />

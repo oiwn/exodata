@@ -26,6 +26,7 @@ pub fn Navbar() -> impl IntoView {
         "px-4 py-2 rounded-lg transition-all duration-200 hover:bg-white/10";
     let active_class =
         "px-4 py-2 rounded-lg bg-white/20 text-purple-300 font-semibold";
+    let icon_link_class = "flex items-center justify-center w-10 h-10 rounded-lg text-gray-300 transition-all duration-200 hover:bg-white/10 hover:text-white";
 
     // Mobile link styles
     let mobile_link_class = "text-xl font-medium text-gray-300 hover:text-purple-400 py-3 px-6 rounded-lg hover:bg-white/5 w-full text-center transition-colors";
@@ -101,6 +102,17 @@ pub fn Navbar() -> impl IntoView {
                             target="_blank"
                         >
                             "API"
+                        </a>
+
+                        <a
+                            href="https://github.com/oiwn/exoplanets-catalog"
+                            class=icon_link_class
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="GitHub repository"
+                            title="GitHub repository"
+                        >
+                            {github_icon()}
                         </a>
                     </div>
 
@@ -195,6 +207,18 @@ pub fn Navbar() -> impl IntoView {
                         >
                             "API"
                         </a>
+
+                        <a
+                            href="https://github.com/oiwn/exoplanets-catalog"
+                            class=mobile_link_class
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <span class="inline-flex items-center gap-3">
+                                {github_icon()}
+                                <span>"GitHub"</span>
+                            </span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -236,6 +260,20 @@ fn close_icon() -> impl IntoView {
                 stroke-width="2"
                 d="M6 18L18 6M6 6l12 12"
             />
+        </svg>
+    }
+}
+
+fn github_icon() -> impl IntoView {
+    view! {
+        <svg
+            class="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path d="M12 0.5C5.37 0.5 0 5.87 0 12.5C0 17.8 3.44 22.29 8.21 23.88C8.81 23.99 9.03 23.63 9.03 23.32C9.03 23.04 9.02 22.09 9.01 20.83C5.67 21.56 4.97 19.42 4.97 19.42C4.42 18.02 3.63 17.65 3.63 17.65C2.55 16.91 3.71 16.93 3.71 16.93C4.91 17.01 5.54 18.17 5.54 18.17C6.6 20 8.32 19.47 9 19.16C9.11 18.39 9.41 17.86 9.74 17.56C7.08 17.25 4.29 16.23 4.29 11.67C4.29 10.37 4.75 9.31 5.52 8.47C5.4 8.17 5 6.95 5.64 5.31C5.64 5.31 6.65 4.99 8.96 6.55C9.93 6.28 10.97 6.14 12 6.14C13.03 6.14 14.07 6.28 15.04 6.55C17.35 4.99 18.36 5.31 18.36 5.31C19 6.95 18.6 8.17 18.48 8.47C19.25 9.31 19.71 10.37 19.71 11.67C19.71 16.24 16.91 17.25 14.24 17.55C14.66 17.91 15.03 18.62 15.03 19.72C15.03 21.3 15.02 22.86 15.02 23.32C15.02 23.63 15.24 24 15.85 23.88C20.62 22.29 24 17.8 24 12.5C24 5.87 18.63 0.5 12 0.5Z"/>
         </svg>
     }
 }

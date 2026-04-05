@@ -11,7 +11,6 @@ This file defines agent workflow and points to project specifications. Implement
 - `specs/cli.md` — CLI requirements
 - `specs/data-management.md` — data fetching/prep
 - `specs/column-metadata.md` — column descriptions/units
-- `specs/problems.md` — known issues/edge cases
 - `DEPLOY.md` and `README.md` — build/test/deploy commands
 
 ## Workflow Guidelines
@@ -24,3 +23,5 @@ This file defines agent workflow and points to project specifications. Implement
 ## Agent Rules
 1. **Explicit Instruction Compliance:** Do not perform actions (file edits or command execution) without explicit user request.
 2. **Confidence Threshold:** If below ~70% confidence about a request or outcome, stop and ask for clarification.
+3. **Response Style Preference:** Prefer single-view answers; if possible, keep responses short enough to fit on one page.
+4. **Fixtures Are Not Source of Truth:** Treat test fixtures as stable sample material for testing only. Do not infer or enforce behavior from exact fixture numbers when those numbers only reflect a sampled snapshot of the live dataset.

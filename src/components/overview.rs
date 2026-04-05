@@ -1,9 +1,14 @@
 use leptos::prelude::*;
+use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
 use leptos_router::lazy_route;
 
+use crate::metadata_helpers::{
+    canonical_url, overview_description, overview_title,
+};
 // Import server function and types - #[server] macro handles client/server compilation
 use crate::server::functions::{DataStats, get_stats};
+use crate::structured_data::{StructuredData, website_schema};
 
 // --- Lazy Route ---
 
@@ -28,6 +33,10 @@ pub fn OverviewPage() -> impl IntoView {
         Resource::new(move || (), move |_| async move { get_stats().await });
 
     view! {
+        <Title text=overview_title()/>
+        <Meta name="description" content=overview_description()/>
+        <Link rel="canonical" href=canonical_url("/")/>
+        <StructuredData value=website_schema()/>
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             // Header with cosmic background
             <div class="relative overflow-hidden">
@@ -107,7 +116,7 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
                 title="Exoplanets"
                 value=stats.exoplanets_total.to_string()
                 icon="🪐"
-                subtitle="Confirmed discoveries"
+                subtitle="Distinct planets in the catalog"
                 gradient="from-purple-600 to-pink-500"
             />
             <StatCard
@@ -134,15 +143,27 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <StatSection
                 title="Discovery Methods"
-                subtitle="How we find exoplanets"
+                subtitle="Distinct planets grouped by canonical method"
                 icon="🔭"
                 items=stats.discovery_methods
             />
             <StatSection
                 title="Planet Classifications"
-                subtitle="Size distribution by Earth radii"
+                subtitle="Distinct planets grouped by canonical radius"
                 icon="🌍"
                 items=stats.planet_size_categories
+            />
+            <StatSection
+                title="Discovery Years"
+                subtitle="Distinct planets grouped by earliest discovery year"
+                icon="📅"
+                items=stats.discovery_years
+            />
+            <StatSection
+                title="Orbital Periods"
+                subtitle="Distinct planets grouped by canonical period"
+                icon="🌀"
+                items=stats.orbital_period_buckets
             />
         </div>
     }
