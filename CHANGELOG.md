@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-04-06
+
+- Fixed overview entity totals and breakdown semantics:
+  - changed overview stellar host / exoplanet totals to count distinct `hostname` and `pl_name` instead of raw row counts (`crates/exo-core/src/tables/overview.rs`, `src/main.rs`)
+  - replaced the exoplanet overview card subtitle with `Distinct planets in the catalog` (`src/components/overview.rs`)
+  - reworked overview discovery-method and radius-classification sections to use one canonical value per planet instead of counting all records
+  - added overview sections for distinct planets by earliest discovery year and canonical orbital-period bucket
+  - added focused overview aggregation tests covering distinct totals, canonical method selection, canonical radius selection, earliest discovery year, and orbital-period bucketing
+- Improved global shell/UI polish:
+  - added GitHub repository link to the navbar on desktop and mobile (`src/components/navbar.rs`)
+  - added compile-time build timestamp to the footer via `build.rs` and rendered it as `Updated` next to the version badge (`build.rs`, `src/components/footer.rs`)
+  - replaced the default plain 404 output with a branded not-found page matching the site visual style (`src/error_template.rs`)
+- Added agent guidance clarifying that test fixtures are sample material for tests and not source-of-truth dataset values (`AGENTS.md`)
+
 ## 2026-04-05
 
 - Added baseline SEO infrastructure for crawlability and metadata:
@@ -13,6 +27,12 @@
   - detail-page metadata now derives from the same SSR resource data used to render page content
   - removed duplicate global description tag from the app shell so each page emits a single description
 - Replaced manual route param decoding for detail pages with proper percent decoding (`percent-encoding` in `Cargo.toml`)
+- Added structured data / JSON-LD for SEO without a dedicated schema crate:
+  - introduced `src/structured_data.rs` to build `serde_json` schema payloads and render SSR `application/ld+json` scripts
+  - added `WebSite` schema to `/`, `CollectionPage` schema to `/stellarhosts` and `/exoplanets`, and `Dataset` schema to stellar host and exoplanet detail pages
+- Fixed detail-page hydration warnings caused by reading SSR resources in head tags outside suspense:
+  - moved resource-backed `Title`, meta description, and JSON-LD emission into the successful `<Suspense/>` branch on detail pages
+  - switched detail-page canonical href generation to non-reactive values to avoid unnecessary reactive read warnings during hydrate
 
 ## 2026-04-03
 

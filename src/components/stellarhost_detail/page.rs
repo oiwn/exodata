@@ -38,21 +38,18 @@ pub fn StellarHostDetailPage() -> impl IntoView {
         decode_path_segment(&raw)
     });
 
-    let fallback_title = Signal::derive(move || {
-        title_with_site(&format!("{} Stellar Host", hostname.get()))
-    });
-    let fallback_description = Signal::derive(move || {
+    let fallback_title =
+        move || title_with_site(&format!("{} Stellar Host", hostname.get()));
+    let fallback_description = move || {
         format!(
             "Explore the stellar host profile, system summary, and planet list for {}.",
             hostname.get()
         )
-    });
-    let canonical_href = Signal::derive(move || {
-        canonical_url(&format!(
-            "/stellarhosts/{}",
-            encode_path_segment(&hostname.get())
-        ))
-    });
+    };
+    let canonical_href = canonical_url(&format!(
+        "/stellarhosts/{}",
+        encode_path_segment(&hostname.get_untracked())
+    ));
 
     let host_resource = Resource::new(
         move || hostname.get(),
@@ -65,26 +62,9 @@ pub fn StellarHostDetailPage() -> impl IntoView {
     );
 
     view! {
-        <Title text=move || {
-            host_resource
-                .get()
-                .and_then(|result| result.ok().map(|host| stellarhost_detail_title(&host)))
-                .unwrap_or_else(|| fallback_title.get())
-        }/>
-        <Meta name="description" content=move || {
-            host_resource
-                .get()
-                .and_then(|result| result.ok().map(|host| stellarhost_detail_description(&host)))
-                .unwrap_or_else(|| fallback_description.get())
-        }/>
-        <Link rel="canonical" href=canonical_href.get()/>
-        {move || {
-            host_resource.get().and_then(|result| {
-                result.ok().map(|host| {
-                    view! { <StructuredData value=stellarhost_dataset_schema(&host)/> }
-                })
-            })
-        }}
+        <Title text=move || fallback_title()/>
+        <Meta name="description" content=move || fallback_description()/>
+        <Link rel="canonical" href=canonical_href.clone()/>
         <div class="min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#0f172a_45%,_#111827_100%)]">
             <div class="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
                 <A
@@ -109,6 +89,9 @@ pub fn StellarHostDetailPage() -> impl IntoView {
 
                         match (host_data, planets_data) {
                             (Some(Ok(host)), Some(Ok(planets))) => view! {
+                                <Title text=stellarhost_detail_title(&host)/>
+                                <Meta name="description" content=stellarhost_detail_description(&host)/>
+                                <StructuredData value=stellarhost_dataset_schema(&host)/>
                                 <div class="mt-6 space-y-10 pb-14">
                                     <HostHeroSection host=host.clone() />
                                     <CanonicalSummarySection host=host.clone() />

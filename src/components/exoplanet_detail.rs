@@ -39,21 +39,18 @@ pub fn ExoplanetDetailPage() -> impl IntoView {
         decode_path_segment(&raw)
     });
 
-    let fallback_title = Signal::derive(move || {
-        title_with_site(&format!("{} Exoplanet", pl_name.get()))
-    });
-    let fallback_description = Signal::derive(move || {
+    let fallback_title =
+        move || title_with_site(&format!("{} Exoplanet", pl_name.get()));
+    let fallback_description = move || {
         format!(
             "Explore measurements and source records for the exoplanet {}.",
             pl_name.get()
         )
-    });
-    let canonical_href = Signal::derive(move || {
-        canonical_url(&format!(
-            "/exoplanets/{}",
-            encode_path_segment(&pl_name.get())
-        ))
-    });
+    };
+    let canonical_href = canonical_url(&format!(
+        "/exoplanets/{}",
+        encode_path_segment(&pl_name.get_untracked())
+    ));
 
     let detail_resource = Resource::new(
         move || pl_name.get(),
@@ -61,26 +58,9 @@ pub fn ExoplanetDetailPage() -> impl IntoView {
     );
 
     view! {
-        <Title text=move || {
-            detail_resource
-                .get()
-                .and_then(|result| result.ok().map(|detail| exoplanet_detail_title(&detail)))
-                .unwrap_or_else(|| fallback_title.get())
-        }/>
-        <Meta name="description" content=move || {
-            detail_resource
-                .get()
-                .and_then(|result| result.ok().map(|detail| exoplanet_detail_description(&detail)))
-                .unwrap_or_else(|| fallback_description.get())
-        }/>
-        <Link rel="canonical" href=canonical_href.get()/>
-        {move || {
-            detail_resource.get().and_then(|result| {
-                result.ok().map(|detail| {
-                    view! { <StructuredData value=exoplanet_dataset_schema(&detail)/> }
-                })
-            })
-        }}
+        <Title text=move || fallback_title()/>
+        <Meta name="description" content=move || fallback_description()/>
+        <Link rel="canonical" href=canonical_href.clone()/>
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             <div class="relative overflow-hidden">
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20"></div>
@@ -123,6 +103,9 @@ pub fn ExoplanetDetailPage() -> impl IntoView {
                     {move || {
                         detail_resource.get().map(|result| match result {
                             Ok(detail) => view! {
+                                <Title text=exoplanet_detail_title(&detail)/>
+                                <Meta name="description" content=exoplanet_detail_description(&detail)/>
+                                <StructuredData value=exoplanet_dataset_schema(&detail)/>
                                 <div class="space-y-10">
                                     <PlanetSummary detail=detail.clone() />
                                     <PlanetRecords detail=detail />

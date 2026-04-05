@@ -116,7 +116,7 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
                 title="Exoplanets"
                 value=stats.exoplanets_total.to_string()
                 icon="🪐"
-                subtitle="Confirmed discoveries"
+                subtitle="Distinct planets in the catalog"
                 gradient="from-purple-600 to-pink-500"
             />
             <StatCard
@@ -143,15 +143,27 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <StatSection
                 title="Discovery Methods"
-                subtitle="How we find exoplanets"
+                subtitle="Distinct planets grouped by canonical method"
                 icon="🔭"
                 items=stats.discovery_methods
             />
             <StatSection
                 title="Planet Classifications"
-                subtitle="Size distribution by Earth radii"
+                subtitle="Distinct planets grouped by canonical radius"
                 icon="🌍"
                 items=stats.planet_size_categories
+            />
+            <StatSection
+                title="Discovery Years"
+                subtitle="Distinct planets grouped by earliest discovery year"
+                icon="📅"
+                items=stats.discovery_years
+            />
+            <StatSection
+                title="Orbital Periods"
+                subtitle="Distinct planets grouped by canonical period"
+                icon="🌀"
+                items=stats.orbital_period_buckets
             />
         </div>
     }

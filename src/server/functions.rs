@@ -47,6 +47,8 @@ pub struct DataStats {
     pub avg_stellar_distance: f64,
     pub discovery_methods: Vec<(String, usize)>,
     pub planet_size_categories: Vec<(String, usize)>,
+    pub discovery_years: Vec<(String, usize)>,
+    pub orbital_period_buckets: Vec<(String, usize)>,
 }
 
 /// Server function to fetch and calculate overview statistics

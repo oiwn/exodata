@@ -62,6 +62,8 @@ mod tests {
                 avg_stellar_distance: 0.0,
                 discovery_methods: Vec::new(),
                 planet_size_categories: Vec::new(),
+                discovery_years: Vec::new(),
+                orbital_period_buckets: Vec::new(),
             }),
             table_cache: build_table_cache(64),
             host_detail_cache: build_host_detail_cache(64),
