@@ -1,9 +1,14 @@
 use leptos::prelude::*;
+use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
 use leptos_router::lazy_route;
 
+use crate::metadata_helpers::{
+    canonical_url, overview_description, overview_title,
+};
 // Import server function and types - #[server] macro handles client/server compilation
 use crate::server::functions::{DataStats, get_stats};
+use crate::structured_data::{StructuredData, website_schema};
 
 // --- Lazy Route ---
 
@@ -28,6 +33,10 @@ pub fn OverviewPage() -> impl IntoView {
         Resource::new(move || (), move |_| async move { get_stats().await });
 
     view! {
+        <Title text=overview_title()/>
+        <Meta name="description" content=overview_description()/>
+        <Link rel="canonical" href=canonical_url("/")/>
+        <StructuredData value=website_schema()/>
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             // Header with cosmic background
             <div class="relative overflow-hidden">

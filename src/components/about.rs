@@ -1,9 +1,11 @@
 use leptos::prelude::*;
+use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
 use leptos_router::components::A;
 use leptos_router::hooks::use_location;
 use leptos_router::lazy_route;
 
+use crate::metadata_helpers::{about_description, about_title, canonical_url};
 // --- Content Constants ---
 
 const INTRO: &str = "A searchable catalog of confirmed exoplanets and their host stars built on NASA Exoplanet Archive data. \
@@ -88,6 +90,9 @@ pub fn AboutPage() -> impl IntoView {
     };
 
     view! {
+        <Title text=about_title()/>
+        <Meta name="description" content=about_description()/>
+        <Link rel="canonical" href=canonical_url("/about")/>
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-16">
             <div class="container mx-auto px-4 max-w-4xl">
                 <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-8 border border-purple-500/20 shadow-2xl">

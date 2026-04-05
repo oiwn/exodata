@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-04-05
+
+- Added baseline SEO infrastructure for crawlability and metadata:
+  - added static `robots.txt` in `public/robots.txt` with open crawling and sitemap reference
+  - added startup-built, in-memory cached `GET /sitemap.xml` served by Axum (`src/main.rs`, `src/server/handlers.rs`, `src/server/mod.rs`)
+  - sitemap includes canonical static pages plus distinct stellar host and exoplanet detail URLs
+  - added sitemap route test coverage in `src/server/tests.rs`
+- Added page-level SSR-friendly metadata across the app:
+  - introduced shared metadata helpers for titles, descriptions, canonical URLs, and percent encoding/decoding (`src/metadata_helpers.rs`)
+  - added per-page `title`, `meta description`, and canonical tags for overview, about, stellar hosts table, exoplanets table, stellar host detail, and exoplanet detail pages
+  - detail-page metadata now derives from the same SSR resource data used to render page content
+  - removed duplicate global description tag from the app shell so each page emits a single description
+- Replaced manual route param decoding for detail pages with proper percent decoding (`percent-encoding` in `Cargo.toml`)
+
 ## 2026-04-03
 
 - Reworked stellar host detail into a canonical host profile instead of a `first row wins` record view:
