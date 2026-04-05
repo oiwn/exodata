@@ -25,8 +25,9 @@ RUN ARCH=$(uname -m) && \
     fi
 
 WORKDIR /app
+ARG BUILD_TIMESTAMP=unknown
+ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
 COPY Cargo.toml Cargo.lock ./
-COPY build.rs ./
 COPY crates ./crates
 COPY src ./src
 COPY style ./style

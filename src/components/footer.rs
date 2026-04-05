@@ -1,7 +1,10 @@
 use leptos::prelude::*;
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
-const BUILD_TIMESTAMP: &str = env!("BUILD_TIMESTAMP");
+const BUILD_TIMESTAMP: &str = match option_env!("BUILD_TIMESTAMP") {
+    Some(value) => value,
+    None => "unknown",
+};
 
 #[component]
 pub fn VersionFooter() -> impl IntoView {
