@@ -6,7 +6,7 @@ use crate::metadata_helpers::{
 };
 use crate::server::functions::get_exoplanets_page;
 use crate::structured_data::{StructuredData, collection_page_schema};
-use crate::table::{Table, build_column_model, build_table_query, is_err_or_lim};
+use crate::table::{PaginationLinks, Table, build_column_model, build_table_query, is_err_or_lim};
 use leptos::prelude::*;
 use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
@@ -475,6 +475,28 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                 <div class="text-sm text-gray-400">
                                                     {format!("Showing {} - {} of {} records", start, end, total)}
                                                 </div>
+
+                                                <PaginationLinks
+                                                    current_page=current_page.get()
+                                                    total_pages=total_pages()
+                                                    base_url="/exoplanets".to_string()
+                                                    sort_col=sort_column.get()
+                                                    sort_order=sort_order.get()
+                                                    columns=selected_columns.get()
+                                                    filter=filter_text.get()
+                                                    on_page_change={
+                                                        let navigate = navigate.clone();
+                                                        Callback::new(move |p: usize| {
+                                                            set_current_page.set(p);
+                                                            let sort_col = sort_column.get();
+                                                            let order = sort_order.get();
+                                                            let cols = selected_columns.get();
+                                                            let filter = filter_text.get();
+                                                            let query_string = build_table_query(p, sort_col.as_deref(), &order, Some(&cols), Some(&filter));
+                                                            navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                        })
+                                                    }
+                                                />
 
                                                 <div class="flex items-center gap-4">
                                                     <button
