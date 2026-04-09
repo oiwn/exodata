@@ -77,13 +77,13 @@ pub fn App() -> impl IntoView {
                 <Route
                     path=StaticSegment("stellarhosts")
                     view={Lazy::<StellarHostsTableLazy>::new()}
-                    ssr=SsrMode::OutOfOrder
+                    ssr=SsrMode::Async
                 />
                 <Route path=path!("/stellarhosts/:hostname") view={Lazy::<StellarHostDetailLazy>::new()} ssr=SsrMode::Async/>
                 <Route
                     path=StaticSegment("exoplanets")
                     view={Lazy::<ExoplanetsTableLazy>::new()}
-                    ssr=SsrMode::OutOfOrder
+                    ssr=SsrMode::Async
                 />
                 <Route path=path!("/exoplanets/:pl_name") view={Lazy::<ExoplanetDetailLazy>::new()} ssr=SsrMode::Async/>
                 <Route path=StaticSegment("about") view={Lazy::<AboutLazy>::new()}/>
