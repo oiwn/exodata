@@ -1,13 +1,16 @@
 use leptos::prelude::*;
 
-use crate::table::build_table_query;
+use crate::table::{TableQueryState, build_table_query};
 
 /// Computes which page numbers to show in the pagination bar.
 /// Returns a deduplicated, sorted list that includes:
 /// - Page 1 and the last page always
 /// - A window of ±2 pages around `current_page`
 /// Gaps between non-consecutive entries signal where "…" should be rendered.
-pub fn compute_page_window(current_page: usize, total_pages: usize) -> Vec<usize> {
+pub fn compute_page_window(
+    current_page: usize,
+    total_pages: usize,
+) -> Vec<usize> {
     if total_pages == 0 {
         return vec![];
     }
@@ -44,17 +47,14 @@ pub fn PaginationLinks(
     on_page_change: Option<Callback<usize>>,
 ) -> impl IntoView {
     let make_url = move |p: usize| {
-        format!(
-            "{}?{}",
-            base_url,
-            build_table_query(
-                p,
-                sort_col.as_deref(),
-                &sort_order,
-                Some(&columns),
-                Some(&filter),
-            )
-        )
+        let query = TableQueryState::new(
+            p,
+            sort_col.clone(),
+            sort_order.clone(),
+            columns.clone(),
+            filter.clone(),
+        );
+        format!("{}?{}", base_url, build_table_query(&query))
     };
 
     let pages = compute_page_window(current_page, total_pages);
@@ -76,18 +76,21 @@ pub fn PaginationLinks(
         } else {
             "px-1.5 py-0.5 rounded text-xs font-mono text-slate-500 hover:text-white hover:bg-slate-800"
         };
-        items.push(view! {
-            <a
-                href=href
-                class=class
-                on:click=move |ev| {
-                    if let Some(cb) = on_page_change {
-                        ev.prevent_default();
-                        cb.run(p);
+        items.push(
+            view! {
+                <a
+                    href=href
+                    class=class
+                    on:click=move |ev| {
+                        if let Some(cb) = on_page_change {
+                            ev.prevent_default();
+                            cb.run(p);
+                        }
                     }
-                }
-            >{p}</a>
-        }.into_any());
+                >{p}</a>
+            }
+            .into_any(),
+        );
         prev = Some(p);
     }
 
