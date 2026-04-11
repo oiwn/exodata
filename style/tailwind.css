@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./components/stellarhosts-table.css";
+
 @theme {
   /* Enable all Tailwind colors */
 }
@@ -35,4 +37,3 @@ html.pre-hydration body::after {
 @keyframes hydration-spin {
   to { transform: rotate(360deg); }
 }
-

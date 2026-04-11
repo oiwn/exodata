@@ -6,7 +6,10 @@ use crate::metadata_helpers::{
 };
 use crate::server::functions::get_exoplanets_page;
 use crate::structured_data::{StructuredData, collection_page_schema};
-use crate::table::{Table, build_column_model, build_table_query, is_err_or_lim};
+use crate::table::{
+    PaginationLinks, Table, TableQueryState, build_column_model, is_err_or_lim,
+    navigate_table_query,
+};
 use leptos::prelude::*;
 use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
@@ -14,8 +17,6 @@ use leptos_router::NavigateOptions;
 use leptos_router::components::A;
 use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_router::lazy_route;
-
-type TableQueryState = (usize, Option<String>, String, Vec<String>, String);
 
 // --- Lazy Route ---
 
@@ -142,7 +143,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
 
     // Track when resource source changes to set loading state
     Effect::new(move |prev: Option<TableQueryState>| {
-        let current = (
+        let current = TableQueryState::new(
             current_page.get(),
             sort_column.get(),
             sort_order.get(),
@@ -224,20 +225,17 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             // Reset to page 1 when sorting changes
             set_current_page.set(1);
             // Update URL with new state
-            let page = current_page.get();
-            let sort_col = sort_column.get();
-            let order = sort_order.get();
-            let cols = selected_columns.get();
-            let filter = filter_text.get();
-            let query_string = build_table_query(
-                page,
-                sort_col.as_deref(),
-                &order,
-                Some(&cols),
-                Some(&filter),
+            let query = TableQueryState::new(
+                current_page.get(),
+                sort_column.get(),
+                sort_order.get(),
+                selected_columns.get(),
+                filter_text.get(),
             );
-            navigate(
-                &format!("/exoplanets?{}", query_string),
+            navigate_table_query(
+                &navigate,
+                "/exoplanets",
+                &query,
                 Default::default(),
             );
         }
@@ -259,19 +257,17 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             }
 
             // Update URL with new state
-            let page = current_page.get();
-            let sort_col = sort_column.get();
-            let order = sort_order.get();
-            let filter = filter_text.get();
-            let query_string = build_table_query(
-                page,
-                sort_col.as_deref(),
-                &order,
-                Some(&columns),
-                Some(&filter),
+            let query = TableQueryState::new(
+                current_page.get(),
+                sort_column.get(),
+                sort_order.get(),
+                columns,
+                filter_text.get(),
             );
-            navigate(
-                &format!("/exoplanets?{}", query_string),
+            navigate_table_query(
+                &navigate,
+                "/exoplanets",
+                &query,
                 NavigateOptions {
                     scroll: false,
                     ..Default::default()
@@ -286,18 +282,17 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
         move |value: String| {
             set_filter_text.set(value.clone());
             set_current_page.set(1);
-            let sort_col = sort_column.get();
-            let order = sort_order.get();
-            let cols = selected_columns.get();
-            let query_string = build_table_query(
+            let query = TableQueryState::new(
                 1,
-                sort_col.as_deref(),
-                &order,
-                Some(&cols),
-                Some(&value),
+                sort_column.get(),
+                sort_order.get(),
+                selected_columns.get(),
+                value,
             );
-            navigate(
-                &format!("/exoplanets?{}", query_string),
+            navigate_table_query(
+                &navigate,
+                "/exoplanets",
+                &query,
                 NavigateOptions {
                     scroll: false,
                     ..Default::default()
@@ -387,19 +382,19 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                             move |_| {
                                                                 if can_go_prev() {
                                                                     set_current_page.update(|p| *p -= 1);
-                                                                    let page = current_page.get();
-                                                                    let sort_col = sort_column.get();
-                                                                    let order = sort_order.get();
-                                                                    let cols = selected_columns.get();
-                                                                    let filter = filter_text.get();
-                                                                    let query_string = build_table_query(
-                                                                        page,
-                                                                        sort_col.as_deref(),
-                                                                        &order,
-                                                                        Some(&cols),
-                                                                        Some(&filter),
+                                                                    let query = TableQueryState::new(
+                                                                        current_page.get(),
+                                                                        sort_column.get(),
+                                                                        sort_order.get(),
+                                                                        selected_columns.get(),
+                                                                        filter_text.get(),
                                                                     );
-                                                                    navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                                    navigate_table_query(
+                                                                        &navigate,
+                                                                        "/exoplanets",
+                                                                        &query,
+                                                                        Default::default(),
+                                                                    );
                                                                 }
                                                             }
                                                         }
@@ -419,19 +414,19 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                             move |_| {
                                                                 if can_go_next() {
                                                                     set_current_page.update(|p| *p += 1);
-                                                                    let page = current_page.get();
-                                                                    let sort_col = sort_column.get();
-                                                                    let order = sort_order.get();
-                                                                    let cols = selected_columns.get();
-                                                                    let filter = filter_text.get();
-                                                                    let query_string = build_table_query(
-                                                                        page,
-                                                                        sort_col.as_deref(),
-                                                                        &order,
-                                                                        Some(&cols),
-                                                                        Some(&filter),
+                                                                    let query = TableQueryState::new(
+                                                                        current_page.get(),
+                                                                        sort_column.get(),
+                                                                        sort_order.get(),
+                                                                        selected_columns.get(),
+                                                                        filter_text.get(),
                                                                     );
-                                                                    navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                                    navigate_table_query(
+                                                                        &navigate,
+                                                                        "/exoplanets",
+                                                                        &query,
+                                                                        Default::default(),
+                                                                    );
                                                                 }
                                                             }
                                                         }
@@ -476,6 +471,35 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                     {format!("Showing {} - {} of {} records", start, end, total)}
                                                 </div>
 
+                                                <PaginationLinks
+                                                    current_page=current_page.get()
+                                                    total_pages=total_pages()
+                                                    base_url="/exoplanets".to_string()
+                                                    sort_col=sort_column.get()
+                                                    sort_order=sort_order.get()
+                                                    columns=selected_columns.get()
+                                                    filter=filter_text.get()
+                                                    on_page_change={
+                                                        let navigate = navigate.clone();
+                                                        Callback::new(move |p: usize| {
+                                                            set_current_page.set(p);
+                                                            let query = TableQueryState::new(
+                                                                p,
+                                                                sort_column.get(),
+                                                                sort_order.get(),
+                                                                selected_columns.get(),
+                                                                filter_text.get(),
+                                                            );
+                                                            navigate_table_query(
+                                                                &navigate,
+                                                                "/exoplanets",
+                                                                &query,
+                                                                Default::default(),
+                                                            );
+                                                        })
+                                                    }
+                                                />
+
                                                 <div class="flex items-center gap-4">
                                                     <button
                                                         class="px-4 py-2 rounded-lg bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700 hover:border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -485,19 +509,19 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                             move |_| {
                                                                 if can_go_prev() {
                                                                     set_current_page.update(|p| *p -= 1);
-                                                                    let page = current_page.get();
-                                                                    let sort_col = sort_column.get();
-                                                                    let order = sort_order.get();
-                                                                    let cols = selected_columns.get();
-                                                                    let filter = filter_text.get();
-                                                                    let query_string = build_table_query(
-                                                                        page,
-                                                                        sort_col.as_deref(),
-                                                                        &order,
-                                                                        Some(&cols),
-                                                                        Some(&filter),
+                                                                    let query = TableQueryState::new(
+                                                                        current_page.get(),
+                                                                        sort_column.get(),
+                                                                        sort_order.get(),
+                                                                        selected_columns.get(),
+                                                                        filter_text.get(),
                                                                     );
-                                                                    navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                                    navigate_table_query(
+                                                                        &navigate,
+                                                                        "/exoplanets",
+                                                                        &query,
+                                                                        Default::default(),
+                                                                    );
                                                                 }
                                                             }
                                                         }
@@ -517,19 +541,19 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                                             move |_| {
                                                                 if can_go_next() {
                                                                     set_current_page.update(|p| *p += 1);
-                                                                    let page = current_page.get();
-                                                                    let sort_col = sort_column.get();
-                                                                    let order = sort_order.get();
-                                                                    let cols = selected_columns.get();
-                                                                    let filter = filter_text.get();
-                                                                    let query_string = build_table_query(
-                                                                        page,
-                                                                        sort_col.as_deref(),
-                                                                        &order,
-                                                                        Some(&cols),
-                                                                        Some(&filter),
+                                                                    let query = TableQueryState::new(
+                                                                        current_page.get(),
+                                                                        sort_column.get(),
+                                                                        sort_order.get(),
+                                                                        selected_columns.get(),
+                                                                        filter_text.get(),
                                                                     );
-                                                                    navigate(&format!("/exoplanets?{}", query_string), Default::default());
+                                                                    navigate_table_query(
+                                                                        &navigate,
+                                                                        "/exoplanets",
+                                                                        &query,
+                                                                        Default::default(),
+                                                                    );
                                                                 }
                                                             }
                                                         }

@@ -1,5 +1,6 @@
 use crate::server::functions::{ColumnMetadata, TableData};
 use crate::table::ColumnGroup;
+use crate::table::TableQueryState;
 use leptos::ev::KeyboardEvent;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
@@ -257,30 +258,20 @@ pub fn Table(
 ///
 /// # Returns
 /// Query string like "page=1&sort=hostname&order=asc"
-pub fn build_table_query(
-    page: usize,
-    sort_col: Option<&str>,
-    order: &str,
-    columns: Option<&[String]>,
-    filter: Option<&str>,
-) -> String {
-    let mut query_params = vec![format!("page={}", page)];
-    if let Some(col) = sort_col {
+pub fn build_table_query(query: &TableQueryState) -> String {
+    let mut query_params = vec![format!("page={}", query.page)];
+    if let Some(col) = query.sort_col.as_deref() {
         query_params.push(format!("sort={}", col));
-        query_params.push(format!("order={}", order));
+        query_params.push(format!("order={}", query.sort_order));
     }
-    if let Some(cols) = columns
-        && !cols.is_empty()
-    {
-        let encoded = encode_query_value(&cols.join(","));
+    if !query.columns.is_empty() {
+        let encoded = encode_query_value(&query.columns.join(","));
         query_params.push(format!("columns={}", encoded));
     }
-    if let Some(value) = filter {
-        let trimmed = value.trim();
-        if !trimmed.is_empty() {
-            let encoded = encode_query_value(trimmed);
-            query_params.push(format!("filter={}", encoded));
-        }
+    let trimmed = query.filter.trim();
+    if !trimmed.is_empty() {
+        let encoded = encode_query_value(trimmed);
+        query_params.push(format!("filter={}", encoded));
     }
     query_params.join("&")
 }
