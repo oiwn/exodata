@@ -6,7 +6,7 @@ use crate::table::{TableQueryState, build_table_query};
 /// Returns a deduplicated, sorted list that includes:
 /// - Page 1 and the last page always
 /// - A window of ±2 pages around `current_page`
-/// Gaps between non-consecutive entries signal where "…" should be rendered.
+///   Gaps between non-consecutive entries signal where "…" should be rendered.
 pub fn compute_page_window(
     current_page: usize,
     total_pages: usize,
@@ -62,12 +62,13 @@ pub fn PaginationLinks(
     let mut prev: Option<usize> = None;
     let mut items: Vec<AnyView> = Vec::new();
     for p in pages {
-        if let Some(prev_p) = prev {
-            if p > prev_p + 1 {
-                items.push(
-                    view! { <span class="text-slate-600 text-xs px-0.5">"…"</span> }.into_any(),
-                );
-            }
+        if let Some(prev_p) = prev
+            && p > prev_p + 1
+        {
+            items.push(
+                view! { <span class="text-slate-600 text-xs px-0.5">"…"</span> }
+                    .into_any(),
+            );
         }
         let href = make_url(p);
         let is_current = p == current_page;
