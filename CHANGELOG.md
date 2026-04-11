@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-04-12
+
+- Refactored the stellar hosts table page into smaller, feature-owned pieces:
+  - introduced shared table query state + navigation helpers in `src/table/query_navigation.rs`
+  - moved both table pages and pagination links onto `TableQueryState`
+  - added focused query-navigation tests
+  - split `stellarhosts_table` into a dedicated module with `page.rs` and `sections.rs`
+  - extracted page shell, header, loading, error, and pagination UI into smaller components
+  - centralized stellar-hosts table page transitions through a single route-specific navigation path
+- Added feature-scoped semantic styling for the stellar hosts table page:
+  - created `style/components/stellarhosts-table.css`
+  - imported it from the active Tailwind entrypoint `style/tailwind.css`
+  - moved page-level shell/header/loading/error/pagination styling out of inline Rust class strings
+- Verified the refactor with `cargo fmt`, `cargo check`, targeted query-navigation tests, and manual browser validation
+
 ## 2026-04-06
 
 - Fixed overview entity totals and breakdown semantics:
