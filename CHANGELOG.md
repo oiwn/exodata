@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-04-13
+
+- Refactored the exoplanets table page to match the current stellar-hosts table architecture:
+  - converted `src/components/exoplanets_table.rs` into a feature module with `mod.rs`, `page.rs`, and `sections.rs`
+  - extracted page shell, header, loading, error, and pagination UI into smaller exoplanets-specific section components
+  - aligned exoplanets page-level styling with semantic feature classes in `style/components/exoplanets-table.css`
+  - imported the exoplanets feature stylesheet through `style/tailwind.css`
+- Expanded shared table-page infrastructure in `src/table/`:
+  - added `TablePaginationState` for repeated pagination view state
+  - added `TableQuerySignals` to group shared query-related signals and query snapshot helpers
+  - applied the shared pagination/query state abstractions across both table pages
+- Verified the refactor with `cargo fmt`, `cargo check`, `cargo clippy --all-features --workspace -- -D warnings`, and manual browser validation
+
 ## 2026-04-12
 
 - Refactored the stellar hosts table page into smaller, feature-owned pieces:
