@@ -22,8 +22,9 @@
 3. **`cli.md`** - exo-cli command-line tool (commands, usage, examples)
 4. **`data-management.md`** - how to fetch and prepare the data
 5. **`column-metadata.md`** - information about each column
-6. **`ideas.md`** - short notes with ideas
-7. **`problems.md`** - known issues and edge cases
+6. **`exoplanet-detail.md`** - exoplanet detail page architecture and data contract
+7. **`ideas.md`** - short notes with ideas
+8. **`problems.md`** - known issues and edge cases
 
 ## Deployment
 

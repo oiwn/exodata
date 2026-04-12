@@ -5,7 +5,9 @@
 ### Scope
 
 - First: refactor `src/components/stellarhost_detail/` to semantic feature CSS.
-- Next: refactor `src/components/exoplanet_detail.rs` to match the current architectural shape of `stellarhost_detail`.
+- Next: define a concrete exoplanet detail page specification.
+- Then: refactor `src/components/exoplanet_detail.rs` to match the current architectural shape of `stellarhost_detail`.
+- Current active step: exoplanet detail page is now split into feature files and semantic CSS, but the records/provenance section still needs redesign.
 
 ### Current Situation
 
@@ -16,13 +18,24 @@
   - `planets.rs`
   - `provenance.rs`
 - `stellarhost_detail` still carries large inline Tailwind class strings in Rust and should be moved to semantic feature CSS.
-- `src/components/exoplanet_detail.rs` is still a large single-file component mixing:
-  - route/page shell
-  - suspense/loading/error handling
-  - summary cards
+- `exoplanet_detail` is now split into:
+  - `mod.rs`
+  - `page.rs`
+  - `hero.rs`
+  - `comparison.rs`
+  - `summary.rs`
+  - `records.rs`
+  - `format.rs`
+- `style/components/exoplanet-detail.css` exists and is imported from `style/tailwind.css`.
+- The exoplanet page now has:
+  - page shell aligned with the stellar host design family
+  - generated planet hero visual
+  - Earth/Jupiter scale comparison
+  - summary section
   - records section
-  - record card/table rendering
-  - formatting logic
+- Current main problem: exoplanet records are rendered as stacked expandable cards.
+- Expected direction: exoplanet records/provenance should move closer to the `stellarhost_detail` provenance model, where row-level data is primarily presented in a dense table layout rather than one-card-per-row.
+- Current backend limitation remains: `ExoplanetDetail` still only provides raw records plus metadata, so the exoplanet summary is still using thin client-side logic instead of a dedicated canonical summary payload.
 
 ### Goals
 
@@ -30,6 +43,7 @@
 - Keep the current visual design direction, but express it through semantic feature styles.
 - Make `exoplanet_detail` structurally consistent with `stellarhost_detail`.
 - Make `exoplanet_detail` feel visually related to `stellarhost_detail` without forcing identical content structure.
+- Define a dedicated exoplanet detail content model before implementation.
 
 ### Specification
 
@@ -40,19 +54,23 @@
 - Move large section-level class groups into semantic feature classes.
 - Keep small one-off utility classes inline only when they improve readability.
 - Do not change behavior or data flow in this pass.
+- Status: completed
 
 #### 2. Exoplanet Detail Structural Refactor
 
+- Create and agree the page spec in `specs/exoplanet-detail.md`.
 - Convert `src/components/exoplanet_detail.rs` into a feature module:
   - `src/components/exoplanet_detail/mod.rs`
   - `page.rs`
   - `hero.rs`
+  - `comparison.rs`
   - `summary.rs`
   - `records.rs`
   - optional shared `format.rs`
 - Separate page/meta/resource handling from section rendering.
 - Extract loading and error states into small page-level components or helpers.
 - Keep route exports stable so the app shell and routing do not need broader changes.
+- Status: completed for module split; records/provenance presentation still needs follow-up
 
 #### 3. Exoplanet Detail Visual Alignment
 
@@ -66,7 +84,23 @@
   - section spacing/rhythm
   - loading state
   - error state
+- Add exoplanet-specific sections for:
+  - generated hero planet visual
+  - Earth/Jupiter scale comparison
+  - canonical/adopted planet summary
 - Keep exoplanet-specific content and section composition appropriate to the page’s actual data model.
+- Status: partially completed; page shell, hero, comparison, and summary are in place, but records/provenance layout still diverges from target
+
+#### 4. Exoplanet Records / Provenance Follow-Up
+
+- Replace the current one-card-per-record presentation in `src/components/exoplanet_detail/records.rs`.
+- Move toward a structure closer to `stellarhost_detail/provenance.rs`:
+  - compact evidence summary panel
+  - dense table for row-level values
+  - optional expandable row details only if needed for narrow screens
+- Keep the exoplanet page planet-specific, but do not treat the records section like a feed of cards.
+- Prefer table-first presentation on desktop because the section is fundamentally provenance/data-dense content.
+- Status: next
 
 ### Non-Goals
 

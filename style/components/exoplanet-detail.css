@@ -1,0 +1,382 @@
+.exoplanet-detail-page {
+  @apply min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#0f172a_38%,_#172554_100%)];
+}
+
+.exoplanet-detail-page__container {
+  @apply mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10;
+}
+
+.exoplanet-detail-page__back-link {
+  @apply inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white;
+}
+
+.exoplanet-detail-page__content {
+  @apply mt-6 space-y-10 pb-14;
+}
+
+.exoplanet-detail-page__loading {
+  @apply flex min-h-[60vh] flex-col items-center justify-center gap-4;
+}
+
+.exoplanet-detail-page__loading-spinner {
+  @apply h-16 w-16 animate-spin rounded-full border-4 border-cyan-300/20 border-t-cyan-300;
+}
+
+.exoplanet-detail-page__loading-label {
+  @apply text-sm uppercase tracking-[0.2em] text-slate-400;
+}
+
+.exoplanet-detail-page__error {
+  @apply mt-10 rounded-[1.5rem] border border-rose-500/40 bg-rose-950/30 px-6 py-5 text-rose-100;
+}
+
+.exoplanet-detail-page__error-title {
+  @apply text-xl font-semibold;
+}
+
+.exoplanet-detail-page__error-message {
+  @apply mt-2 text-sm text-rose-200;
+}
+
+.planet-hero {
+  @apply relative overflow-hidden rounded-[2rem] border border-cyan-200/10 px-6 py-8 shadow-2xl shadow-cyan-950/20 md:px-10 md:py-12;
+  background-image:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(244, 114, 182, 0.12), transparent 30%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
+}
+
+.planet-hero__layout {
+  @apply relative grid gap-8 lg:grid-cols-[1.2fr_0.9fr] lg:items-center;
+}
+
+.planet-hero__content {
+  @apply space-y-5;
+}
+
+.planet-hero__eyebrow {
+  @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.22em] text-slate-300;
+}
+
+.planet-hero__heading {
+  @apply space-y-3;
+}
+
+.planet-hero__title {
+  @apply text-4xl font-semibold tracking-tight text-white md:text-6xl;
+}
+
+.planet-hero__subtitle {
+  @apply max-w-2xl text-base text-slate-300 md:text-lg;
+}
+
+.planet-hero__stats {
+  @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+}
+
+.planet-hero__visual {
+  @apply flex items-center justify-center;
+}
+
+.planet-hero-stat {
+  @apply rounded-2xl border border-white/10 bg-white/5 px-4 py-4 backdrop-blur;
+}
+
+.planet-hero-stat__label {
+  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+}
+
+.planet-hero-stat__value {
+  @apply mt-2 text-2xl font-semibold text-white;
+}
+
+.planet-hero-stat__hint {
+  @apply mt-1 text-sm text-slate-400;
+}
+
+.planet-visual {
+  @apply relative flex h-72 w-72 items-center justify-center;
+}
+
+.planet-visual__nebula {
+  @apply absolute inset-0 rounded-full blur-3xl;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.22), transparent 62%);
+}
+
+.planet-visual__orbit {
+  @apply absolute h-64 w-64 rounded-full border border-white/10;
+}
+
+.planet-visual__world {
+  @apply absolute rounded-full border border-white/10 shadow-2xl;
+  width: 11rem;
+  height: 11rem;
+}
+
+.planet-visual__world::before {
+  content: "";
+  @apply absolute inset-[14%] rounded-full opacity-80;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.34), transparent 38%);
+}
+
+.planet-visual__world::after {
+  content: "";
+  @apply absolute inset-0 rounded-full opacity-80;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 42%, rgba(2, 6, 23, 0.28));
+}
+
+.planet-visual--temperate {
+  background:
+    radial-gradient(circle at 28% 32%, rgba(240, 249, 255, 0.78), transparent 20%),
+    linear-gradient(135deg, #22c55e, #0f766e 55%, #1d4ed8);
+  box-shadow: 0 0 80px rgba(56, 189, 248, 0.35);
+}
+
+.planet-visual--hot {
+  background:
+    radial-gradient(circle at 30% 28%, rgba(255, 245, 157, 0.82), transparent 18%),
+    linear-gradient(135deg, #f97316, #dc2626 55%, #7f1d1d);
+  box-shadow: 0 0 90px rgba(249, 115, 22, 0.38);
+}
+
+.planet-visual--cold {
+  background:
+    radial-gradient(circle at 30% 28%, rgba(224, 242, 254, 0.82), transparent 18%),
+    linear-gradient(135deg, #38bdf8, #2563eb 55%, #1e3a8a);
+  box-shadow: 0 0 90px rgba(59, 130, 246, 0.34);
+}
+
+.planet-visual--sub-neptune {
+  background:
+    radial-gradient(circle at 30% 28%, rgba(224, 231, 255, 0.78), transparent 18%),
+    linear-gradient(135deg, #14b8a6, #0f766e 55%, #1e40af);
+  box-shadow: 0 0 90px rgba(20, 184, 166, 0.34);
+}
+
+.planet-visual--giant {
+  background:
+    radial-gradient(circle at 30% 28%, rgba(255, 237, 213, 0.82), transparent 18%),
+    linear-gradient(135deg, #f59e0b, #b45309 55%, #78350f);
+  box-shadow: 0 0 100px rgba(245, 158, 11, 0.35);
+}
+
+.planet-visual__spec {
+  @apply absolute bottom-5 right-3 rounded-full border border-white/10 bg-slate-950/55 px-4 py-2 text-right backdrop-blur;
+}
+
+.planet-visual__spec-label {
+  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+}
+
+.planet-visual__spec-value {
+  @apply text-sm text-white;
+}
+
+.planet-detail-section {
+  @apply space-y-6;
+}
+
+.planet-detail-section__header {
+  @apply flex flex-col gap-3 md:flex-row md:items-end md:justify-between;
+}
+
+.planet-detail-section__eyebrow {
+  @apply text-sm uppercase tracking-[0.18em];
+}
+
+.planet-detail-section__eyebrow--summary {
+  @apply text-cyan-300;
+}
+
+.planet-detail-section__eyebrow--comparison {
+  @apply text-emerald-300;
+}
+
+.planet-detail-section__eyebrow--records {
+  @apply text-amber-300;
+}
+
+.planet-detail-section__title {
+  @apply mt-2 text-3xl font-semibold text-white;
+}
+
+.planet-detail-section__description {
+  @apply max-w-2xl text-sm text-slate-400;
+}
+
+.planet-detail-section__description--comparison {
+  @apply text-slate-300;
+}
+
+.planet-summary-grid {
+  @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+}
+
+.planet-summary-card {
+  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30;
+}
+
+.planet-summary-card__label {
+  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+}
+
+.planet-summary-card__value {
+  @apply mt-3 text-3xl font-semibold text-white;
+}
+
+.planet-summary-card--blue {
+  @apply border-cyan-500/20;
+}
+
+.planet-summary-card--indigo {
+  @apply border-indigo-500/20;
+}
+
+.planet-summary-card--rose {
+  @apply border-rose-500/20;
+}
+
+.planet-summary-card--amber {
+  @apply border-amber-500/20;
+}
+
+.planet-summary-card--emerald {
+  @apply border-emerald-500/20;
+}
+
+.planet-summary-card--orange {
+  @apply border-orange-500/20;
+}
+
+.planet-summary-card--slate {
+  @apply border-slate-600;
+}
+
+.planet-comparison {
+  @apply grid gap-4 rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30 md:grid-cols-3;
+}
+
+.planet-comparison__card {
+  @apply flex flex-col items-center justify-end rounded-[1.25rem] border border-white/8 bg-white/4 px-4 py-6 text-center;
+  min-height: 21rem;
+}
+
+.planet-comparison__body-wrap {
+  @apply flex h-56 items-end justify-center;
+}
+
+.planet-comparison__body {
+  @apply rounded-full border border-white/10 shadow-xl;
+}
+
+.planet-comparison__body--earth {
+  background: linear-gradient(135deg, #22c55e, #0f766e 60%, #2563eb);
+}
+
+.planet-comparison__body--planet {
+  background: linear-gradient(135deg, #67e8f9, #0f766e 55%, #1d4ed8);
+}
+
+.planet-comparison__body--jupiter {
+  background: linear-gradient(135deg, #fbbf24, #c2410c 55%, #7c2d12);
+}
+
+.planet-comparison__label {
+  @apply mt-4 text-lg font-semibold text-white;
+}
+
+.planet-comparison__subtitle {
+  @apply mt-1 text-sm text-slate-400;
+}
+
+.planet-provenance__actions {
+  @apply flex gap-3;
+}
+
+.planet-provenance__action {
+  @apply rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300 disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.planet-provenance__layout {
+  @apply grid gap-4 xl:grid-cols-[1.25fr_3fr];
+}
+
+.planet-provenance__panel {
+  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 shadow-lg shadow-slate-950/30;
+}
+
+.planet-provenance__panel--summary {
+  @apply p-6;
+}
+
+.planet-provenance__panel--table {
+  @apply p-5;
+}
+
+.planet-provenance__summary-grid {
+  @apply mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-3;
+}
+
+.planet-provenance__stats {
+  @apply mt-5 grid gap-3;
+}
+
+.planet-provenance__stat {
+  @apply rounded-2xl bg-slate-900/80 px-4 py-3;
+}
+
+.planet-provenance__stat-row {
+  @apply flex items-start justify-between gap-4;
+}
+
+.planet-provenance__stat-label {
+  @apply text-sm text-slate-200;
+}
+
+.planet-provenance__stat-status {
+  @apply text-xs uppercase tracking-[0.16em] text-slate-500;
+}
+
+.planet-provenance__stat-meta {
+  @apply mt-2 text-sm text-slate-400;
+}
+
+.planet-provenance-metric {
+  @apply rounded-2xl bg-slate-900/80 px-4 py-4;
+}
+
+.planet-provenance-metric__label {
+  @apply text-xs uppercase tracking-[0.16em] text-slate-500;
+}
+
+.planet-provenance-metric__value {
+  @apply mt-2 text-2xl font-semibold text-white;
+}
+
+.planet-provenance__table-wrap {
+  @apply overflow-x-auto;
+}
+
+.planet-provenance__table {
+  @apply min-w-full border-separate border-spacing-y-2;
+}
+
+.planet-provenance__table-head {
+  @apply px-3 py-2 text-left text-xs uppercase tracking-[0.18em] text-slate-500;
+}
+
+.planet-provenance__table-row {
+  @apply bg-slate-900/80;
+}
+
+.planet-provenance__table-cell {
+  @apply px-3 py-3 text-sm text-slate-200 align-top;
+}
+
+.planet-provenance__ref-link {
+  @apply break-words text-sky-300 underline decoration-sky-400/40 underline-offset-4 hover:text-sky-200;
+}
+
+.planet-provenance__cell-value {
+  @apply break-words;
+}

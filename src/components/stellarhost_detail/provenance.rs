@@ -11,22 +11,22 @@ pub fn ProvenanceSection(host: StellarHostDetail) -> impl IntoView {
     let records = host.records.clone();
 
     view! {
-        <section class="space-y-6">
-            <div class="flex items-end justify-between gap-4">
+        <section class="host-detail-section">
+            <div class="host-detail-section__header">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.18em] text-emerald-300">"Provenance"</p>
-                    <h2 class="mt-2 text-3xl font-semibold text-white">"Underlying measurements and references"</h2>
+                    <p class="host-detail-section__eyebrow host-detail-section__eyebrow--provenance">"Provenance"</p>
+                    <h2 class="host-detail-section__title">"Underlying measurements and references"</h2>
                 </div>
-                <div class="flex gap-3">
-                    <button class="rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300">"Download JSON"</button>
-                    <button class="rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300">"Download CSV"</button>
+                <div class="host-provenance__actions">
+                    <button class="host-provenance__action">"Download JSON"</button>
+                    <button class="host-provenance__action">"Download CSV"</button>
                 </div>
             </div>
 
-            <div class="grid gap-4 xl:grid-cols-[1.25fr_3fr]">
-                <div class="rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-6 shadow-lg shadow-slate-950/30">
-                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">"Evidence Summary"</p>
-                    <div class="mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-3">
+            <div class="host-provenance__layout">
+                <div class="host-provenance__panel host-provenance__panel--summary">
+                    <p class="host-detail-card__label">"Evidence Summary"</p>
+                    <div class="host-provenance__summary-grid">
                         <ProvenanceMetric label="Rows" value=host.provenance.record_count.to_string() />
                         <ProvenanceMetric
                             label="Stellar refs"
@@ -37,16 +37,16 @@ pub fn ProvenanceSection(host: StellarHostDetail) -> impl IntoView {
                             value=host.provenance.system_refs.len().to_string()
                         />
                     </div>
-                    <div class="mt-5 grid gap-3">
+                    <div class="host-provenance__stats">
                         {stat_rows.into_iter().map(|stat| view! {
-                            <div class="rounded-2xl bg-slate-900/80 px-4 py-3">
-                                <div class="flex items-start justify-between gap-4">
-                                    <span class="text-sm text-slate-200">{stat.label}</span>
-                                    <span class="text-xs uppercase tracking-[0.16em] text-slate-500">
+                            <div class="host-provenance__stat">
+                                <div class="host-provenance__stat-row">
+                                    <span class="host-provenance__stat-label">{stat.label}</span>
+                                    <span class="host-provenance__stat-status">
                                         {if stat.disputed { "disputed" } else { "stable" }}
                                     </span>
                                 </div>
-                                <p class="mt-2 text-sm text-slate-400">
+                                <p class="host-provenance__stat-meta">
                                     {format!("{} values • {} distinct", stat.measurement_count, stat.distinct_count)}
                                 </p>
                             </div>
@@ -54,13 +54,13 @@ pub fn ProvenanceSection(host: StellarHostDetail) -> impl IntoView {
                     </div>
                 </div>
 
-                <div class="rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full border-separate border-spacing-y-2">
+                <div class="host-provenance__panel host-provenance__panel--table">
+                    <div class="host-provenance__table-wrap">
+                        <table class="host-provenance__table">
                             <thead>
                                 <tr>
                                     {columns.iter().map(|column| view! {
-                                        <th class="px-3 py-2 text-left text-xs uppercase tracking-[0.18em] text-slate-500">
+                                        <th class="host-provenance__table-head">
                                             {column_label(column)}
                                         </th>
                                     }).collect::<Vec<_>>()}
@@ -70,11 +70,11 @@ pub fn ProvenanceSection(host: StellarHostDetail) -> impl IntoView {
                                 {records.into_iter().map(|record| {
                                     let columns = columns.clone();
                                     view! {
-                                        <tr class="bg-slate-900/80">
+                                        <tr class="host-provenance__table-row">
                                             {columns.into_iter().map(|column| {
                                                 let value = record.get(&column).cloned().unwrap_or(Value::Null);
                                                 view! {
-                                                    <td class="px-3 py-3 text-sm text-slate-200">
+                                                    <td class="host-provenance__table-cell">
                                                         <ProvenanceCell column=column value=value />
                                                     </td>
                                                 }
@@ -94,9 +94,9 @@ pub fn ProvenanceSection(host: StellarHostDetail) -> impl IntoView {
 #[component]
 fn ProvenanceMetric(label: &'static str, value: String) -> impl IntoView {
     view! {
-        <div class="rounded-2xl bg-slate-900/80 px-4 py-4">
-            <p class="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</p>
-            <p class="mt-2 text-2xl font-semibold text-white">{value}</p>
+        <div class="host-provenance-metric">
+            <p class="host-provenance-metric__label">{label}</p>
+            <p class="host-provenance-metric__value">{value}</p>
         </div>
     }
 }
@@ -108,7 +108,7 @@ fn ProvenanceCell(column: String, value: Value) -> impl IntoView {
     if is_ref_column && let Some(link) = parse_archive_anchor(&value) {
         return view! {
             <a
-                class="break-words text-sky-300 underline decoration-sky-400/40 underline-offset-4 hover:text-sky-200"
+                class="host-provenance__ref-link"
                 href=link.href
                 target="_blank"
                 rel="nofollow noopener noreferrer"
@@ -120,7 +120,7 @@ fn ProvenanceCell(column: String, value: Value) -> impl IntoView {
     }
 
     view! {
-        <span class="break-words">{format_json_value(&value, "")}</span>
+        <span class="host-provenance__cell-value">{format_json_value(&value, "")}</span>
     }
     .into_any()
 }

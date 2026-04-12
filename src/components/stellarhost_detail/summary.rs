@@ -23,18 +23,18 @@ pub fn CanonicalSummarySection(host: StellarHostDetail) -> impl IntoView {
     let planet_count = host.system.planet_count.clone();
 
     view! {
-        <section class="space-y-6">
-            <div class="flex items-end justify-between gap-4">
+        <section class="host-detail-section">
+            <div class="host-detail-section__header">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.18em] text-amber-300">"Canonical Summary"</p>
-                    <h2 class="mt-2 text-3xl font-semibold text-white">"Adopted host values from all rows"</h2>
+                    <p class="host-detail-section__eyebrow host-detail-section__eyebrow--summary">"Canonical Summary"</p>
+                    <h2 class="host-detail-section__title">"Adopted host values from all rows"</h2>
                 </div>
-                <p class="max-w-xl text-sm text-slate-400">
+                <p class="host-detail-section__description host-detail-section__description--summary">
                     "Numeric fields use the median of non-null measurements. Disagreement stays visible through ranges, counts, and provenance."
                 </p>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div class="host-detail-summary-grid">
                 {primary_cards.into_iter().map(|summary| view! {
                     <NumericSummaryCard summary=summary />
                 }).collect::<Vec<_>>()}
@@ -63,11 +63,11 @@ fn NumericSummaryCard(summary: NumericFieldSummary) -> impl IntoView {
     );
 
     view! {
-        <article class="rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30">
-            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">{summary.label.clone()}</p>
-            <p class="mt-3 text-3xl font-semibold text-white">{primary}</p>
-            <p class="mt-3 text-sm text-slate-300">{range}</p>
-            <p class="mt-1 text-sm text-slate-500">{evidence}</p>
+        <article class="host-detail-card">
+            <p class="host-detail-card__label">{summary.label.clone()}</p>
+            <p class="host-detail-card__value">{primary}</p>
+            <p class="host-detail-card__body">{range}</p>
+            <p class="host-detail-card__meta">{evidence}</p>
         </article>
     }
 }
@@ -82,13 +82,13 @@ fn CategoricalSummaryCard(summary: CategoricalFieldSummary) -> impl IntoView {
         .join(", ");
 
     view! {
-        <article class="rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30">
-            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">{summary.label.clone()}</p>
-            <p class="mt-3 text-3xl font-semibold text-white">{summary.value.clone()}</p>
-            <p class="mt-3 text-sm text-slate-300">
+        <article class="host-detail-card">
+            <p class="host-detail-card__label">{summary.label.clone()}</p>
+            <p class="host-detail-card__value">{summary.value.clone()}</p>
+            <p class="host-detail-card__body">
                 {if summary.disputed { "Multiple classifications reported" } else { "Consistent across records" }}
             </p>
-            <p class="mt-1 text-sm text-slate-500">{counts}</p>
+            <p class="host-detail-card__meta">{counts}</p>
         </article>
     }
 }
@@ -107,13 +107,13 @@ fn StableSummaryCard(summary: StableValueSummary) -> impl IntoView {
         .join(", ");
 
     view! {
-        <article class="rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30">
-            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">{summary.label.clone()}</p>
-            <p class="mt-3 text-3xl font-semibold text-white">{value}</p>
-            <p class="mt-3 text-sm text-slate-300">
+        <article class="host-detail-card">
+            <p class="host-detail-card__label">{summary.label.clone()}</p>
+            <p class="host-detail-card__value">{value}</p>
+            <p class="host-detail-card__body">
                 {if summary.disputed { "System counts disagree across records" } else { "Stable across source rows" }}
             </p>
-            <p class="mt-1 text-sm text-slate-500">{distinct}</p>
+            <p class="host-detail-card__meta">{distinct}</p>
         </article>
     }
 }

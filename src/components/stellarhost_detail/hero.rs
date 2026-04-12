@@ -28,24 +28,24 @@ pub fn HostHeroSection(host: StellarHostDetail) -> impl IntoView {
         .collect::<Vec<_>>();
 
     view! {
-        <section class="relative overflow-hidden rounded-[2rem] border border-amber-200/10 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.18),_transparent_35%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(30,41,59,0.92))] px-6 py-8 shadow-2xl shadow-amber-950/20 md:px-10 md:py-12">
-            <div class="relative grid gap-8 lg:grid-cols-[1.3fr_0.9fr] lg:items-center">
-                <div class="space-y-5">
-                    <div class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.22em] text-slate-300">
+        <section class="host-hero">
+            <div class="host-hero__layout">
+                <div class="host-hero__content">
+                    <div class="host-hero__eyebrow">
                         <span>"Stellar Host"</span>
                         <span>"Profile"</span>
                     </div>
-                    <div class="space-y-3">
-                        <h1 class="text-4xl font-semibold tracking-tight text-white md:text-6xl">
+                    <div class="host-hero__heading">
+                        <h1 class="host-hero__title">
                             {host.hostname.clone()}
                         </h1>
-                        <p class="max-w-2xl text-base text-slate-300 md:text-lg">
+                        <p class="host-hero__subtitle">
                             {spectype}
                             {distance.map(|value| format!(" • {}", value)).unwrap_or_default()}
                         </p>
                     </div>
 
-                    <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="host-hero__stats">
                         <HeroStat
                             label="Records"
                             value=host.provenance.record_count.to_string()
@@ -67,9 +67,9 @@ pub fn HostHeroSection(host: StellarHostDetail) -> impl IntoView {
                         view! { <div></div> }.into_any()
                     } else {
                         view! {
-                            <div class="flex flex-wrap gap-2">
+                            <div class="host-hero__aliases">
                                 {aliases.into_iter().map(|alias| view! {
-                                    <span class="rounded-full border border-slate-700 bg-slate-950/40 px-3 py-1 text-sm text-slate-300">
+                                    <span class="host-hero__alias">
                                         {alias}
                                     </span>
                                 }).collect::<Vec<_>>()}
@@ -78,7 +78,7 @@ pub fn HostHeroSection(host: StellarHostDetail) -> impl IntoView {
                     }}
                 </div>
 
-                <div class="flex items-center justify-center">
+                <div class="host-hero__visual">
                     <HostStarVisual tokens=star_tokens />
                 </div>
             </div>
@@ -93,10 +93,10 @@ fn HeroStat(
     hint: &'static str,
 ) -> impl IntoView {
     view! {
-        <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-4 backdrop-blur">
-            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">{label}</p>
-            <p class="mt-2 text-2xl font-semibold text-white">{value}</p>
-            <p class="mt-1 text-sm text-slate-400">{hint}</p>
+        <div class="host-hero-stat">
+            <p class="host-hero-stat__label">{label}</p>
+            <p class="host-hero-stat__value">{value}</p>
+            <p class="host-hero-stat__hint">{hint}</p>
         </div>
     }
 }
