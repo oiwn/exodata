@@ -65,11 +65,11 @@ pub fn StellarHostDetailPage() -> impl IntoView {
         <Title text=move || fallback_title()/>
         <Meta name="description" content=move || fallback_description()/>
         <Link rel="canonical" href=canonical_href.clone()/>
-        <div class="min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#0f172a_45%,_#111827_100%)]">
-            <div class="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
+        <div class="stellarhost-detail-page">
+            <div class="stellarhost-detail-page__container">
                 <A
                     href="/stellarhosts"
-                    attr:class="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
+                    attr:class="stellarhost-detail-page__back-link"
                 >
                     <span>"←"</span>
                     <span>"Back to Stellar Hosts"</span>
@@ -77,9 +77,9 @@ pub fn StellarHostDetailPage() -> impl IntoView {
 
                 <Suspense fallback=move || {
                     view! {
-                        <div class="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-                            <div class="h-16 w-16 animate-spin rounded-full border-4 border-amber-400/20 border-t-amber-300"></div>
-                            <p class="text-sm uppercase tracking-[0.2em] text-slate-400">"Loading stellar profile"</p>
+                        <div class="stellarhost-detail-page__loading">
+                            <div class="stellarhost-detail-page__loading-spinner"></div>
+                            <p class="stellarhost-detail-page__loading-label">"Loading stellar profile"</p>
                         </div>
                     }
                 }>
@@ -92,7 +92,7 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                                 <Title text=stellarhost_detail_title(&host)/>
                                 <Meta name="description" content=stellarhost_detail_description(&host)/>
                                 <StructuredData value=stellarhost_dataset_schema(&host)/>
-                                <div class="mt-6 space-y-10 pb-14">
+                                <div class="stellarhost-detail-page__content">
                                     <HostHeroSection host=host.clone() />
                                     <CanonicalSummarySection host=host.clone() />
                                     <PlanetsSection planets=planets />
@@ -101,9 +101,9 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                             }
                             .into_any(),
                             (Some(Err(error)), _) | (_, Some(Err(error))) => view! {
-                                <div class="mt-10 rounded-[1.5rem] border border-rose-500/40 bg-rose-950/30 px-6 py-5 text-rose-100">
-                                    <h2 class="text-xl font-semibold">"Error Loading Host"</h2>
-                                    <p class="mt-2 text-sm text-rose-200">{error.to_string()}</p>
+                                <div class="stellarhost-detail-page__error">
+                                    <h2 class="stellarhost-detail-page__error-title">"Error Loading Host"</h2>
+                                    <p class="stellarhost-detail-page__error-message">{error.to_string()}</p>
                                 </div>
                             }
                             .into_any(),

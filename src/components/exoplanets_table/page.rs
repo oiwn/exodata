@@ -1,12 +1,12 @@
 use super::sections::{
-    StellarHostsErrorState, StellarHostsLoadingFallback, StellarHostsPageHeader,
-    StellarHostsPageShell, StellarHostsPaginationControls, StellarHostsTableMeta,
+    ExoplanetsErrorState, ExoplanetsLoadingFallback, ExoplanetsPageHeader,
+    ExoplanetsPageShell, ExoplanetsPaginationControls, ExoplanetsTableMeta,
     pagination_links_view,
 };
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
 use crate::metadata::use_app_metadata_store;
-use crate::server::functions::get_stellarhosts_page;
+use crate::server::functions::get_exoplanets_page;
 use crate::table::{
     Table, TablePaginationState, TableQuerySignals, TableQueryState,
     build_column_model, is_err_or_lim, navigate_table_query,
@@ -17,34 +17,41 @@ use leptos_router::NavigateOptions;
 use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_router::lazy_route;
 
-const STELLARHOSTS_BASE_PATH: &str = "/stellarhosts";
-const DEFAULT_STELLARHOSTS_COLUMNS: [&str; 5] =
-    ["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
+const EXOPLANETS_BASE_PATH: &str = "/exoplanets";
+const DEFAULT_EXOPLANETS_COLUMNS: [&str; 7] = [
+    "pl_name",
+    "hostname",
+    "discoverymethod",
+    "disc_year",
+    "pl_orbper",
+    "pl_rade",
+    "pl_bmasse",
+];
 
-fn navigate_stellarhosts(
+fn navigate_exoplanets(
     navigate: &impl Fn(&str, NavigateOptions),
     query: &TableQueryState,
     options: NavigateOptions,
 ) {
-    navigate_table_query(navigate, STELLARHOSTS_BASE_PATH, query, options);
+    navigate_table_query(navigate, EXOPLANETS_BASE_PATH, query, options);
 }
 
 #[derive(Clone)]
-pub struct StellarHostsTableLazy;
+pub struct ExoplanetsTableLazy;
 
 #[lazy_route]
-impl LazyRoute for StellarHostsTableLazy {
+impl LazyRoute for ExoplanetsTableLazy {
     fn data() -> Self {
         Self
     }
 
     fn view(_this: Self) -> AnyView {
-        view! { <StellarHostsTablePage/> }.into_any()
+        view! { <ExoplanetsTablePage/> }.into_any()
     }
 }
 
 #[component]
-pub fn StellarHostsTablePage() -> impl IntoView {
+pub fn ExoplanetsTablePage() -> impl IntoView {
     let query_map = use_query_map();
     let navigate = use_navigate();
 
@@ -73,7 +80,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                     .collect::<Vec<_>>()
             })
             .unwrap_or_else(|| {
-                DEFAULT_STELLARHOSTS_COLUMNS
+                DEFAULT_EXOPLANETS_COLUMNS
                     .into_iter()
                     .map(str::to_string)
                     .collect()
@@ -93,7 +100,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
 
     let app_metadata = use_app_metadata_store();
     let available_columns =
-        Signal::derive(move || app_metadata.with(|m| m.stellarhosts.clone()));
+        Signal::derive(move || app_metadata.with(|m| m.exoplanets.clone()));
 
     let fetch_columns = Signal::derive(move || {
         let all_columns: Vec<String> =
@@ -123,7 +130,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             } else {
                 Some(filter)
             };
-            get_stellarhosts_page(
+            get_exoplanets_page(
                 page,
                 50,
                 sort_col,
@@ -201,7 +208,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             table_state.set_current_page.set(1);
             let query =
                 table_state.query_with_sort(1, next_sort_column, next_sort_order);
-            navigate_stellarhosts(&navigate, &query, Default::default());
+            navigate_exoplanets(&navigate, &query, Default::default());
         }
     });
 
@@ -221,7 +228,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
 
             let query =
                 table_state.query_with_columns(1, next_sort_column, columns);
-            navigate_stellarhosts(
+            navigate_exoplanets(
                 &navigate,
                 &query,
                 NavigateOptions {
@@ -238,7 +245,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
             table_state.set_filter_text.set(value.clone());
             table_state.set_current_page.set(1);
             let query = table_state.query_with_filter(1, value);
-            navigate_stellarhosts(
+            navigate_exoplanets(
                 &navigate,
                 &query,
                 NavigateOptions {
@@ -254,7 +261,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         move |page: usize| {
             table_state.set_current_page.set(page);
             let query = table_state.query_with_page(page);
-            navigate_stellarhosts(&navigate, &query, Default::default());
+            navigate_exoplanets(&navigate, &query, Default::default());
         }
     });
 
@@ -275,9 +282,9 @@ pub fn StellarHostsTablePage() -> impl IntoView {
     });
 
     view! {
-        <StellarHostsTableMeta/>
-        <StellarHostsPageShell>
-            <StellarHostsPageHeader/>
+        <ExoplanetsTableMeta/>
+        <ExoplanetsPageShell>
+            <ExoplanetsPageHeader/>
 
             <ColumnSelector
                 available_columns=available_columns
@@ -287,9 +294,9 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                 on_toggle=Callback::new(move |state| set_selector_is_open.set(state))
             />
 
-            <div class="stellarhosts-page__content">
+            <div class="exoplanets-page__content">
                 <LoadingOverlay loading=show_overlay />
-                <Transition fallback=move || view! { <StellarHostsLoadingFallback/> }>
+                <Transition fallback=move || view! { <ExoplanetsLoadingFallback/> }>
                     {move || {
                         table_resource.get().map(|result| match result {
                             Ok(data) => {
@@ -318,7 +325,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
 
                                 view! {
                                     <div class="space-y-6">
-                                        <StellarHostsPaginationControls
+                                        <ExoplanetsPaginationControls
                                             state=pagination_state
                                             on_prev=on_prev_page
                                             on_next=on_next_page
@@ -335,11 +342,11 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                             filter_input=table_state.filter_input
                                             set_filter_input=table_state.set_filter_input
                                             on_filter_commit=on_filter_commit
-                                            link_column="hostname".to_string()
-                                            link_base="/stellarhosts/".to_string()
+                                            link_column="pl_name".to_string()
+                                            link_base="/exoplanets/".to_string()
                                         />
 
-                                        <StellarHostsPaginationControls
+                                        <ExoplanetsPaginationControls
                                             state=pagination_state
                                             on_prev=on_prev_page
                                             on_next=on_next_page
@@ -358,7 +365,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                                 .into_any()
                             }
                             Err(err) => view! {
-                                <StellarHostsErrorState
+                                <ExoplanetsErrorState
                                     error_msg=format!("Error loading data: {}", err)
                                 />
                             }
@@ -367,6 +374,6 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                     }}
                 </Transition>
             </div>
-        </StellarHostsPageShell>
+        </ExoplanetsPageShell>
     }
 }

@@ -1,0 +1,326 @@
+.stellarhost-detail-page {
+  @apply min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#0f172a_45%,_#111827_100%)];
+}
+
+.stellarhost-detail-page__container {
+  @apply mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10;
+}
+
+.stellarhost-detail-page__back-link {
+  @apply inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white;
+}
+
+.stellarhost-detail-page__content {
+  @apply mt-6 space-y-10 pb-14;
+}
+
+.stellarhost-detail-page__loading {
+  @apply flex min-h-[60vh] flex-col items-center justify-center gap-4;
+}
+
+.stellarhost-detail-page__loading-spinner {
+  @apply h-16 w-16 animate-spin rounded-full border-4 border-amber-400/20 border-t-amber-300;
+}
+
+.stellarhost-detail-page__loading-label {
+  @apply text-sm uppercase tracking-[0.2em] text-slate-400;
+}
+
+.stellarhost-detail-page__error {
+  @apply mt-10 rounded-[1.5rem] border border-rose-500/40 bg-rose-950/30 px-6 py-5 text-rose-100;
+}
+
+.stellarhost-detail-page__error-title {
+  @apply text-xl font-semibold;
+}
+
+.stellarhost-detail-page__error-message {
+  @apply mt-2 text-sm text-rose-200;
+}
+
+.host-hero {
+  @apply relative overflow-hidden rounded-[2rem] border border-amber-200/10 px-6 py-8 shadow-2xl shadow-amber-950/20 md:px-10 md:py-12;
+  background-image:
+    radial-gradient(circle at top, rgba(251, 191, 36, 0.18), transparent 35%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
+}
+
+.host-hero__layout {
+  @apply relative grid gap-8 lg:grid-cols-[1.3fr_0.9fr] lg:items-center;
+}
+
+.host-hero__content {
+  @apply space-y-5;
+}
+
+.host-hero__eyebrow {
+  @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.22em] text-slate-300;
+}
+
+.host-hero__heading {
+  @apply space-y-3;
+}
+
+.host-hero__title {
+  @apply text-4xl font-semibold tracking-tight text-white md:text-6xl;
+}
+
+.host-hero__subtitle {
+  @apply max-w-2xl text-base text-slate-300 md:text-lg;
+}
+
+.host-hero__stats {
+  @apply grid gap-3 sm:grid-cols-3;
+}
+
+.host-hero__aliases {
+  @apply flex flex-wrap gap-2;
+}
+
+.host-hero__alias {
+  @apply rounded-full border border-slate-700 bg-slate-950/40 px-3 py-1 text-sm text-slate-300;
+}
+
+.host-hero__visual {
+  @apply flex items-center justify-center;
+}
+
+.host-hero-stat {
+  @apply rounded-2xl border border-white/10 bg-white/5 px-4 py-4 backdrop-blur;
+}
+
+.host-hero-stat__label {
+  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+}
+
+.host-hero-stat__value {
+  @apply mt-2 text-2xl font-semibold text-white;
+}
+
+.host-hero-stat__hint {
+  @apply mt-1 text-sm text-slate-400;
+}
+
+.star-visual {
+  @apply relative flex h-72 w-72 items-center justify-center;
+}
+
+.star-visual__halo {
+  @apply absolute inset-0 rounded-full blur-3xl;
+}
+
+.star-visual__halo--offset {
+  @apply absolute right-[-5rem] top-[-4rem] h-56 w-56 rounded-full blur-3xl;
+}
+
+.star-visual__spark {
+  @apply absolute left-[18%] top-[30%] h-2 w-2 rounded-full bg-sky-200/60;
+}
+
+.star-visual__core {
+  @apply absolute h-56 w-56 rounded-full border border-amber-100/20;
+}
+
+.star-visual__badge {
+  @apply absolute bottom-6 right-4 rounded-full border border-white/10 px-4 py-2 text-right backdrop-blur;
+}
+
+.star-visual__badge-label {
+  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+}
+
+.star-visual__badge-value {
+  @apply text-sm text-white;
+}
+
+.host-detail-section {
+  @apply space-y-6;
+}
+
+.host-detail-section__header {
+  @apply flex items-end justify-between gap-4;
+}
+
+.host-detail-section__eyebrow {
+  @apply text-sm uppercase tracking-[0.18em];
+}
+
+.host-detail-section__eyebrow--summary {
+  @apply text-amber-300;
+}
+
+.host-detail-section__eyebrow--planets {
+  @apply text-sky-300;
+}
+
+.host-detail-section__eyebrow--provenance {
+  @apply text-emerald-300;
+}
+
+.host-detail-section__title {
+  @apply mt-2 text-3xl font-semibold text-white;
+}
+
+.host-detail-section__description {
+  @apply text-sm text-slate-400;
+}
+
+.host-detail-section__description--summary {
+  @apply max-w-xl;
+}
+
+.host-detail-summary-grid {
+  @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+}
+
+.host-detail-card {
+  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30;
+}
+
+.host-detail-card__label {
+  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+}
+
+.host-detail-card__value {
+  @apply mt-3 text-3xl font-semibold text-white;
+}
+
+.host-detail-card__body {
+  @apply mt-3 text-sm text-slate-300;
+}
+
+.host-detail-card__meta {
+  @apply mt-1 text-sm text-slate-500;
+}
+
+.host-planets__empty {
+  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 px-6 py-10 text-center text-slate-400;
+}
+
+.host-planets__grid {
+  @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+}
+
+.host-planet-card {
+  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30;
+}
+
+.host-planet-card__header {
+  @apply flex items-start justify-between gap-4;
+}
+
+.host-planet-card__title {
+  @apply text-xl font-semibold text-white;
+}
+
+.host-planet-card__subtitle {
+  @apply mt-1 text-sm text-slate-400;
+}
+
+.host-planet-card__glyph {
+  @apply h-12 w-12 rounded-full bg-sky-400/10 text-center text-2xl leading-[3rem] text-sky-300;
+}
+
+.host-planet-card__metrics {
+  @apply mt-5 grid gap-3 sm:grid-cols-2;
+}
+
+.host-planet-card__metric-label {
+  @apply text-xs uppercase tracking-[0.16em] text-slate-500;
+}
+
+.host-planet-card__metric-value {
+  @apply mt-1 text-sm text-white;
+}
+
+.host-provenance__actions {
+  @apply flex gap-3;
+}
+
+.host-provenance__action {
+  @apply rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300;
+}
+
+.host-provenance__layout {
+  @apply grid gap-4 xl:grid-cols-[1.25fr_3fr];
+}
+
+.host-provenance__panel {
+  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 shadow-lg shadow-slate-950/30;
+}
+
+.host-provenance__panel--summary {
+  @apply p-6;
+}
+
+.host-provenance__panel--table {
+  @apply p-5;
+}
+
+.host-provenance__summary-grid {
+  @apply mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-3;
+}
+
+.host-provenance__stats {
+  @apply mt-5 grid gap-3;
+}
+
+.host-provenance__stat {
+  @apply rounded-2xl bg-slate-900/80 px-4 py-3;
+}
+
+.host-provenance__stat-row {
+  @apply flex items-start justify-between gap-4;
+}
+
+.host-provenance__stat-label {
+  @apply text-sm text-slate-200;
+}
+
+.host-provenance__stat-status {
+  @apply text-xs uppercase tracking-[0.16em] text-slate-500;
+}
+
+.host-provenance__stat-meta {
+  @apply mt-2 text-sm text-slate-400;
+}
+
+.host-provenance-metric {
+  @apply rounded-2xl bg-slate-900/80 px-4 py-4;
+}
+
+.host-provenance-metric__label {
+  @apply text-xs uppercase tracking-[0.16em] text-slate-500;
+}
+
+.host-provenance-metric__value {
+  @apply mt-2 text-2xl font-semibold text-white;
+}
+
+.host-provenance__table-wrap {
+  @apply overflow-x-auto;
+}
+
+.host-provenance__table {
+  @apply min-w-full border-separate border-spacing-y-2;
+}
+
+.host-provenance__table-head {
+  @apply px-3 py-2 text-left text-xs uppercase tracking-[0.18em] text-slate-500;
+}
+
+.host-provenance__table-row {
+  @apply bg-slate-900/80;
+}
+
+.host-provenance__table-cell {
+  @apply px-3 py-3 text-sm text-slate-200;
+}
+
+.host-provenance__ref-link {
+  @apply break-words text-sky-300 underline decoration-sky-400/40 underline-offset-4 hover:text-sky-200;
+}
+
+.host-provenance__cell-value {
+  @apply break-words;
+}
