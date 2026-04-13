@@ -21,7 +21,7 @@ async fn start_server() {
     use exo_core::tables::overview as aggregation;
     use exoplanets_catalog::app::{App, shell};
     use exoplanets_catalog::metadata::AppMetadata;
-    use exoplanets_catalog::server::common as server_common;
+    use exoplanets_catalog::server::data::tables as server_tables;
     use exoplanets_catalog::server::functions::{
         ColumnMetadata as UiColumnMetadata, DataStats,
     };
@@ -138,10 +138,10 @@ async fn start_server() {
 
     // Prewarm default table cache entries before serving any requests.
     let prewarm_started = Instant::now();
-    server_common::get_stellarhosts_data_cached(
+    server_tables::get_stellarhosts_data_cached(
         &api_state.stellarhosts_df,
         &api_state.table_cache,
-        server_common::TableQuery {
+        server_tables::TableQuery {
             page: 1,
             limit: 50,
             sort_by: None,
@@ -157,10 +157,10 @@ async fn start_server() {
             e
         )
     });
-    server_common::get_exoplanets_data_cached(
+    server_tables::get_exoplanets_data_cached(
         &api_state.exoplanets_df,
         &api_state.table_cache,
-        server_common::TableQuery {
+        server_tables::TableQuery {
             page: 1,
             limit: 50,
             sort_by: None,

@@ -1,0 +1,199 @@
+.insights-page {
+  @apply min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#0f172a_38%,_#111827_100%)];
+}
+
+.insights-page__container {
+  @apply mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10;
+}
+
+.insights-page__back-link {
+  @apply inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white;
+}
+
+.insights-hero {
+  @apply relative overflow-hidden rounded-[2rem] border border-sky-200/10 px-6 py-8 shadow-2xl shadow-sky-950/20 md:px-10 md:py-12;
+  background-image:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.10), transparent 28%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
+}
+
+.insights-hero__eyebrow {
+  @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.22em] text-slate-300;
+}
+
+.insights-hero__header {
+  @apply mt-6 grid gap-6 lg:grid-cols-[1.35fr_0.65fr] lg:items-end;
+}
+
+.insights-hero__content {
+  @apply space-y-4;
+}
+
+.insights-hero__title {
+  @apply text-4xl font-semibold tracking-tight text-white md:text-6xl;
+}
+
+.insights-hero__subtitle {
+  @apply max-w-3xl text-base text-slate-300 md:text-lg;
+}
+
+.insights-hero__status {
+  @apply rounded-[1.5rem] border border-white/10 bg-white/5 px-5 py-5 backdrop-blur;
+}
+
+.insights-hero__status-label {
+  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+}
+
+.insights-hero__status-value {
+  @apply mt-3 text-2xl font-semibold text-white;
+}
+
+.insights-section {
+  @apply mt-10 space-y-6;
+}
+
+.insights-section__header {
+  @apply flex flex-col gap-3 md:flex-row md:items-end md:justify-between;
+}
+
+.insights-section__eyebrow {
+  @apply text-sm uppercase tracking-[0.18em] text-sky-300;
+}
+
+.insights-section__title {
+  @apply mt-2 text-3xl font-semibold text-white;
+}
+
+.insights-section__description {
+  @apply max-w-2xl text-sm text-slate-400;
+}
+
+.insights-grid {
+  @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+}
+
+.insight-card {
+  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30;
+}
+
+.insight-card--live {
+  @apply block transition-colors hover:border-sky-500/35 hover:bg-slate-950/85;
+}
+
+.insight-card__header {
+  @apply flex items-start justify-between gap-4;
+}
+
+.insight-card__category {
+  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+}
+
+.insight-card__badge {
+  @apply rounded-full border border-sky-500/25 bg-sky-400/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-sky-200;
+}
+
+.insight-card__badge--live {
+  @apply border-emerald-500/25 bg-emerald-400/10 text-emerald-200;
+}
+
+.insight-card__title {
+  @apply mt-5 text-2xl font-semibold text-white;
+}
+
+.insight-card__body {
+  @apply mt-3 text-sm leading-6 text-slate-300;
+}
+
+.insight-card__footer {
+  @apply mt-6 flex items-center justify-between;
+}
+
+.insight-card__kind {
+  @apply text-sm text-emerald-300;
+}
+
+.insight-card__action {
+  @apply text-sm text-sky-300;
+}
+
+.insight-detail-shell {
+  @apply mt-6 space-y-6;
+}
+
+.insight-detail-shell__header {
+  @apply space-y-3;
+}
+
+.insight-detail-shell__title {
+  @apply text-4xl font-semibold tracking-tight text-white md:text-5xl;
+}
+
+.insight-detail-shell__intro {
+  @apply max-w-3xl text-base text-slate-300 md:text-lg;
+}
+
+.insight-data-panel {
+  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30;
+}
+
+.insight-data-panel--loading {
+  @apply flex min-h-[18rem] items-center justify-center;
+}
+
+.insight-data-panel--error {
+  @apply border-rose-500/40 bg-rose-950/30;
+}
+
+.insight-data-panel__loading-label {
+  @apply text-sm uppercase tracking-[0.18em] text-slate-400;
+}
+
+.insight-data-panel__error-title {
+  @apply text-lg font-semibold text-rose-100;
+}
+
+.insight-data-panel__error-message {
+  @apply mt-2 text-sm text-rose-200;
+}
+
+.insight-data-panel__empty {
+  @apply text-sm text-slate-400;
+}
+
+.insight-data-panel__summary {
+  @apply mb-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-4;
+}
+
+.insight-data-panel__summary-label {
+  @apply text-xs uppercase tracking-[0.16em] text-slate-500;
+}
+
+.insight-data-panel__summary-value {
+  @apply mt-2 text-2xl font-semibold text-white;
+}
+
+.insight-data-panel__table-wrap {
+  @apply overflow-x-auto;
+}
+
+.insight-data-panel__table {
+  @apply min-w-full border-separate border-spacing-y-2;
+}
+
+.insight-data-panel__head {
+  @apply px-3 py-2 text-left text-xs uppercase tracking-[0.18em] text-slate-500;
+}
+
+.insight-data-panel__row {
+  @apply bg-slate-900/80;
+}
+
+.insight-data-panel__cell {
+  @apply px-3 py-3 text-sm text-slate-200;
+}
+
+.insight-data-panel__cell--rank {
+  @apply font-semibold text-sky-300;
+}

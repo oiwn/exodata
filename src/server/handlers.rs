@@ -23,7 +23,7 @@ use sqlparser::parser::Parser;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
-use super::common;
+use super::data::{rows, tables};
 use super::functions::DataStats;
 use crate::server::cache::{HostDetailCache, TableCache};
 
@@ -229,10 +229,10 @@ pub async fn get_stellarhosts(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns) = common::get_stellarhosts_data_cached(
+    let (rows, total, total_all, columns) = tables::get_stellarhosts_data_cached(
         &state.stellarhosts_df,
         &state.table_cache,
-        common::TableQuery {
+        tables::TableQuery {
             page,
             limit,
             sort_by: params.sort_by,
@@ -286,10 +286,10 @@ pub async fn get_exoplanets(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns) = common::get_exoplanets_data_cached(
+    let (rows, total, total_all, columns) = tables::get_exoplanets_data_cached(
         &state.exoplanets_df,
         &state.table_cache,
-        common::TableQuery {
+        tables::TableQuery {
             page,
             limit,
             sort_by: params.sort_by,
@@ -406,7 +406,7 @@ pub async fn execute_sql(
             .iter()
             .map(|name| (*name).to_string())
             .collect::<Vec<_>>();
-        let data = common::dataframe_to_json(&df)?;
+        let data = rows::dataframe_to_json(&df)?;
 
         Ok::<_, String>((data, columns, rows))
     });

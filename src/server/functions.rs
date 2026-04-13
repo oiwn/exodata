@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 // Server-only imports
 #[cfg(feature = "ssr")]
-use crate::server::common;
+use crate::server::data::{details, insights, tables};
 #[cfg(feature = "ssr")]
 use crate::server::handlers::ApiState;
 
@@ -186,7 +186,7 @@ pub struct HostProvenanceSummary {
 ///
 /// This is a thin wrapper around the common business logic.
 /// It handles Leptos-specific concerns (context extraction, error mapping)
-/// and delegates the actual work to common::get_stellarhosts_data.
+/// and delegates the actual work to `server::data::tables`.
 #[server(input = GetUrl)]
 pub async fn get_stellarhosts_page(
     page: usize,
@@ -209,10 +209,10 @@ pub async fn get_stellarhosts_page(
     });
 
     // Call the common business logic
-    let (rows, total, total_all, columns) = common::get_stellarhosts_data_cached(
+    let (rows, total, total_all, columns) = tables::get_stellarhosts_data_cached(
         &state.stellarhosts_df,
         &state.table_cache,
-        common::TableQuery {
+        tables::TableQuery {
             page,
             limit,
             sort_by,
@@ -238,11 +238,70 @@ pub async fn get_stellarhosts_page(
     })
 }
 
+/// Server function to fetch paginated stellar host data with one row per host.
+#[server(input = GetUrl)]
+pub async fn get_distinct_stellarhosts_page(
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+    columns: Option<String>,
+    filter: Option<String>,
+) -> Result<TableData, ServerFnError> {
+    tracing::info!(
+        "get_distinct_stellarhosts_page called: page={page} columns={columns:?}"
+    );
+    let state = expect_context::<ApiState>();
+
+    let selected_columns = columns.map(|s| {
+        s.split(',')
+            .map(|col| col.trim().to_string())
+            .collect::<Vec<_>>()
+    });
+
+    let df = state.stellarhosts_df.clone();
+    let (rows, total, total_all, columns) =
+        tokio::task::spawn_blocking(move || {
+            insights::get_distinct_stellarhosts_data(
+                &df,
+                tables::TableQuery {
+                    page,
+                    limit,
+                    sort_by,
+                    order,
+                    selected_columns,
+                    filter,
+                },
+            )
+        })
+        .await
+        .map_err(|e| -> ServerFnError {
+            let message = format!(
+                "Failed to join distinct stellarhosts blocking task: {e}"
+            );
+            tracing::error!("{message}");
+            ServerFnError::ServerError(message)
+        })?
+        .map_err(|e: String| -> ServerFnError {
+            tracing::error!("get_distinct_stellarhosts_page error: {e}");
+            ServerFnError::ServerError(e)
+        })?;
+
+    Ok(TableData {
+        rows,
+        columns,
+        total,
+        total_all,
+        page,
+        limit,
+    })
+}
+
 /// Server function to fetch paginated exoplanets data
 ///
 /// This is a thin wrapper around the common business logic.
 /// It handles Leptos-specific concerns (context extraction, error mapping)
-/// and delegates the actual work to common::get_exoplanets_data.
+/// and delegates the actual work to `server::data::tables`.
 #[server(input = GetUrl)]
 pub async fn get_exoplanets_page(
     page: usize,
@@ -263,10 +322,10 @@ pub async fn get_exoplanets_page(
     });
 
     // Call the common business logic
-    let (rows, total, total_all, columns) = common::get_exoplanets_data_cached(
+    let (rows, total, total_all, columns) = tables::get_exoplanets_data_cached(
         &state.exoplanets_df,
         &state.table_cache,
-        common::TableQuery {
+        tables::TableQuery {
             page,
             limit,
             sort_by,
@@ -293,6 +352,64 @@ pub async fn get_exoplanets_page(
     })
 }
 
+/// Server function to fetch paginated exoplanet data with one row per planet.
+#[server(input = GetUrl)]
+pub async fn get_distinct_exoplanets_page(
+    page: usize,
+    limit: usize,
+    sort_by: Option<String>,
+    order: Option<String>,
+    columns: Option<String>,
+    filter: Option<String>,
+) -> Result<TableData, ServerFnError> {
+    let state = expect_context::<ApiState>();
+    tracing::info!(
+        "get_distinct_exoplanets_page called: page={page} columns={columns:?}"
+    );
+
+    let selected_columns = columns.map(|s| {
+        s.split(',')
+            .map(|col| col.trim().to_string())
+            .collect::<Vec<_>>()
+    });
+
+    let df = state.exoplanets_df.clone();
+    let (rows, total, total_all, columns) =
+        tokio::task::spawn_blocking(move || {
+            insights::get_distinct_exoplanets_data(
+                &df,
+                tables::TableQuery {
+                    page,
+                    limit,
+                    sort_by,
+                    order,
+                    selected_columns,
+                    filter,
+                },
+            )
+        })
+        .await
+        .map_err(|e| -> ServerFnError {
+            let message =
+                format!("Failed to join distinct exoplanets blocking task: {e}");
+            tracing::error!("{message}");
+            ServerFnError::ServerError(message)
+        })?
+        .map_err(|e: String| -> ServerFnError {
+            tracing::error!("get_distinct_exoplanets_page error: {e}");
+            ServerFnError::ServerError(e)
+        })?;
+
+    Ok(TableData {
+        rows,
+        columns,
+        total,
+        total_all,
+        page,
+        limit,
+    })
+}
+
 /// Server function to fetch a single stellar host's details
 #[server(input = GetUrl)]
 pub async fn get_stellar_host_detail(
@@ -304,7 +421,7 @@ pub async fn get_stellar_host_detail(
     let (detail, exo_metadata): (
         StellarHostDetail,
         HashMap<String, exo_core::metadata::ColumnMetadata>,
-    ) = common::get_stellar_host_detail_cached(
+    ) = details::get_stellar_host_detail_cached(
         &state.stellarhosts_df,
         &state.host_detail_cache,
         &state.stellarhosts_metadata,
@@ -338,7 +455,7 @@ pub async fn get_planets_for_host(
         Vec<Value>,
         Vec<String>,
         HashMap<String, exo_core::metadata::ColumnMetadata>,
-    ) = common::get_planets_by_hostname(
+    ) = details::get_planets_by_hostname(
         &state.exoplanets_df,
         &state.exoplanets_metadata,
         &hostname,
@@ -374,7 +491,7 @@ pub async fn get_exoplanet_detail(
     let (records, exo_metadata): (
         Vec<Value>,
         HashMap<String, exo_core::metadata::ColumnMetadata>,
-    ) = common::get_exoplanet_by_name(
+    ) = details::get_exoplanet_by_name(
         &state.exoplanets_df,
         &state.exoplanets_metadata,
         &pl_name,

@@ -10,6 +10,7 @@ pub fn Navbar() -> impl IntoView {
     let is_root = move || pathname() == "/";
     let is_stellarhosts = move || pathname().starts_with("/stellarhosts");
     let is_exoplanets = move || pathname().starts_with("/exoplanets");
+    let is_insights = move || pathname().starts_with("/facts");
     let is_about = move || pathname().starts_with("/about");
 
     // Mobile menu state
@@ -81,6 +82,19 @@ pub fn Navbar() -> impl IntoView {
                             }
                         >
                             "Exoplanets"
+                        </A>
+
+                        <A
+                            href="/facts"
+                            attr:class=move || {
+                                if is_insights() {
+                                    active_class
+                                } else {
+                                    link_class
+                                }
+                            }
+                        >
+                            "Insights"
                         </A>
 
                         <A
@@ -190,6 +204,14 @@ pub fn Navbar() -> impl IntoView {
                             }
                         >
                             "Exoplanets"
+                        </A>
+                        <A
+                            href="/facts"
+                            attr:class=move || {
+                                if is_insights() { mobile_active_class } else { mobile_link_class }
+                            }
+                        >
+                            "Insights"
                         </A>
                         <A
                             href="/about"

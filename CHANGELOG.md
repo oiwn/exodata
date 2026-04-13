@@ -2,6 +2,13 @@
 
 ## 2026-04-13
 
+- Refactored the exoplanet detail page into a feature-owned module and aligned it with the stellar-host detail design family:
+  - added `specs/exoplanet-detail.md` to define page architecture, visual direction, and the target backend contract
+  - converted `src/components/exoplanet_detail.rs` into `src/components/exoplanet_detail/` with `page.rs`, `hero.rs`, `comparison.rs`, `summary.rs`, `records.rs`, and shared formatting helpers
+  - added semantic exoplanet detail styling in `style/components/exoplanet-detail.css` and imported it through `style/tailwind.css`
+  - replaced the old emoji-heavy page shell with a planet hero, generated planet visual, and a dedicated Earth/Jupiter radius comparison section
+  - corrected comparison scaling to use linear radius proportions while still filling the available comparison space
+  - replaced the one-card-per-record records section with a provenance-style summary + dense table layout modeled on stellar-host detail
 - Refactored the exoplanets table page to match the current stellar-hosts table architecture:
   - converted `src/components/exoplanets_table.rs` into a feature module with `mod.rs`, `page.rs`, and `sections.rs`
   - extracted page shell, header, loading, error, and pagination UI into smaller exoplanets-specific section components

@@ -5,6 +5,7 @@ use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
 use leptos_router::lazy_route;
 
+use super::comparison::StarScaleComparisonSection;
 use super::hero::HostHeroSection;
 use super::planets::PlanetsSection;
 use super::provenance::ProvenanceSection;
@@ -95,6 +96,7 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                                 <div class="stellarhost-detail-page__content">
                                     <HostHeroSection host=host.clone() />
                                     <CanonicalSummarySection host=host.clone() />
+                                    <StarScaleComparisonSection host=host.clone() />
                                     <PlanetsSection planets=planets />
                                     <ProvenanceSection host=host />
                                 </div>

@@ -1,3 +1,4 @@
+mod comparison;
 mod format;
 mod hero;
 mod page;

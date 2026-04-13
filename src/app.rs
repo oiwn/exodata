@@ -1,7 +1,12 @@
 use crate::components::{
-    about::AboutLazy, exoplanet_detail::ExoplanetDetailLazy,
-    exoplanets_table::ExoplanetsTableLazy, footer::VersionFooter,
-    google_analytics::GoogleAnalytics, navbar::Navbar, overview::OverviewLazy,
+    about::AboutLazy,
+    exoplanet_detail::ExoplanetDetailLazy,
+    exoplanets_table::ExoplanetsTableLazy,
+    footer::VersionFooter,
+    google_analytics::GoogleAnalytics,
+    insights::{InsightDetailLazy, InsightsLazy},
+    navbar::Navbar,
+    overview::OverviewLazy,
     stellarhost_detail::StellarHostDetailLazy,
     stellarhosts_table::StellarHostsTableLazy,
 };
@@ -86,6 +91,8 @@ pub fn App() -> impl IntoView {
                     ssr=SsrMode::Async
                 />
                 <Route path=path!("/exoplanets/:pl_name") view={Lazy::<ExoplanetDetailLazy>::new()} ssr=SsrMode::Async/>
+                <Route path=StaticSegment("facts") view={Lazy::<InsightsLazy>::new()} ssr=SsrMode::Async/>
+                <Route path=path!("/facts/:slug") view={Lazy::<InsightDetailLazy>::new()} ssr=SsrMode::Async/>
                 <Route path=StaticSegment("about") view={Lazy::<AboutLazy>::new()}/>
             </Routes>
 

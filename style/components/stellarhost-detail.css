@@ -153,6 +153,10 @@
   @apply text-sky-300;
 }
 
+.host-detail-section__eyebrow--comparison {
+  @apply text-orange-300;
+}
+
 .host-detail-section__eyebrow--provenance {
   @apply text-emerald-300;
 }
@@ -169,8 +173,36 @@
   @apply max-w-xl;
 }
 
+.host-detail-section__description--comparison {
+  @apply text-slate-300;
+}
+
 .host-detail-summary-grid {
   @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
+}
+
+.host-comparison {
+  @apply grid gap-4 rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30 md:grid-cols-2;
+}
+
+.host-comparison__card {
+  @apply flex min-h-[21rem] flex-col items-center justify-end rounded-[1.25rem] border border-white/8 bg-white/4 px-4 py-6 text-center;
+}
+
+.host-comparison__body-wrap {
+  @apply flex h-56 items-end justify-center;
+}
+
+.host-comparison__body {
+  @apply rounded-full border border-white/10 shadow-xl;
+}
+
+.host-comparison__label {
+  @apply mt-4 text-lg font-semibold text-white;
+}
+
+.host-comparison__subtitle {
+  @apply mt-1 text-sm text-slate-400;
 }
 
 .host-detail-card {

@@ -1,181 +1,141 @@
 # Current Context
 
-## Detail Page Refactor
+## Exoplanet Detail Follow-Up
 
-### Scope
+- Frontend layout refactor is done enough for now:
+  - hero visual
+  - Earth/Jupiter comparison
+  - provenance-style records section
+- The remaining important gap is backend/data-shape quality:
+  - current payload is still `ExoplanetDetail { pl_name, records, metadata }`
+  - summary/provenance UI still derives too much from raw rows on the client
+- The durable specification for this work now lives in `specs/exoplanet-detail.md`, especially the `**TODO ASAP**` section.
 
-- First: refactor `src/components/stellarhost_detail/` to semantic feature CSS.
-- Next: define a concrete exoplanet detail page specification.
-- Then: refactor `src/components/exoplanet_detail.rs` to match the current architectural shape of `stellarhost_detail`.
-- Current active step: exoplanet detail page is now split into feature files and semantic CSS, but the records/provenance section still needs redesign.
-
-### Current Situation
-
-- `stellarhost_detail` is already structurally split into feature files such as:
-  - `page.rs`
-  - `hero.rs`
-  - `summary.rs`
-  - `planets.rs`
-  - `provenance.rs`
-- `stellarhost_detail` still carries large inline Tailwind class strings in Rust and should be moved to semantic feature CSS.
-- `exoplanet_detail` is now split into:
-  - `mod.rs`
-  - `page.rs`
-  - `hero.rs`
-  - `comparison.rs`
-  - `summary.rs`
-  - `records.rs`
-  - `format.rs`
-- `style/components/exoplanet-detail.css` exists and is imported from `style/tailwind.css`.
-- The exoplanet page now has:
-  - page shell aligned with the stellar host design family
-  - generated planet hero visual
-  - Earth/Jupiter scale comparison
-  - summary section
-  - records section
-- Current main problem: exoplanet records are rendered as stacked expandable cards.
-- Expected direction: exoplanet records/provenance should move closer to the `stellarhost_detail` provenance model, where row-level data is primarily presented in a dense table layout rather than one-card-per-row.
-- Current backend limitation remains: `ExoplanetDetail` still only provides raw records plus metadata, so the exoplanet summary is still using thin client-side logic instead of a dedicated canonical summary payload.
-
-### Goals
-
-- Reduce inline class noise in detail-page Rust code.
-- Keep the current visual design direction, but express it through semantic feature styles.
-- Make `exoplanet_detail` structurally consistent with `stellarhost_detail`.
-- Make `exoplanet_detail` feel visually related to `stellarhost_detail` without forcing identical content structure.
-- Define a dedicated exoplanet detail content model before implementation.
-
-### Specification
-
-#### 1. Stellar Host Detail Styling Cleanup
-
-- Add `style/components/stellarhost-detail.css`.
-- Import it from `style/tailwind.css`.
-- Move large section-level class groups into semantic feature classes.
-- Keep small one-off utility classes inline only when they improve readability.
-- Do not change behavior or data flow in this pass.
-- Status: completed
-
-#### 2. Exoplanet Detail Structural Refactor
-
-- Create and agree the page spec in `specs/exoplanet-detail.md`.
-- Convert `src/components/exoplanet_detail.rs` into a feature module:
-  - `src/components/exoplanet_detail/mod.rs`
-  - `page.rs`
-  - `hero.rs`
-  - `comparison.rs`
-  - `summary.rs`
-  - `records.rs`
-  - optional shared `format.rs`
-- Separate page/meta/resource handling from section rendering.
-- Extract loading and error states into small page-level components or helpers.
-- Keep route exports stable so the app shell and routing do not need broader changes.
-- Status: completed for module split; records/provenance presentation still needs follow-up
-
-#### 3. Exoplanet Detail Visual Alignment
-
-- Add `style/components/exoplanet-detail.css`.
-- Import it from `style/tailwind.css`.
-- Move repeated page-level and section-level Tailwind class piles into semantic classes.
-- Align `exoplanet_detail` with the same design family as `stellarhost_detail`, especially for:
-  - page shell
-  - back link
-  - hero/header treatment
-  - section spacing/rhythm
-  - loading state
-  - error state
-- Add exoplanet-specific sections for:
-  - generated hero planet visual
-  - Earth/Jupiter scale comparison
-  - canonical/adopted planet summary
-- Keep exoplanet-specific content and section composition appropriate to the page’s actual data model.
-- Status: partially completed; page shell, hero, comparison, and summary are in place, but records/provenance layout still diverges from target
-
-#### 4. Exoplanet Records / Provenance Follow-Up
-
-- Replace the current one-card-per-record presentation in `src/components/exoplanet_detail/records.rs`.
-- Move toward a structure closer to `stellarhost_detail/provenance.rs`:
-  - compact evidence summary panel
-  - dense table for row-level values
-  - optional expandable row details only if needed for narrow screens
-- Keep the exoplanet page planet-specific, but do not treat the records section like a feed of cards.
-- Prefer table-first presentation on desktop because the section is fundamentally provenance/data-dense content.
-- Status: next
-
-### Non-Goals
-
-- No server/data contract changes.
-- No new styling library or scoped styling tool.
-- No forced one-to-one section parity when the exoplanet page needs different content structure.
-
-## Shared Table State Follow-Up
+## Insights Pages For SEO / GEO
 
 ### Goal
 
-- Reduce signal sprawl in `src/components/stellarhosts_table/page.rs`.
-- Shape the refactor so the same approach can later be reused in `src/components/exoplanets_table.rs`.
+- Add indexable “Insights” pages aimed at SEO/GEO discovery.
+- These pages should expose curated rankings/lists such as:
+  - `Smallest exoplanets by radius`
+  - `Top 10 exoplanets by radius`
+  - `Top 10 hottest exo-suns`
+- There should be at least a dozen such pages, so the implementation must scale beyond one-off experiments.
 
-### Current Observation
+### Product Direction
 
-- `stellarhosts_table/page.rs` still declares many adjacent signals for one logical area of state.
-- Most of these belong to table/query behavior rather than page-specific UI.
-- `exoplanets_table.rs` still has the older, larger version of the same pattern.
+- There should be an insights landing page or hub.
+- Stage 1 hub now exists at `/facts`.
+- User-facing label is `Insights`, while the route namespace remains `/facts/...`.
+- The hub now contains both planned cards and live routed insight cards.
+- Each insight page should have:
+  - a clear title
+  - short intro text
+  - a structured ranked list or table of results
+- The pages should be crawlable and useful as standalone entry points.
 
-### Proposed Direction
+### Stages
 
-- Extract shared table/query signal state into a reusable struct in `src/table/`.
-- Keep transient UI-only state separate from query state.
+#### Stage 1
 
-### Likely Split
-
-- Shared table/query state:
-  - `current_page`
-  - `sort_column`
-  - `sort_order`
-  - `selected_columns`
-  - `filter_text`
-  - possibly `filter_input`
-- Local UI state:
-  - `selector_is_open`
-  - `is_loading`
-  - `has_loaded`
-
-### Design Intent
-
-- The shared struct should store Leptos signals, not plain snapshot values.
-- It should expose small helper methods so it is more useful than a passive field bag.
-- It should be designed for reuse by both table pages, not only `stellarhosts_table`.
-
-### Suggested Refactor Phases
-
-#### Phase A: Shared Query Signal Struct
-
-- Add a shared struct in `src/table/` for table/query signals.
-- Add helpers such as:
-  - current query snapshot
-  - set page
-  - set filter
-  - set sort for column
-- Migrate `stellarhosts_table/page.rs` onto that struct first.
-- Status: next
-
-#### Phase B: Shared Pagination View State
-
-- Add a shared pagination view-state struct in `src/table/`.
-- Use a generic name such as `TablePaginationState` or `PaginationViewState`.
-- Target repeated pagination props such as:
-  - `start`
-  - `end`
-  - `total`
-  - `current_page`
-  - `total_pages`
-  - `can_go_prev`
-  - `can_go_next`
-- Migrate `stellarhosts_table` first, then reuse the same struct in `exoplanets_table`.
-- Keep callbacks and optional page links explicit unless bundling them clearly improves readability.
+- Build the insights landing page/hub only.
+- Use a dummy list of insights.
+- Insight cards/links do not need to be clickable yet.
+- Primary goal: establish visual direction and page composition.
 - Status: completed
 
-#### Phase C: Reuse In Exoplanets Table
+#### Stage 2
 
-- Apply the same shared table/query signal struct to `src/components/exoplanets_table.rs`.
-- Compare whether more shared controller logic can be extracted after both pages use the same state model.
+- Plan and implement the actual fact-page component architecture.
+- Facts pages will likely need multiple aggregation/query families, not just one generic `TOP N` pattern.
+- Expected fact families:
+  - ranked lists such as top-N / bottom-N by a single metric
+  - comparison/system pages such as a stellar host and its biggest planets
+  - special relationship pages such as equal star-planet pairs or hosts with the most planets
+- At this stage we should explicitly decide how generic to be.
+- Current leaning:
+  - do not over-generalize too early
+  - consider one file per insight page if each page needs its own fetch/query/render logic
+  - use shared small building blocks only where they clearly reduce duplication
+- Likely shared pieces:
+  - insights page shell
+  - cards for the hub page
+  - a few templates for recurring fact families
+  - metadata helpers for SEO text
+- Possible page ownership model:
+  - one component file per insight page
+  - each insight component responsible for querying parquet-backed data and rendering its result
+  - shared helpers only for repeated query or presentation primitives
+- Current implementation direction:
+  - do not reuse the main `stellarhosts_table` / `exoplanets_table` pages
+  - keep tables/presentations fully on the insight-component side
+  - allow lightweight shared shells, but keep page-specific rendering logic local
+- Current progress:
+  - Insights is now a feature module:
+    - `src/components/insights/mod.rs`
+    - `overview.rs`
+    - `detail.rs`
+    - `smallest_exoplanets.rs`
+    - `hottest_stellar_hosts.rs`
+    - `crowded_systems.rs`
+  - Three live routed pages now exist:
+    - `/facts/smallest-exoplanets-radius`
+    - `/facts/hottest-stellar-hosts`
+    - `/facts/systems-with-most-planets`
+  - These pages currently use a lightweight shared shell plus page-owned fetch/render flow.
+- Main question for the next session:
+  - does this “one file per insight page + small shared shell” pattern remain the preferred Stage 2 model after a few more examples?
+
+#### Stage 3
+
+- Add tests for insights-page infrastructure and insight logic.
+- Prefer testing:
+  - query/aggregation helpers
+  - fact-page selection logic
+  - small presentation helpers
+- Avoid brittle page snapshots unless a specific page shape needs protection.
+
+### Likely Building Blocks
+
+- insights index page with reusable link-card component
+- optional insights page config registry if it proves useful after Stage 2 decisions
+- shared renderers/templates for different fact families, but only where reuse is real
+- metadata helpers for per-page SEO text
+- server/query helpers for:
+  - top-N / bottom-N style result sets
+  - comparison/system aggregations
+  - special relationship aggregations where needed
+
+### Initial Examples
+
+- smallest exoplanets by radius
+- largest exoplanets by radius
+- hottest exoplanets by equilibrium temperature
+- coldest exoplanets by equilibrium temperature
+- nearest stellar hosts
+- hottest stellar hosts
+- coolest stellar hosts
+- most massive stellar hosts
+- stellar hosts with the most planets
+- most equal star-planet pairs
+- stellar hosts with the largest known planet
+- compact systems with the shortest orbital periods
+- largest planet-to-host size ratios
+- hottest planets around the coolest stars
+- nearest systems with multiple known planets
+- densest small exoplanets
+- lowest-density giant exoplanets
+- oldest stellar hosts with planets
+
+### Open Questions
+
+- Should insight pages live under a dedicated route namespace such as `/facts/...`?
+  - Yes for now: keep `/facts/...` as the route namespace even if the user-facing label is “Insights”
+- Should each insight page show exactly 10 results by default, or vary by page?
+  - Vary by page; some should be top 5, others top 10 or another explicit limit
+- Should result presentation be card-based, table-based, or hybrid depending on the fact type?
+  - Depends on fact type; likely each fact family should have its own template
+- Which insights should be prioritized first for maximum SEO/GEO value?
+  - Scope target is roughly 20-30 new pages, so prioritization and grouping still need to be decided
+- Should insights use a heavily generic registry-driven model or a lighter one-file-per-page approach?
+  - Decide during Stage 2 after we see the real diversity of fact families

@@ -316,3 +316,137 @@ fn extract_attr(raw: &str, attr: &str) -> Option<String> {
         Some(rest[..end].to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use leptos::serde_json::{Value, json};
+
+    fn metadata_with_units(keys: &[&str]) -> HashMap<String, ColumnMetadata> {
+        keys.iter()
+            .map(|key| {
+                (
+                    (*key).to_string(),
+                    ColumnMetadata {
+                        name: (*key).to_string(),
+                        description: None,
+                        unit: Some(match *key {
+                            "pl_orbper" => "day".to_string(),
+                            "pl_rade" => "Rearth".to_string(),
+                            "pl_bmasse" => "Mearth".to_string(),
+                            "pl_eqt" => "K".to_string(),
+                            _ => "".to_string(),
+                        }),
+                        datatype: "double".to_string(),
+                    },
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn available_columns_prefers_curated_columns_with_data_or_metadata() {
+        let records = vec![json!({
+            "disc_year": 2010,
+            "discoverymethod": "Transit",
+            "pl_rade": 2.68,
+            "pl_refname": "<a href=\"https://example.test/ref\">Example Ref</a>"
+        })];
+        let metadata =
+            metadata_with_units(&["disc_year", "discoverymethod", "pl_rade"]);
+
+        let columns = available_columns(&records, &metadata);
+
+        assert_eq!(
+            columns,
+            vec![
+                "disc_year".to_string(),
+                "discoverymethod".to_string(),
+                "pl_rade".to_string(),
+                "pl_refname".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn build_stats_counts_values_and_distinct_entries() {
+        let records = vec![
+            json!({
+                "discoverymethod": "Transit",
+                "pl_rade": 2.5,
+                "pl_eqt": 500
+            }),
+            json!({
+                "discoverymethod": "Transit",
+                "pl_rade": 2.7,
+                "pl_eqt": 500
+            }),
+            json!({
+                "discoverymethod": "Imaging",
+                "pl_rade": null,
+                "pl_eqt": 700
+            }),
+        ];
+
+        let stats = build_stats(&records);
+        let discovery =
+            stats.iter().find(|stat| stat.label == "Discovery").unwrap();
+        let radius = stats.iter().find(|stat| stat.label == "Radius").unwrap();
+        let eqt = stats.iter().find(|stat| stat.label == "Eq. Temp").unwrap();
+
+        assert_eq!(discovery.value_count, 3);
+        assert_eq!(discovery.distinct_count, 2);
+        assert_eq!(radius.value_count, 2);
+        assert_eq!(radius.distinct_count, 2);
+        assert_eq!(eqt.value_count, 3);
+        assert_eq!(eqt.distinct_count, 2);
+    }
+
+    #[test]
+    fn collect_refs_deduplicates_reference_labels() {
+        let records = vec![
+            json!({ "pl_refname": "Ref A" }),
+            json!({ "pl_refname": "Ref A" }),
+            json!({ "pl_refname": "Ref B" }),
+        ];
+
+        assert_eq!(
+            collect_refs(&records),
+            vec!["Ref A".to_string(), "Ref B".to_string()]
+        );
+    }
+
+    #[test]
+    fn parse_archive_anchor_extracts_href_and_label() {
+        let value = Value::String(
+            "<a href=\"https://example.test/paper\">Example Paper</a>"
+                .to_string(),
+        );
+
+        let parsed = parse_archive_anchor(&value).unwrap();
+
+        assert_eq!(parsed.href, "https://example.test/paper");
+        assert_eq!(parsed.label, "Example Paper");
+    }
+
+    #[test]
+    fn curated_provenance_columns_exist_in_fixture_schema() {
+        let fixture: Value = leptos::serde_json::from_str(include_str!(
+            "../../../crates/exo-core/tests/fixtures/exoplanets.fixture.json"
+        ))
+        .unwrap();
+        let column_names = fixture["column_names"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(Value::as_str)
+            .collect::<BTreeSet<_>>();
+
+        for column in PROVENANCE_COLUMNS {
+            assert!(
+                column_names.contains(column),
+                "fixture schema missing curated provenance column {column}"
+            );
+        }
+    }
+}

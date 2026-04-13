@@ -7,6 +7,9 @@ pub mod functions;
 pub mod common;
 
 #[cfg(feature = "ssr")]
+pub mod data;
+
+#[cfg(feature = "ssr")]
 pub mod cache;
 
 #[cfg(feature = "ssr")]
