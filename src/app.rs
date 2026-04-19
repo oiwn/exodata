@@ -91,8 +91,8 @@ pub fn App() -> impl IntoView {
                     ssr=SsrMode::Async
                 />
                 <Route path=path!("/exoplanets/:pl_name") view={Lazy::<ExoplanetDetailLazy>::new()} ssr=SsrMode::Async/>
-                <Route path=StaticSegment("facts") view={Lazy::<InsightsLazy>::new()} ssr=SsrMode::Async/>
-                <Route path=path!("/facts/:slug") view={Lazy::<InsightDetailLazy>::new()} ssr=SsrMode::Async/>
+                <Route path=StaticSegment("insights") view={Lazy::<InsightsLazy>::new()} ssr=SsrMode::Async/>
+                <Route path=path!("/insights/:slug") view={Lazy::<InsightDetailLazy>::new()} ssr=SsrMode::Async/>
                 <Route path=StaticSegment("about") view={Lazy::<AboutLazy>::new()}/>
             </Routes>
 

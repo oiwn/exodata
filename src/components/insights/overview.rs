@@ -8,30 +8,38 @@ use crate::metadata_helpers::{canonical_url, title_with_site};
 
 const INSIGHTS: &[InsightCardData] = &[
     InsightCardData::live(
-        "/facts/smallest-exoplanets-radius",
+        "/insights/smallest-exoplanets-radius",
         "Smallest Exoplanets By Radius",
         "Planetary extremes",
         "Tiny confirmed worlds ordered by radius with host-star context.",
         "Top 10 list",
     ),
     InsightCardData::live(
-        "/facts/hottest-stellar-hosts",
+        "/insights/largest-exoplanets-radius",
+        "Largest Exoplanets By Radius",
+        "Planetary extremes",
+        "Inflated giants and outsized worlds ranked by radius with quick host-star context.",
+        "Top 10 list",
+    ),
+    InsightCardData::live(
+        "/insights/hottest-stellar-hosts",
         "Hottest Stellar Hosts",
         "Stellar extremes",
         "Host stars with the highest effective temperatures among confirmed systems.",
         "Top 10 list",
     ),
     InsightCardData::live(
-        "/facts/systems-with-most-planets",
-        "Systems With Most Planets",
+        "/insights/systems-with-most-planets",
+        "Planetary Systems With Most Planets",
         "System architecture",
-        "Host systems ordered by the number of confirmed planets.",
+        "System names ordered by the archive-backed confirmed planet count.",
         "Top 10 list",
     ),
-    InsightCardData::planned(
-        "Largest Exoplanets By Radius",
-        "Planetary extremes",
-        "Inflated giants and outsized worlds ranked by radius with quick host-star context.",
+    InsightCardData::live(
+        "/insights/binary-star-systems",
+        "Binary Planetary Systems With Planets",
+        "System architecture",
+        "Planetary systems where the archive star count identifies two stars.",
         "Top 10 list",
     ),
     InsightCardData::planned(
@@ -81,7 +89,7 @@ pub fn InsightsPage() -> impl IntoView {
     view! {
         <Title text=insights_title()/>
         <Meta name="description" content=insights_description()/>
-        <Link rel="canonical" href=canonical_url("/facts")/>
+        <Link rel="canonical" href=canonical_url("/insights")/>
 
         <div class="insights-page">
             <div class="insights-page__container">

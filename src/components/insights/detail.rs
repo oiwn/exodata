@@ -5,8 +5,10 @@ use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
 use leptos_router::lazy_route;
 
+use super::binary_systems::BinaryStarSystemsPage;
 use super::crowded_systems::SystemsWithMostPlanetsPage;
 use super::hottest_stellar_hosts::HottestStellarHostsPage;
+use super::largest_exoplanets::LargestExoplanetsPage;
 use super::smallest_exoplanets::SmallestExoplanetsPage;
 use crate::metadata_helpers::{
     canonical_url, decode_path_segment, title_with_site,
@@ -34,22 +36,24 @@ pub fn InsightDetailPage() -> impl IntoView {
         decode_path_segment(&raw)
     });
     let canonical_href =
-        canonical_url(&format!("/facts/{}", slug.get_untracked()));
+        canonical_url(&format!("/insights/{}", slug.get_untracked()));
 
     view! {
         <Link rel="canonical" href=canonical_href/>
 
         <div class="insights-page">
             <div class="insights-page__container">
-                <A href="/facts" attr:class="insights-page__back-link">
+                <A href="/insights" attr:class="insights-page__back-link">
                     <span>"←"</span>
                     <span>"Back to Insights"</span>
                 </A>
 
                 {move || match slug.get().as_str() {
                     "smallest-exoplanets-radius" => view! { <SmallestExoplanetsPage/> }.into_any(),
+                    "largest-exoplanets-radius" => view! { <LargestExoplanetsPage/> }.into_any(),
                     "hottest-stellar-hosts" => view! { <HottestStellarHostsPage/> }.into_any(),
                     "systems-with-most-planets" => view! { <SystemsWithMostPlanetsPage/> }.into_any(),
+                    "binary-star-systems" => view! { <BinaryStarSystemsPage/> }.into_any(),
                     _ => view! {
                         <Title text=move || title_with_site(&format!("{} Insight", slug.get()))/>
                         <Meta name="description" content="Standalone insights page for ranked exoplanet and stellar-host views."/>

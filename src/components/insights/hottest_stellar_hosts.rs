@@ -1,25 +1,13 @@
 use leptos::prelude::*;
 
 use super::common::InsightListPageShell;
-use crate::server::functions::get_distinct_stellarhosts_page;
-
-const COLUMNS: &str = "hostname,st_teff,st_mass,sy_dist,sy_pnum";
+use crate::server::functions::get_hottest_stellar_hosts_insight;
 
 #[component]
 pub fn HottestStellarHostsPage() -> impl IntoView {
     let rows_resource = Resource::new(
         move || (),
-        move |_| async move {
-            get_distinct_stellarhosts_page(
-                1,
-                10,
-                Some("st_teff".to_string()),
-                Some("desc".to_string()),
-                Some(COLUMNS.to_string()),
-                None,
-            )
-            .await
-        },
+        move |_| async move { get_hottest_stellar_hosts_insight().await },
     );
 
     view! {

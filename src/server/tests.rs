@@ -12,7 +12,9 @@ mod tests {
     use serde_json::Value;
     use tower::ServiceExt;
 
-    use crate::server::cache::{build_host_detail_cache, build_table_cache};
+    use crate::server::cache::{
+        build_host_detail_cache, build_insight_cache, build_table_cache,
+    };
     use crate::server::functions::DataStats;
     use crate::server::handlers::{
         ApiState, build_sitemap_xml, get_exoplanets, get_exoplanets_schema,
@@ -67,6 +69,7 @@ mod tests {
             }),
             table_cache: build_table_cache(64),
             host_detail_cache: build_host_detail_cache(64),
+            insight_cache: build_insight_cache(16),
         }
     }
 
@@ -391,6 +394,16 @@ mod tests {
         assert!(xml.contains("<loc>https://example.com/about</loc>"));
         assert!(xml.contains("<loc>https://example.com/stellarhosts</loc>"));
         assert!(xml.contains("<loc>https://example.com/exoplanets</loc>"));
+        assert!(xml.contains("<loc>https://example.com/insights</loc>"));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/smallest-exoplanets-radius</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/largest-exoplanets-radius</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/binary-star-systems</loc>"
+        ));
         assert!(
             xml.contains(
                 "<loc>https://example.com/stellarhosts/HD%20189733</loc>"

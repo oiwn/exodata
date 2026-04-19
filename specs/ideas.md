@@ -19,3 +19,8 @@
 - [ ] confirm/remove unused `src/stellarhosts.rs` + `src/common.rs`
 - [ ] tests: mirror exoplanets coverage + query encode/decode + dtype handling
 - [ ] decide filter URL format + filter semantics
+
+## TODO:
+
+- [ ] add skill for agent how to use cli tool.
+- [ ] MCP server

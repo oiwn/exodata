@@ -25,7 +25,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use super::data::{rows, tables};
 use super::functions::DataStats;
-use crate::server::cache::{HostDetailCache, TableCache};
+use crate::server::cache::{HostDetailCache, InsightCache, TableCache};
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
@@ -38,6 +38,7 @@ pub struct ApiState {
     pub overview_stats: Arc<DataStats>,
     pub table_cache: TableCache,
     pub host_detail_cache: HostDetailCache,
+    pub insight_cache: InsightCache,
 }
 
 /// Generic query parameters for data endpoints
@@ -490,6 +491,12 @@ pub fn build_sitemap_xml(
         format!("{site_url}/about"),
         format!("{site_url}/stellarhosts"),
         format!("{site_url}/exoplanets"),
+        format!("{site_url}/insights"),
+        format!("{site_url}/insights/smallest-exoplanets-radius"),
+        format!("{site_url}/insights/largest-exoplanets-radius"),
+        format!("{site_url}/insights/hottest-stellar-hosts"),
+        format!("{site_url}/insights/systems-with-most-planets"),
+        format!("{site_url}/insights/binary-star-systems"),
     ];
 
     urls.extend(build_detail_urls(

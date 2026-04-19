@@ -1,25 +1,13 @@
 use leptos::prelude::*;
 
 use super::common::InsightListPageShell;
-use crate::server::functions::get_distinct_exoplanets_page;
-
-const COLUMNS: &str = "pl_name,hostname,pl_rade,pl_bmasse,disc_year";
+use crate::server::functions::get_smallest_exoplanets_by_radius_insight;
 
 #[component]
 pub fn SmallestExoplanetsPage() -> impl IntoView {
     let rows_resource = Resource::new(
         move || (),
-        move |_| async move {
-            get_distinct_exoplanets_page(
-                1,
-                10,
-                Some("pl_rade".to_string()),
-                Some("asc".to_string()),
-                Some(COLUMNS.to_string()),
-                None,
-            )
-            .await
-        },
+        move |_| async move { get_smallest_exoplanets_by_radius_insight().await },
     );
 
     view! {

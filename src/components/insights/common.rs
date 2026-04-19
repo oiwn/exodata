@@ -95,6 +95,7 @@ fn InsightErrorPanel(message: String) -> impl IntoView {
 #[component]
 fn InsightDataPanel(data: TableData) -> impl IntoView {
     let columns = data.columns.clone();
+    let render_columns = render_columns(&columns);
 
     view! {
         <div class="insight-data-panel">
@@ -107,14 +108,14 @@ fn InsightDataPanel(data: TableData) -> impl IntoView {
                     <thead>
                         <tr>
                             <th class="insight-data-panel__head">"#"</th>
-                            {columns.iter().map(|column| view! {
+                            {render_columns.iter().map(|column| view! {
                                 <th class="insight-data-panel__head">{label_for_column(column)}</th>
                             }).collect::<Vec<_>>()}
                         </tr>
                     </thead>
                     <tbody>
                         {data.rows.into_iter().enumerate().map(|(idx, row)| {
-                            view! { <InsightDataRow rank=idx + 1 columns=columns.clone() row=row/> }
+                            view! { <InsightDataRow rank=idx + 1 columns=render_columns.clone() row=row/> }
                         }).collect::<Vec<_>>()}
                     </tbody>
                 </table>
@@ -134,15 +135,15 @@ fn InsightDataRow(
             <td class="insight-data-panel__cell insight-data-panel__cell--rank">{rank.to_string()}</td>
             {columns.into_iter().map(|column| {
                 let value = row.get(&column).cloned().unwrap_or(Value::Null);
-                view! { <InsightDataCell column=column value=value/> }
+                view! { <InsightDataCell column=column value=value row=row.clone()/> }
             }).collect::<Vec<_>>()}
         </tr>
     }
 }
 
 #[component]
-fn InsightDataCell(column: String, value: Value) -> impl IntoView {
-    if let Some(href) = href_for_column(&column, &value) {
+fn InsightDataCell(column: String, value: Value, row: Value) -> impl IntoView {
+    if let Some(href) = href_for_column(&column, &value, &row) {
         view! {
             <td class="insight-data-panel__cell">
                 <A href=href attr:class="text-cyan-300 hover:text-cyan-200 hover:underline transition-colors">
@@ -159,11 +160,34 @@ fn InsightDataCell(column: String, value: Value) -> impl IntoView {
     }
 }
 
-fn href_for_column(column: &str, value: &Value) -> Option<String> {
-    let slug = value.as_str().map(encode_path_segment)?;
+fn render_columns(columns: &[String]) -> Vec<String> {
+    let is_system_table = columns.iter().any(|column| column == "sy_name");
+
+    columns
+        .iter()
+        .filter(|column| !(is_system_table && column.as_str() == "hostname"))
+        .cloned()
+        .collect()
+}
+
+fn href_for_column(column: &str, value: &Value, row: &Value) -> Option<String> {
     match column {
-        "pl_name" => Some(format!("/exoplanets/{slug}")),
-        "hostname" => Some(format!("/stellarhosts/{slug}")),
+        "pl_name" => {
+            let slug = value.as_str().map(encode_path_segment)?;
+            Some(format!("/exoplanets/{slug}"))
+        }
+        "hostname" => {
+            let slug = value.as_str().map(encode_path_segment)?;
+            Some(format!("/stellarhosts/{slug}"))
+        }
+        "sy_name" => {
+            let slug = row
+                .get("hostname")
+                .and_then(Value::as_str)
+                .filter(|host| !host.trim().is_empty())
+                .map(encode_path_segment)?;
+            Some(format!("/stellarhosts/{slug}"))
+        }
         _ => None,
     }
 }
@@ -172,11 +196,13 @@ fn label_for_column(column: &str) -> &'static str {
     match column {
         "pl_name" => "Planet",
         "hostname" => "Host Star",
+        "sy_name" => "System",
         "pl_rade" => "Radius",
         "pl_bmasse" => "Mass",
         "disc_year" => "Year",
         "st_teff" => "Teff",
         "st_mass" => "Mass",
+        "sy_snum" => "Stars",
         "sy_pnum" => "Planets",
         "sy_dist" => "Distance",
         _ => "Value",

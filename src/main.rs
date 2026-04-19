@@ -109,6 +109,7 @@ async fn start_server() {
 
     let table_cache = server::cache::build_table_cache(400);
     let host_detail_cache = server::cache::build_host_detail_cache(512);
+    let insight_cache = server::cache::build_insight_cache(32);
     let site_url = Arc::new(
         std::env::var("SITE_URL")
             .ok()
@@ -134,6 +135,7 @@ async fn start_server() {
         overview_stats,
         table_cache,
         host_detail_cache,
+        insight_cache,
     };
 
     // Prewarm default table cache entries before serving any requests.
