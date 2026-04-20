@@ -14,8 +14,8 @@ pub fn LargestExoplanetsPage() -> impl IntoView {
         <InsightListPageShell
             eyebrow="Planetary extremes"
             title="Largest exoplanets by radius"
-            intro="Inflated giants and outsized confirmed worlds ranked by the current archive-backed radius field."
-            description="The largest confirmed exoplanets in the catalog ordered by radius."
+            intro="Inflated giants and outsized confirmed worlds ranked by the current archive-default radius field."
+            description="The largest confirmed exoplanets in the catalog ordered by archive-default radius."
             resource=rows_resource
             empty_label="No planet rows available."
         />

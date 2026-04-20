@@ -24,3 +24,27 @@
 
 - [ ] add skill for agent how to use cli tool.
 - [ ] MCP server
+
+## Insights page
+
+- smallest exoplanets by radius
+- largest exoplanets by radius
+- hottest exoplanets by equilibrium temperature
+- coldest exoplanets by equilibrium temperature
+- nearest stellar hosts
+- hottest stellar hosts
+- coolest stellar hosts
+- most massive stellar hosts
+- stellar hosts with the most planets
+- binary planetary systems with planets
+- planetary systems with the most planets
+- most equal star-planet pairs
+- stellar hosts with the largest known planet
+- compact systems with the shortest orbital periods
+- largest planet-to-host size ratios
+- hottest planets around the coolest stars
+- nearest systems with multiple known planets
+- densest small exoplanets
+- lowest-density giant exoplanets
+- oldest stellar hosts with planets
+

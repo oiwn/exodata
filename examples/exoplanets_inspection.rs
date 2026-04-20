@@ -198,7 +198,7 @@ fn numeric_stats(df: &DataFrame, col: &str) -> Option<NumericStats> {
     let series = df.column(col).ok()?;
     let cast = series.cast(&DataType::Float64).ok()?;
     let s = cast.f64().ok()?;
-    if s.len() == 0 {
+    if s.is_empty() {
         return None;
     }
     Some(NumericStats {

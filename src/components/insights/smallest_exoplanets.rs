@@ -14,8 +14,8 @@ pub fn SmallestExoplanetsPage() -> impl IntoView {
         <InsightListPageShell
             eyebrow="Planetary extremes"
             title="Smallest exoplanets by radius"
-            intro="A compact ranked view of the smallest confirmed exoplanets using the current archive-backed radius field."
-            description="The smallest confirmed exoplanets in the catalog ordered by radius."
+            intro="A compact ranked view of the smallest confirmed exoplanets using the current archive-default radius field."
+            description="The smallest confirmed exoplanets in the catalog ordered by archive-default radius."
             resource=rows_resource
             empty_label="No planet rows available."
         />

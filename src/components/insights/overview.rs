@@ -22,6 +22,34 @@ const INSIGHTS: &[InsightCardData] = &[
         "Top 10 list",
     ),
     InsightCardData::live(
+        "/insights/most-distant-exoplanets",
+        "Most Distant Exoplanets From Their Stars",
+        "Orbital architecture",
+        "Confirmed planets ranked by semi-major axis instead of inferred temperature.",
+        "Top 10 list",
+    ),
+    InsightCardData::live(
+        "/insights/nearest-stellar-hosts",
+        "Nearest Stellar Hosts",
+        "Distance",
+        "Nearby host stars ranked by distance from Earth for quick local-neighborhood browsing.",
+        "Top 10 list",
+    ),
+    InsightCardData::live(
+        "/insights/largest-planet-to-host-ratios",
+        "Largest Planet-To-Host Ratios",
+        "Relationships",
+        "Extreme size-ratio systems highlighting oversized planets around comparatively small stars.",
+        "Top 10 list",
+    ),
+    InsightCardData::live(
+        "/insights/most-equal-star-planet-pairs",
+        "Most Equal Star-Planet Pairs",
+        "Relationships",
+        "Systems where planet and host-star sizes sit unusually close together in relative scale.",
+        "Top 10 list",
+    ),
+    InsightCardData::live(
         "/insights/hottest-stellar-hosts",
         "Hottest Stellar Hosts",
         "Stellar extremes",
@@ -42,30 +70,6 @@ const INSIGHTS: &[InsightCardData] = &[
         "Planetary systems where the archive star count identifies two stars.",
         "Top 10 list",
     ),
-    InsightCardData::planned(
-        "Coldest Exoplanets",
-        "Planetary climate",
-        "Cold, distant, or weakly irradiated planets ranked by equilibrium temperature.",
-        "Top 10 list",
-    ),
-    InsightCardData::planned(
-        "Nearest Stellar Hosts",
-        "Distance",
-        "Nearby host stars ranked by distance from Earth for quick local-neighborhood browsing.",
-        "Top 10 list",
-    ),
-    InsightCardData::planned(
-        "Largest Planet-To-Host Ratios",
-        "Relationships",
-        "Extreme size-ratio systems highlighting oversized planets around comparatively small stars.",
-        "Comparison page",
-    ),
-    InsightCardData::planned(
-        "Most Equal Star-Planet Pairs",
-        "Relationships",
-        "Systems where planet and host-star sizes sit unusually close together in relative scale.",
-        "Comparison page",
-    ),
 ];
 
 #[derive(Clone)]
@@ -84,8 +88,6 @@ impl LazyRoute for InsightsLazy {
 
 #[component]
 pub fn InsightsPage() -> impl IntoView {
-    let live_count = INSIGHTS.iter().filter(|item| item.href.is_some()).count();
-
     view! {
         <Title text=insights_title()/>
         <Meta name="description" content=insights_description()/>
@@ -96,7 +98,7 @@ pub fn InsightsPage() -> impl IntoView {
                 <section class="insights-hero">
                     <div class="insights-hero__eyebrow">
                         <span>"Insights"</span>
-                        <span>"SEO / GEO"</span>
+                        <span>"Ranked lists"</span>
                     </div>
 
                     <div class="insights-hero__header">
@@ -105,13 +107,13 @@ pub fn InsightsPage() -> impl IntoView {
                                 "Curated exoplanet and stellar-host insights"
                             </h1>
                             <p class="insights-hero__subtitle">
-                                "This hub now routes to a few standalone experiment pages. Each live page owns its own lightweight data fetch and rendering instead of reusing the main table-page UI."
+                                "Explore notable planets, host stars, and planetary systems through focused rankings built from the catalog data."
                             </p>
                         </div>
 
                         <div class="insights-hero__status">
-                            <p class="insights-hero__status-label">"Stage 2"</p>
-                            <p class="insights-hero__status-value">{format!("{live_count} live insights")}</p>
+                            <p class="insights-hero__status-label">"Available"</p>
+                            <p class="insights-hero__status-value">{format!("{} insights", INSIGHTS.len())}</p>
                         </div>
                     </div>
                 </section>
@@ -119,11 +121,11 @@ pub fn InsightsPage() -> impl IntoView {
                 <section class="insights-section">
                     <div class="insights-section__header">
                         <div>
-                            <p class="insights-section__eyebrow">"Insight Pages"</p>
-                            <h2 class="insights-section__title">"Live experiments plus planned candidates"</h2>
+                            <p class="insights-section__eyebrow">"Browse"</p>
+                            <h2 class="insights-section__title">"Exoplanet and stellar-host rankings"</h2>
                         </div>
                         <p class="insights-section__description">
-                            "Live cards route to standalone pages. Planned cards stay visible here to shape the wider insight catalog."
+                            "Open a ranking to compare planets, host stars, and system architectures across the archive."
                         </p>
                     </div>
 
@@ -140,43 +142,25 @@ pub fn InsightsPage() -> impl IntoView {
 
 #[component]
 fn InsightCard(item: InsightCardData) -> impl IntoView {
-    if let Some(href) = item.href {
-        view! {
-            <A href=href attr:class="insight-card insight-card--live">
-                <div class="insight-card__header">
-                    <p class="insight-card__category">{item.category}</p>
-                    <span class="insight-card__badge insight-card__badge--live">"Live"</span>
-                </div>
-                <h3 class="insight-card__title">{item.title}</h3>
-                <p class="insight-card__body">{item.description}</p>
-                <div class="insight-card__footer">
-                    <span class="insight-card__kind">{item.kind}</span>
-                    <span class="insight-card__action">"Open insight →"</span>
-                </div>
-            </A>
-        }
-        .into_any()
-    } else {
-        view! {
-            <article class="insight-card" aria-disabled="true">
-                <div class="insight-card__header">
-                    <p class="insight-card__category">{item.category}</p>
-                    <span class="insight-card__badge">"Coming Soon"</span>
-                </div>
-                <h3 class="insight-card__title">{item.title}</h3>
-                <p class="insight-card__body">{item.description}</p>
-                <div class="insight-card__footer">
-                    <span class="insight-card__kind">{item.kind}</span>
-                </div>
-            </article>
-        }
-        .into_any()
+    view! {
+        <A href=item.href attr:class="insight-card insight-card--live">
+            <div class="insight-card__header">
+                <p class="insight-card__category">{item.category}</p>
+                <span class="insight-card__badge insight-card__badge--live">"Open"</span>
+            </div>
+            <h3 class="insight-card__title">{item.title}</h3>
+            <p class="insight-card__body">{item.description}</p>
+            <div class="insight-card__footer">
+                <span class="insight-card__kind">{item.kind}</span>
+                <span class="insight-card__action">"View ranking →"</span>
+            </div>
+        </A>
     }
 }
 
 #[derive(Clone, Copy)]
 struct InsightCardData {
-    href: Option<&'static str>,
+    href: &'static str,
     title: &'static str,
     category: &'static str,
     description: &'static str,
@@ -192,22 +176,7 @@ impl InsightCardData {
         kind: &'static str,
     ) -> Self {
         Self {
-            href: Some(href),
-            title,
-            category,
-            description,
-            kind,
-        }
-    }
-
-    const fn planned(
-        title: &'static str,
-        category: &'static str,
-        description: &'static str,
-        kind: &'static str,
-    ) -> Self {
-        Self {
-            href: None,
+            href,
             title,
             category,
             description,

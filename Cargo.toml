@@ -107,7 +107,6 @@ site-pkg-dir = "pkg"
 
 # Activates the tailwind build
 tailwind-input-file = "style/tailwind.css"
-tailwind-config-file = "tailwind.config.js"
 
 # Assets source dir. All files found here will be copied and synchronized to site-root.
 # The assets-dir cannot have a sub directory with the same name/path as site-pkg-dir.
@@ -129,9 +128,6 @@ end2end-dir = "end2end"
 
 #  The browserlist query used for optimizing the CSS.
 browserquery = "defaults"
-
-# The environment Leptos will run in, usually either "DEV" or "PROD"
-env = "DEV"
 
 # The features to use when compiling the bin target
 #

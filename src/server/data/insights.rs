@@ -3,10 +3,37 @@ use super::tables::{TableQuery, TableResult};
 use crate::server::cache::{InsightCache, InsightKind, TableCacheValue};
 use polars::prelude::*;
 
+const SOLAR_RADIUS_IN_EARTH_RADII: f64 = 109.076;
 const SMALLEST_EXOPLANETS_COLUMNS: &[&str] =
     &["pl_name", "hostname", "pl_rade", "pl_bmasse", "disc_year"];
 const LARGEST_EXOPLANETS_COLUMNS: &[&str] =
     &["pl_name", "hostname", "pl_rade", "pl_bmasse", "disc_year"];
+const MOST_DISTANT_EXOPLANETS_COLUMNS: &[&str] = &[
+    "pl_name",
+    "hostname",
+    "pl_orbsmax",
+    "pl_orbper",
+    "disc_year",
+];
+const NEAREST_STELLAR_HOSTS_COLUMNS: &[&str] =
+    &["hostname", "sy_dist", "st_teff", "st_mass", "sy_pnum"];
+const LARGEST_PLANET_TO_HOST_RATIO_COLUMNS: &[&str] = &[
+    "pl_name",
+    "hostname",
+    "pl_host_radius_ratio",
+    "pl_rade",
+    "st_rad",
+    "disc_year",
+];
+const MOST_EQUAL_STAR_PLANET_PAIR_COLUMNS: &[&str] = &[
+    "pl_name",
+    "hostname",
+    "pl_host_radius_ratio",
+    "pl_host_radius_ratio_delta",
+    "pl_rade",
+    "st_rad",
+    "disc_year",
+];
 const HOTTEST_STELLAR_HOSTS_COLUMNS: &[&str] =
     &["hostname", "st_teff", "st_mass", "sy_dist", "sy_pnum"];
 const SYSTEMS_WITH_MOST_PLANETS_COLUMNS: &[&str] =
@@ -36,6 +63,58 @@ pub async fn get_largest_exoplanets_by_radius_cached(
         insight_cache,
         InsightKind::LargestExoplanetsByRadius,
         get_largest_exoplanets_by_radius,
+    )
+    .await
+}
+
+pub async fn get_most_distant_exoplanets_cached(
+    df: &DataFrame,
+    insight_cache: &InsightCache,
+) -> TableResult {
+    get_cached_insight(
+        df,
+        insight_cache,
+        InsightKind::MostDistantExoplanets,
+        get_most_distant_exoplanets,
+    )
+    .await
+}
+
+pub async fn get_nearest_stellar_hosts_cached(
+    df: &DataFrame,
+    insight_cache: &InsightCache,
+) -> TableResult {
+    get_cached_insight(
+        df,
+        insight_cache,
+        InsightKind::NearestStellarHosts,
+        get_nearest_stellar_hosts,
+    )
+    .await
+}
+
+pub async fn get_largest_planet_to_host_ratios_cached(
+    df: &DataFrame,
+    insight_cache: &InsightCache,
+) -> TableResult {
+    get_cached_insight(
+        df,
+        insight_cache,
+        InsightKind::LargestPlanetToHostRatios,
+        get_largest_planet_to_host_ratios,
+    )
+    .await
+}
+
+pub async fn get_most_equal_star_planet_pairs_cached(
+    df: &DataFrame,
+    insight_cache: &InsightCache,
+) -> TableResult {
+    get_cached_insight(
+        df,
+        insight_cache,
+        InsightKind::MostEqualStarPlanetPairs,
+        get_most_equal_star_planet_pairs,
     )
     .await
 }
@@ -117,16 +196,54 @@ fn table_result_from_cache_value(
 }
 
 fn get_smallest_exoplanets_by_radius(df: &DataFrame) -> TableResult {
-    get_distinct_exoplanets_data(
+    get_default_exoplanets_data(
         df,
         fixed_query(10, "pl_rade", "asc", SMALLEST_EXOPLANETS_COLUMNS),
     )
 }
 
 fn get_largest_exoplanets_by_radius(df: &DataFrame) -> TableResult {
-    get_distinct_exoplanets_data(
+    get_default_exoplanets_data(
         df,
         fixed_query(10, "pl_rade", "desc", LARGEST_EXOPLANETS_COLUMNS),
+    )
+}
+
+fn get_most_distant_exoplanets(df: &DataFrame) -> TableResult {
+    get_default_exoplanets_data(
+        df,
+        fixed_query(10, "pl_orbsmax", "desc", MOST_DISTANT_EXOPLANETS_COLUMNS),
+    )
+}
+
+fn get_nearest_stellar_hosts(df: &DataFrame) -> TableResult {
+    get_distinct_stellarhosts_data(
+        df,
+        fixed_query(10, "sy_dist", "asc", NEAREST_STELLAR_HOSTS_COLUMNS),
+    )
+}
+
+fn get_largest_planet_to_host_ratios(df: &DataFrame) -> TableResult {
+    get_computed_exoplanet_ratio_data(
+        df,
+        fixed_query(
+            10,
+            "pl_host_radius_ratio",
+            "desc",
+            LARGEST_PLANET_TO_HOST_RATIO_COLUMNS,
+        ),
+    )
+}
+
+fn get_most_equal_star_planet_pairs(df: &DataFrame) -> TableResult {
+    get_computed_exoplanet_ratio_data(
+        df,
+        fixed_query(
+            10,
+            "pl_host_radius_ratio_delta",
+            "asc",
+            MOST_EQUAL_STAR_PLANET_PAIR_COLUMNS,
+        ),
     )
 }
 
@@ -271,6 +388,137 @@ fn get_distinct_systems_data(df: &DataFrame, query: TableQuery) -> TableResult {
 
     let rows = dataframe_to_json(&working)?;
     Ok((rows, total, total_all, valid_columns))
+}
+
+fn get_default_exoplanets_data(df: &DataFrame, query: TableQuery) -> TableResult {
+    if df.column("default_flag").is_err() {
+        return Err(
+            "Missing required column 'default_flag' for default exoplanet rows"
+                .to_string(),
+        );
+    }
+
+    let working = df
+        .clone()
+        .lazy()
+        .filter(col("default_flag").eq(lit(1i32)))
+        .collect()
+        .map_err(|e| format!("Failed to filter default exoplanet rows: {e}"))?;
+
+    get_distinct_exoplanets_data(&working, query)
+}
+
+fn get_computed_exoplanet_ratio_data(
+    df: &DataFrame,
+    query: TableQuery,
+) -> TableResult {
+    if df.column("default_flag").is_err() {
+        return Err(
+            "Missing required column 'default_flag' for default exoplanet rows"
+                .to_string(),
+        );
+    }
+    for column in ["pl_name", "hostname", "pl_rade", "st_rad"] {
+        if df.column(column).is_err() {
+            return Err(format!(
+                "Missing required column '{column}' for planet-to-host ratio"
+            ));
+        }
+    }
+
+    let TableQuery {
+        page,
+        limit,
+        sort_by,
+        order,
+        selected_columns,
+        filter,
+    } = query;
+    let sort_col = sort_by.unwrap_or_else(|| "pl_host_radius_ratio".to_string());
+
+    let selected_columns = selected_columns.unwrap_or_else(|| {
+        LARGEST_PLANET_TO_HOST_RATIO_COLUMNS
+            .iter()
+            .map(|column| (*column).to_string())
+            .collect()
+    });
+
+    let mut working = df
+        .clone()
+        .lazy()
+        .filter(col("default_flag").eq(lit(1i32)))
+        .filter(col("pl_name").is_not_null())
+        .filter(col("pl_name").neq(lit("")))
+        .filter(col("pl_rade").is_not_null())
+        .filter(col("pl_rade").gt(lit(0.0)))
+        .filter(col("st_rad").is_not_null())
+        .filter(col("st_rad").gt(lit(0.0)))
+        .with_columns([(col("pl_rade")
+            / (col("st_rad") * lit(SOLAR_RADIUS_IN_EARTH_RADII)))
+        .alias("pl_host_radius_ratio")])
+        .with_columns([(col("pl_host_radius_ratio") - lit(1.0))
+            .abs()
+            .alias("pl_host_radius_ratio_delta")])
+        .select(selected_columns.iter().map(col).collect::<Vec<_>>())
+        .collect()
+        .map_err(|e| {
+            format!("Failed to compute planet-to-host radius ratios: {e}")
+        })?;
+
+    if let Some(filter_value) = filter {
+        let needle = filter_value.trim().to_lowercase();
+        if !needle.is_empty() {
+            let series = working
+                .column("pl_name")
+                .map_err(|e| format!("Failed to read filter column: {e}"))?;
+            let utf8 = series
+                .str()
+                .map_err(|e| format!("Failed to read string column: {e}"))?;
+            let mask: BooleanChunked = utf8
+                .into_iter()
+                .map(|opt| opt.map(|s| s.to_lowercase().contains(&needle)))
+                .collect();
+            working = working
+                .filter(&mask)
+                .map_err(|e| format!("Failed to apply filter: {e}"))?;
+        }
+    }
+
+    let total_all = distinct_value_count(&working, "pl_name")?;
+
+    let descending = order.as_deref().unwrap_or("asc") == "desc";
+    let sort_options =
+        SortMultipleOptions::new().with_order_descending(descending);
+
+    working = working
+        .sort([sort_col.as_str()], sort_options.clone())
+        .map_err(|e| format!("Failed to sort planet-to-host ratios: {e}"))?;
+
+    working = working
+        .unique::<String, String>(
+            Some(&["pl_name".to_string()]),
+            UniqueKeepStrategy::First,
+            None,
+        )
+        .map_err(|e| format!("Failed to deduplicate ratio planets: {e}"))?;
+
+    working = working
+        .sort([sort_col.as_str(), "pl_name"], sort_options)
+        .map_err(|e| format!("Failed to resort planet-to-host ratios: {e}"))?;
+
+    let total = working.height();
+    let page = if page == 0 { 1 } else { page };
+    let offset = (page - 1) * limit;
+
+    if offset < working.height() {
+        let end = std::cmp::min(offset + limit, working.height());
+        working = working.slice(offset as i64, end - offset);
+    } else {
+        working = working.slice(0, 0);
+    }
+
+    let rows = dataframe_to_json(&working)?;
+    Ok((rows, total, total_all, selected_columns))
 }
 
 fn fixed_query(

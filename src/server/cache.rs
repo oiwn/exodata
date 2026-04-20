@@ -16,6 +16,10 @@ pub enum TableKind {
 pub enum InsightKind {
     SmallestExoplanetsByRadius,
     LargestExoplanetsByRadius,
+    MostDistantExoplanets,
+    NearestStellarHosts,
+    LargestPlanetToHostRatios,
+    MostEqualStarPlanetPairs,
     HottestStellarHosts,
     SystemsWithMostPlanets,
     BinaryStarSystems,

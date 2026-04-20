@@ -99,6 +99,7 @@ pub async fn get_exoplanets_page(
     })
 }
 
+#[cfg(feature = "ssr")]
 fn parse_columns(columns: Option<String>) -> Option<Vec<String>> {
     columns.map(|s| {
         s.split(',')

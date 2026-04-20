@@ -1,15 +1,19 @@
 use leptos::prelude::*;
-use leptos::serde_json::Value;
 use leptos::server_fn::ServerFnError;
 use leptos::server_fn::codec::GetUrl;
-use std::collections::HashMap;
 
 #[cfg(feature = "ssr")]
 use crate::server::data::details;
 #[cfg(feature = "ssr")]
 use crate::server::handlers::ApiState;
+#[cfg(feature = "ssr")]
+use leptos::serde_json::Value;
+#[cfg(feature = "ssr")]
+use std::collections::HashMap;
 
-use super::{ColumnMetadata, ExoplanetDetail, HostPlanets, StellarHostDetail};
+#[cfg(feature = "ssr")]
+use super::ColumnMetadata;
+use super::{ExoplanetDetail, HostPlanets, StellarHostDetail};
 
 /// Server function to fetch a single stellar host's details.
 #[server(input = GetUrl)]

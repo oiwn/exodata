@@ -32,7 +32,6 @@ COPY crates ./crates
 COPY src ./src
 COPY style ./style
 COPY public ./public
-COPY tailwind.config.js ./
 
 RUN cargo leptos build --release --split
 

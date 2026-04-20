@@ -20,6 +20,9 @@ pub use details::{
 pub use insights::{
     get_binary_star_systems_insight, get_hottest_stellar_hosts_insight,
     get_largest_exoplanets_by_radius_insight,
+    get_largest_planet_to_host_ratios_insight,
+    get_most_distant_exoplanets_insight,
+    get_most_equal_star_planet_pairs_insight, get_nearest_stellar_hosts_insight,
     get_smallest_exoplanets_by_radius_insight,
     get_systems_with_most_planets_insight,
 };

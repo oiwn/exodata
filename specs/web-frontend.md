@@ -333,24 +333,15 @@ pub struct DataStats { /* same fields */ }
 
 ## Styling with Tailwind CSS
 
-### Configuration (tailwind.config.js)
+### Configuration
 
-```javascript
-module.exports = {
-  content: ["*.html", "./src/**/*.rs"],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-```
+Tailwind CSS v4 is configured through `style/tailwind.css`; no JavaScript
+Tailwind config file is required.
 
 ### Input File (style/tailwind.css)
 
 ```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 ```
 
 ### Usage in Components

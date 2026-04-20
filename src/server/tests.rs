@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -400,6 +401,18 @@ mod tests {
         ));
         assert!(xml.contains(
             "<loc>https://example.com/insights/largest-exoplanets-radius</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/most-distant-exoplanets</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/nearest-stellar-hosts</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/largest-planet-to-host-ratios</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/most-equal-star-planet-pairs</loc>"
         ));
         assert!(xml.contains(
             "<loc>https://example.com/insights/binary-star-systems</loc>"

@@ -7,8 +7,12 @@ use leptos_router::lazy_route;
 
 use super::binary_systems::BinaryStarSystemsPage;
 use super::crowded_systems::SystemsWithMostPlanetsPage;
+use super::distant_exoplanets::MostDistantExoplanetsPage;
+use super::equal_star_planet_pairs::MostEqualStarPlanetPairsPage;
 use super::hottest_stellar_hosts::HottestStellarHostsPage;
 use super::largest_exoplanets::LargestExoplanetsPage;
+use super::nearest_stellar_hosts::NearestStellarHostsPage;
+use super::planet_host_ratios::LargestPlanetToHostRatiosPage;
 use super::smallest_exoplanets::SmallestExoplanetsPage;
 use crate::metadata_helpers::{
     canonical_url, decode_path_segment, title_with_site,
@@ -51,18 +55,22 @@ pub fn InsightDetailPage() -> impl IntoView {
                 {move || match slug.get().as_str() {
                     "smallest-exoplanets-radius" => view! { <SmallestExoplanetsPage/> }.into_any(),
                     "largest-exoplanets-radius" => view! { <LargestExoplanetsPage/> }.into_any(),
+                    "most-distant-exoplanets" => view! { <MostDistantExoplanetsPage/> }.into_any(),
+                    "nearest-stellar-hosts" => view! { <NearestStellarHostsPage/> }.into_any(),
+                    "largest-planet-to-host-ratios" => view! { <LargestPlanetToHostRatiosPage/> }.into_any(),
+                    "most-equal-star-planet-pairs" => view! { <MostEqualStarPlanetPairsPage/> }.into_any(),
                     "hottest-stellar-hosts" => view! { <HottestStellarHostsPage/> }.into_any(),
                     "systems-with-most-planets" => view! { <SystemsWithMostPlanetsPage/> }.into_any(),
                     "binary-star-systems" => view! { <BinaryStarSystemsPage/> }.into_any(),
                     _ => view! {
                         <Title text=move || title_with_site(&format!("{} Insight", slug.get()))/>
-                        <Meta name="description" content="Standalone insights page for ranked exoplanet and stellar-host views."/>
+                        <Meta name="description" content="Insights page for ranked exoplanet and stellar-host views."/>
                         <section class="insight-detail-shell">
                             <div class="insight-detail-shell__header">
                                 <p class="insights-section__eyebrow">"Not Found"</p>
-                                <h1 class="insight-detail-shell__title">"Insight page is not available"</h1>
+                                <h1 class="insight-detail-shell__title">"Insight not found"</h1>
                                 <p class="insight-detail-shell__intro">
-                                    "This insight slug is not implemented yet. Use the hub page to browse the currently live experiments."
+                                    "Use the Insights hub to browse the available exoplanet and stellar-host rankings."
                                 </p>
                             </div>
                         </section>

@@ -178,7 +178,7 @@ fn numeric_stats(df: &DataFrame, col: &str) -> Option<NumericStats> {
     let series = df.column(col).ok()?;
     let cast = series.cast(&DataType::Float64).ok()?;
     let s = cast.f64().ok()?;
-    if s.len() == 0 {
+    if s.is_empty() {
         return None;
     }
     Some(NumericStats {
@@ -222,7 +222,7 @@ fn value_counts(
 
     Ok(values
         .into_iter()
-        .zip(counts.into_iter())
+        .zip(counts)
         .filter_map(|(value, count)| match (value, count) {
             (Some(v), Some(c)) => Some(ValueCount { value: v, count: c }),
             _ => None,
