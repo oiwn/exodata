@@ -595,6 +595,7 @@ fn dataframe_table(frame: &DataFrame) -> Result<Table, Error> {
     let columns = frame
         .get_column_names()
         .iter()
+        .filter(|name| !is_link_helper_column(name.as_str()))
         .map(|name| name.to_string())
         .collect::<Vec<_>>();
     let mut table = minimal_table();
@@ -618,6 +619,10 @@ fn dataframe_table(frame: &DataFrame) -> Result<Table, Error> {
     }
 
     Ok(table)
+}
+
+fn is_link_helper_column(column: &str) -> bool {
+    column == "host_link_hostname"
 }
 
 fn minimal_table() -> Table {

@@ -4,371 +4,133 @@
 
 Goal: eliminate structural repetition without behaviour change.
 
-### 1.1 Rearchitect insights: SQL-driven core module, web/CLI reusable
+## Completed
 
-**Affected files:** `src/server/data/insights.rs`, `src/server/functions/insights.rs`,
-`src/components/insights/*.rs`, `src/server/cache.rs`, `crates/exo-core/src/insights.rs`,
-`crates/exo-core/src/insights/*.rs`, `crates/exo-cli/src/*`
+### 1.1 SQL-driven insights
 
-**Current problem:** adding one insight requires touching 5 layers: data query fn, cached wrapper, server function, component file, router. The logic (what to fetch) is buried in the data layer; the component only owns presentation strings.
+Implemented:
+- `exo-core::insights` owns SQL-backed insight definitions and execution.
+- `exo-cli` supports `exo insights list`, `exo insights run <slug>`, and `exo insights run-all`.
+- Web uses one generic `get_insight(slug)` Leptos server function.
+- Insight cache is keyed by slug and prewarmed at startup.
+- Sitemap insight URLs are generated from the insight registry.
 
-**Target architecture:**
+### 1.2 `TableResult` cleanup
 
-`exo-core` owns the reusable insight definitions and execution. The web app renders the result.
-The CLI can call the same core functions now or later without duplicating SQL.
+Implemented:
+- `TableResult = Result<TableCacheValue, String>`.
+- Tuple destructuring helpers/spreads for table payloads are removed.
 
-```rust
-// crates/exo-core/src/insights/smallest_exoplanets.rs
-pub const DEF: InsightDef = InsightDef {
-    slug: "smallest-exoplanets-radius",
-    title: "Smallest Exoplanets By Radius",
-    category: "Planetary extremes",
-    description: "Tiny confirmed worlds ordered by radius with host-star context.",
-    table: InsightTable::Exoplanets,
-    limit: 10,
-    sql: r#"
-        SELECT pl_name, hostname, pl_rade, pl_bmasse, disc_year
-        FROM exoplanets
-        WHERE default_flag = 1
-          AND pl_name IS NOT NULL
-          AND pl_name != ''
-          AND pl_rade IS NOT NULL
-        ORDER BY pl_rade ASC, pl_name ASC
-        LIMIT 10
-    "#,
-};
-```
+### 1.3 Hydrate-safe insight metadata
 
-Core registry and API:
+Implemented:
+- New lightweight `exo-types` crate owns `InsightMeta`, `INSIGHTS`, and `find_insight`.
+- `exo-core::insights::InsightDef` references `&'static InsightMeta` instead of duplicating
+  slug/title/category/description/kind/limit.
+- Frontend overview cards use `exo_types::insights::INSIGHTS`.
+- Frontend detail routing uses a hydrate-safe page registry in
+  `src/components/insights/registry.rs`.
+- Insight page-local slug constants are replaced with shared `META.slug`.
+- Tests cover unique metadata slugs and UI page registry parity.
 
-```rust
-// crates/exo-core/src/insights.rs
-pub mod smallest_exoplanets;
-pub mod largest_exoplanets;
-// ...
-
-pub static INSIGHTS: &[&InsightDef] = &[
-    &smallest_exoplanets::DEF,
-    &largest_exoplanets::DEF,
-    // one line to add a new insight definition
-];
-
-pub fn find_insight(slug: &str) -> Option<&'static InsightDef>;
-pub fn run_insight(input: InsightInput<'_>, slug: &str) -> anyhow::Result<InsightData>;
-pub fn run_insight_def(input: InsightInput<'_>, def: &'static InsightDef) -> anyhow::Result<InsightData>;
-pub fn run_all_insights(input: InsightInput<'_>) -> anyhow::Result<Vec<InsightData>>;
-```
-
-Core types:
-
-```rust
-pub enum InsightTable {
-    Exoplanets,
-    StellarHosts,
-    Both,
-}
-
-pub struct InsightDef {
-    pub slug: &'static str,
-    pub title: &'static str,
-    pub category: &'static str,
-    pub description: &'static str,
-    pub table: InsightTable,
-    pub sql: &'static str,
-    pub limit: usize,
-}
-
-pub struct InsightInput<'a> {
-    pub stellarhosts: &'a DataFrame,
-    pub exoplanets: &'a DataFrame,
-}
-
-pub struct InsightData {
-    pub slug: &'static str,
-    pub columns: Vec<String>,
-    pub frame: DataFrame,
-}
-```
-
-`InsightData` deliberately returns a Polars `DataFrame`, not web `TableData` or JSON. The web
-server converts the frame into `TableCacheValue`; the CLI can print the frame directly; future
-REST/MCP consumers can convert at their boundary.
-
-The web layer has one generic server function. It validates slug through `exo_core::insights`,
-executes the core insight function, converts the returned frame into `TableData`, and caches by
-slug:
-
-```rust
-#[server(input = GetUrl)]
-pub async fn get_insight(slug: String) -> Result<TableData, ServerFnError>
-```
-
-Insight components import their core `DEF` and render however they need:
-
-```rust
-// src/components/insights/smallest_exoplanets.rs
-use exo_core::insights::smallest_exoplanets::DEF;
-
-#[component]
-pub fn SmallestExoplanetsPage() -> impl IntoView {
-    let rows_resource = Resource::new(
-        move || DEF.slug.to_string(),
-        move |slug| async move { get_insight(slug).await },
-    );
-
-    view! {
-        <InsightListPageShell
-            eyebrow=DEF.category
-            title=DEF.title
-            description=DEF.description
-            resource=rows_resource
-            empty_label="No planet rows available."
-        />
-    }
-}
-```
-
-**What disappears:**
-- `InsightKind` enum
-- 9 `get_FOO_cached` wrapper functions (`src/server/data/insights.rs:44–159`)
-- 9 `#[server]` insight functions (`src/server/functions/insights.rs:12–235`)
-- `get_distinct_stellarhosts_data`, `get_distinct_exoplanets_data`, `get_distinct_systems_data`
-- `fixed_query`, `get_default_exoplanets_data`, `get_computed_exoplanet_ratio_data`
-- All column constant arrays (`SMALLEST_EXOPLANETS_COLUMNS`, etc.)
-
-**What remains / is new:**
-- `InsightDef` struct (slug, title, category, description, table, sql, limit)
-- `InsightInput` and `InsightData` core structs
-- `INSIGHTS` registry in `crates/exo-core/src/insights.rs`
-- One SQL executor function in `exo-core` using Polars `SQLContext`
-- One web cache wrapper around `exo_core::insights::run_insight`
-- Cache keyed by slug (`Cache<String, TableCacheValue>`)
-- Cache warm at startup: iterate `exo_core::insights::INSIGHTS`, execute each SQL
-- Optional/immediate CLI commands using the same core API:
-  `exo insights list`, `exo insights run <slug>`, `exo insights run-all`
-
-**Adding a new insight** = add a core insight definition file, add one line to
-`crates/exo-core/src/insights.rs`, and add/render a web component route/card if the insight should
-be visible in the UI. No server data wrapper or server function changes.
-
-**Implementation notes:**
-- Enable the Polars `sql` feature in `crates/exo-core/Cargo.toml`.
-- Keep long page intros, empty states, SEO variants, and special layouts in the web components.
-- Keep short reusable metadata (`title`, `category`, `description`, `kind`, `limit`) in a
-  lightweight shared crate (`exo-types`), and make Polars-backed `InsightDef` reference that
-  metadata.
-- Use SQL as the source of truth for insight selection and computed columns. Verify host/system
-  dedupe semantics against current output before deleting the old Polars helpers.
-- Generate overview cards, detail slug matching, sitemap insight URLs, and startup prewarm from
-  `exo_core::insights::INSIGHTS` instead of hardcoded slug lists.
-
-Est. −500 lines in server/data + server/functions layers.
-
----
-
-### 1.1a Implementation order: CLI insights first
-
-**Status:** core insight registry/execution, `exo insights list`, `exo insights run <slug>`,
-`exo insights run-all`, generic web server function, slug-keyed insight cache, startup prewarm, and
-registry-backed sitemap insight URLs are implemented. Web insight components currently call
-`get_insight(slug)` using page-local slug constants to avoid pulling Polars-backed `exo-core` into
-the hydrate bundle.
-
-Start by implementing the reusable core insight module and exposing it through `exo-cli` before
-touching the web insight pages. This gives a fast verification loop for every SQL insight and makes
-the core API immediately useful for humans, CI, and LLM-driven tooling.
-
-**First vertical slice:**
-1. Add `crates/exo-core/src/insights.rs` and `crates/exo-core/src/insights/*.rs`.
-2. Add `InsightDef`, `InsightTable`, `InsightInput`, `InsightData`, `INSIGHTS`,
-   `find_insight`, `run_insight`, `run_insight_def`, and `run_all_insights`.
-3. Enable Polars `sql` in `crates/exo-core/Cargo.toml`.
-4. Implement at least one insight SQL definition first, then add the remaining existing insights.
-5. Add `exo insights list`, `exo insights run <slug>`, and `exo insights run-all`.
-6. Print CLI result frames with `comfy_table` using a minimal-border style.
-7. Verify every insight from CLI before wiring the web app to the new core API.
-
-**CLI output requirements:**
-- `exo insights list` prints slug, title, category, and row limit.
-- `exo insights run <slug>` prints a short heading, description, row count, then the result table.
-- `exo insights run-all` prints each insight in registry order; continue running remaining insights
-  after a failure, then return an error if any insight failed.
-- Use existing data directory defaults: `--data-dir data`.
-- Load `stellarhosts.parquet` and `exoplanets.parquet` once per command, then reuse those frames for
-  each insight.
-- Keep table borders minimal. Prefer a `comfy_table` preset close to the existing
-  `table.load_preset("||--+-++|  ")` style used by current CLI sample commands, or a similarly
-  sparse preset if that exact preset does not render well for insight output.
-- Format scalar values predictably: null as `N/A`, floats with compact precision, integers as-is,
-  strings unchanged.
-- Do not add web-server cache, Leptos server-function, or component rewiring until the CLI/core path
-  is working.
-
-**Suggested command shape:**
+Validated after 1.3:
 
 ```bash
-exo insights list
-exo insights run smallest-exoplanets-radius
-exo insights run-all
-exo insights run-all --data-dir data
+cargo check --features ssr
+cargo check --no-default-features --features hydrate
+cargo test --package exo-cli
+cargo test --package exo-types
+cargo test --package exoplanets-catalog --features ssr page_registry_matches_insight_metadata_registry
 ```
 
-Remaining follow-up after this slice:
-- Current phase: add `exo-types` as described in section 1.3.
+## Current Architecture
 
----
-
-### 1.2 Change `TableResult` to use `TableCacheValue` instead of 4-tuple
-**Status:** implemented for table and insight data paths.
-
-**File:** `src/server/data/insights.rs` + all callers
-
-`TableResult = Result<(Vec<Value>, usize, usize, Vec<String>), String>` — the four fields
-are already named in `TableCacheValue`. `table_result_from_cache_value` at line 192 is a
-pointless destructure that exists only because of the tuple.
-
-**Action:** redefine `TableResult = Result<TableCacheValue, String>`. Remove the destructure
-function and all `let (rows, total, total_all, columns) =` spreads. Est. −30 lines.
-
----
-
-### 1.3 Current phase: split lightweight insight metadata into `exo-types`
-
-**Status:** implemented. `exo-types` now owns hydrate-safe insight metadata, `exo-core`
-references that metadata from SQL-backed `InsightDef`s, the frontend overview/detail routing uses
-the shared registry, and focused uniqueness/registry-match tests are in place.
-
-**Goal:** share insight slugs/cards/labels between frontend, server, CLI, and future MCP/tooling
-without pulling Polars-backed `exo-core` into the hydrate bundle.
-
-**Why:** `exo-core` currently depends on Polars and must remain server/CLI/data-execution only.
-Leptos components must not import `exo_core::insights`, even for constants, because that would drag
-the data stack toward the frontend build.
-
-**New crate:**
-
-```text
-crates/exo-types/
-  Cargo.toml
-  src/lib.rs
-  src/insights.rs
-```
-
-`exo-types` must stay lightweight:
-- no Polars
-- no Leptos
-- no Axum / utoipa
-- no Tokio
-- no CLI formatting
-- optional `serde` only if/when needed
-
-Initial type:
-
-```rust
-// crates/exo-types/src/insights.rs
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct InsightMeta {
-    pub slug: &'static str,
-    pub title: &'static str,
-    pub category: &'static str,
-    pub description: &'static str,
-    pub kind: &'static str,
-    pub limit: usize,
-}
-```
-
-Metadata registry:
-
-```rust
-pub mod smallest_exoplanets {
-    use super::InsightMeta;
-
-    pub const META: InsightMeta = InsightMeta {
-        slug: "smallest-exoplanets-radius",
-        title: "Smallest Exoplanets By Radius",
-        category: "Planetary extremes",
-        description: "Tiny confirmed worlds ordered by radius with host-star context.",
-        kind: "Top 10 list",
-        limit: 10,
-    };
-}
-
-pub static INSIGHTS: &[&InsightMeta] = &[
-    &smallest_exoplanets::META,
-    // ...
-];
-
-pub fn find_insight(slug: &str) -> Option<&'static InsightMeta>;
-```
-
-Dependency graph after this phase:
+Dependency direction:
 
 ```text
 exo-types
-  shared constants/types only
+  shared constants/types only; no Polars/Leptos/Axum/Tokio
 
 exo-core
-  depends on exo-types
-  depends on Polars
-  owns SQL execution and parquet/dataframe logic
+  depends on exo-types + Polars
+  owns SQL execution and DataFrame output
 
 exo-cli
   depends on exo-core
-  can read metadata through exo-core defs or exo-types directly
+  uses the same insight registry/executor as web SSR
 
 exoplanets-catalog
-  hydrate: depends on exo-types only for insight metadata
-  ssr: depends on exo-types + exo-core
+  hydrate: uses exo-types for insight metadata
+  ssr: uses exo-types + exo-core for execution/cache/prewarm
 ```
 
-Change `exo-core::insights::InsightDef` to reference shared metadata instead of duplicating fields:
+Adding a visible insight now requires:
+- add metadata in `crates/exo-types/src/insights.rs`
+- add SQL definition in `crates/exo-core/src/insights/*.rs`
+- register both lists in matching order
+- add a web page/registry entry only if it should be visible in the UI
 
-```rust
-use exo_types::insights::InsightMeta;
+## Completed Cleanup
 
-pub struct InsightDef {
-    pub meta: &'static InsightMeta,
-    pub table: InsightTable,
-    pub sql: &'static str,
-}
+### 1.4 Clean stale specs
+
+**Status:** implemented. `specs/refactoring.md` and this file now describe the current
+`exo-types`/`exo-core` architecture and remaining cleanup work.
+
+### 1.5 Fix murky insight table column handling
+
+**Status:** implemented. System insight SQL now returns `sy_name` for display and
+`host_link_hostname` as an explicit link helper. The insight table UI hides link-helper columns and
+uses `host_link_hostname` for `sy_name` links. CLI insight table output also hides the helper.
+
+File: `src/components/insights/common.rs`
+
+Implemented behavior:
+- `render_columns` filters explicit link-helper columns, not columns inferred from `sy_name`.
+- `href_for_column("sy_name")` requires `host_link_hostname`; it does not fall back to displayed
+  `hostname`.
+- Focused tests cover helper-column hiding and system-name link behavior.
+
+### 1.7 Dead-code deletion
+
+**Status:** implemented for the obvious dead code found during this refactor.
+
+Deleted:
+- `src/server/common.rs`
+- `crates/exo-core/src/tables/exoplanets.rs`
+- `crates/exo-core/src/tables/stellarhosts.rs`
+
+Updated:
+- `src/server/mod.rs` no longer exports server `common`.
+- `crates/exo-core/src/tables.rs` no longer declares deleted table modules.
+
+Validated with:
+
+```bash
+cargo check --features ssr
+cargo check --no-default-features --features hydrate
+cargo test --package exo-cli
 ```
 
-Then per-insight core SQL files become:
+## Next Steps
 
-```rust
-pub const DEF: InsightDef = InsightDef {
-    meta: &exo_types::insights::smallest_exoplanets::META,
-    table: InsightTable::Exoplanets,
-    sql: "...",
-};
-```
+### 1.6 Remove duplicate page normalization
 
-Frontend follow-up:
-- Add `exo-types` to the root app hydrate build, but do not add `exo-core`.
-- Refactor `src/components/insights/overview.rs` to iterate `exo_types::insights::INSIGHTS`.
-- Add a hydrate-safe UI page registry in `src/components/insights/mod.rs` or
-  `src/components/insights/registry.rs`:
+Files:
+- `src/server/cache.rs`
+- `src/server/data/tables.rs`
 
-```rust
-pub struct InsightPage {
-    pub meta: &'static InsightMeta,
-    pub render: fn() -> AnyView,
-}
-```
+Current behavior:
+- `normalize_table_cache_key` canonicalizes `page == 0` to `1`.
+- `get_table_data` also normalizes `page == 0` before pagination.
 
-- Refactor `detail.rs` to find the page by `meta.slug` and call `render`.
-- Replace page-local slug constants with `META.slug`.
+This is intentionally redundant today because cached and uncached callers can reach
+`get_table_data`. Before removing the data-layer guard, verify all direct callers either pass
+normalized input or keep the guard and document why both layers normalize.
 
-Server/CLI follow-up:
-- Update all `def.slug`, `def.title`, `def.description`, `def.limit` usages to `def.meta.slug`,
-  `def.meta.title`, etc.
-- Keep web data fetching through Leptos server functions. Do not add REST/utoipa insight endpoints
-  for this refactor.
+## Keep In Mind
 
-Tests:
-- Add a lightweight test that `exo_types::insights::INSIGHTS` slugs are unique.
-- Add an SSR-side test that the UI page registry slugs match `exo_types::insights::INSIGHTS`.
-- Keep existing checks:
-  - `cargo check --features ssr`
-  - `cargo check --no-default-features --features hydrate`
-  - `cargo test --package exo-cli`
+- Do not infer behavior from fixture values unless the fixture is testing a stable contract.
+- Keep `exo-types` lightweight.
+- Do not import `exo-core` from hydrate/frontend code.
+- Prefer no-behavior-change cleanup unless a spec is updated first.

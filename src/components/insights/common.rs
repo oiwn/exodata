@@ -7,6 +7,8 @@ use leptos_router::components::A;
 use crate::metadata_helpers::{encode_path_segment, title_with_site};
 use crate::server::functions::TableData;
 
+const HOST_LINK_COLUMN: &str = "host_link_hostname";
+
 #[component]
 pub fn InsightListPageShell(
     eyebrow: &'static str,
@@ -161,13 +163,15 @@ fn InsightDataCell(column: String, value: Value, row: Value) -> impl IntoView {
 }
 
 fn render_columns(columns: &[String]) -> Vec<String> {
-    let is_system_table = columns.iter().any(|column| column == "sy_name");
-
     columns
         .iter()
-        .filter(|column| !(is_system_table && column.as_str() == "hostname"))
+        .filter(|column| !is_link_helper_column(column))
         .cloned()
         .collect()
+}
+
+fn is_link_helper_column(column: &str) -> bool {
+    column == HOST_LINK_COLUMN
 }
 
 fn href_for_column(column: &str, value: &Value, row: &Value) -> Option<String> {
@@ -182,7 +186,7 @@ fn href_for_column(column: &str, value: &Value, row: &Value) -> Option<String> {
         }
         "sy_name" => {
             let slug = row
-                .get("hostname")
+                .get(HOST_LINK_COLUMN)
                 .and_then(Value::as_str)
                 .filter(|host| !host.trim().is_empty())
                 .map(encode_path_segment)?;
@@ -243,5 +247,48 @@ fn format_cell(column: &str, value: &Value) -> String {
             }
         }
         _ => value.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use leptos::serde_json::json;
+
+    use super::{HOST_LINK_COLUMN, href_for_column, render_columns};
+
+    #[test]
+    fn render_columns_hides_explicit_link_helper_columns() {
+        let columns = vec![
+            "sy_name".to_string(),
+            HOST_LINK_COLUMN.to_string(),
+            "sy_pnum".to_string(),
+        ];
+
+        assert_eq!(
+            render_columns(&columns),
+            vec!["sy_name".to_string(), "sy_pnum".to_string()]
+        );
+    }
+
+    #[test]
+    fn system_name_links_use_explicit_host_link_column() {
+        let row = json!({
+            "sy_name": "Kepler-90",
+            HOST_LINK_COLUMN: "Kepler-90",
+        });
+        let href = href_for_column("sy_name", &json!("Kepler-90"), &row);
+
+        assert_eq!(href.as_deref(), Some("/stellarhosts/Kepler%2D90"));
+    }
+
+    #[test]
+    fn system_name_does_not_fall_back_to_display_hostname() {
+        let row = json!({
+            "sy_name": "Kepler-90",
+            "hostname": "Kepler-90",
+        });
+        let href = href_for_column("sy_name", &json!("Kepler-90"), &row);
+
+        assert_eq!(href, None);
     }
 }

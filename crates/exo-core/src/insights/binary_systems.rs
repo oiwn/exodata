@@ -4,7 +4,7 @@ pub const DEF: InsightDef = InsightDef {
     meta: &exo_types::insights::binary_systems::META,
     table: InsightTable::StellarHosts,
     sql: r#"
-        SELECT sy_name, MIN(hostname) AS hostname, MAX(sy_pnum) AS sy_pnum, MAX(sy_snum) AS sy_snum, MIN(sy_dist) AS sy_dist
+        SELECT sy_name, MIN(hostname) AS host_link_hostname, MAX(sy_pnum) AS sy_pnum, MAX(sy_snum) AS sy_snum, MIN(sy_dist) AS sy_dist
         FROM stellarhosts
         WHERE sy_name IS NOT NULL
           AND sy_name != ''

@@ -4,9 +4,6 @@ pub mod functions;
 
 // Server-only modules
 #[cfg(feature = "ssr")]
-pub mod common;
-
-#[cfg(feature = "ssr")]
 pub mod data;
 
 #[cfg(feature = "ssr")]
