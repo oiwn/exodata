@@ -1,13 +1,14 @@
 use leptos::prelude::*;
 
 use super::common::InsightListPageShell;
-use crate::server::functions::get_largest_planet_to_host_ratios_insight;
+use crate::server::functions::get_insight;
+use exo_types::insights::planet_host_ratios::META;
 
 #[component]
 pub fn LargestPlanetToHostRatiosPage() -> impl IntoView {
     let rows_resource = Resource::new(
-        move || (),
-        move |_| async move { get_largest_planet_to_host_ratios_insight().await },
+        move || META.slug.to_string(),
+        move |slug| async move { get_insight(slug).await },
     );
 
     view! {

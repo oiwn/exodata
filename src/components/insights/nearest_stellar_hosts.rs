@@ -1,13 +1,14 @@
 use leptos::prelude::*;
 
 use super::common::InsightListPageShell;
-use crate::server::functions::get_nearest_stellar_hosts_insight;
+use crate::server::functions::get_insight;
+use exo_types::insights::nearest_stellar_hosts::META;
 
 #[component]
 pub fn NearestStellarHostsPage() -> impl IntoView {
     let rows_resource = Resource::new(
-        move || (),
-        move |_| async move { get_nearest_stellar_hosts_insight().await },
+        move || META.slug.to_string(),
+        move |slug| async move { get_insight(slug).await },
     );
 
     view! {

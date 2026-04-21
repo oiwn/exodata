@@ -11,20 +11,6 @@ pub enum TableKind {
     Exoplanets,
 }
 
-/// Cache namespace for standalone insight pages.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum InsightKind {
-    SmallestExoplanetsByRadius,
-    LargestExoplanetsByRadius,
-    MostDistantExoplanets,
-    NearestStellarHosts,
-    LargestPlanetToHostRatios,
-    MostEqualStarPlanetPairs,
-    HottestStellarHosts,
-    SystemsWithMostPlanets,
-    BinaryStarSystems,
-}
-
 /// Canonicalized sort order used in cache keys.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SortOrder {
@@ -55,7 +41,7 @@ pub struct TableCacheValue {
 
 pub type TableCache = Cache<TableCacheKey, TableCacheValue>;
 pub type HostDetailCache = Cache<String, StellarHostDetail>;
-pub type InsightCache = Cache<InsightKind, TableCacheValue>;
+pub type InsightCache = Cache<String, TableCacheValue>;
 
 /// Build a table cache with max-entry bounds.
 pub fn build_table_cache(max_entries: u64) -> TableCache {

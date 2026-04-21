@@ -5,15 +5,7 @@ use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
 use leptos_router::lazy_route;
 
-use super::binary_systems::BinaryStarSystemsPage;
-use super::crowded_systems::SystemsWithMostPlanetsPage;
-use super::distant_exoplanets::MostDistantExoplanetsPage;
-use super::equal_star_planet_pairs::MostEqualStarPlanetPairsPage;
-use super::hottest_stellar_hosts::HottestStellarHostsPage;
-use super::largest_exoplanets::LargestExoplanetsPage;
-use super::nearest_stellar_hosts::NearestStellarHostsPage;
-use super::planet_host_ratios::LargestPlanetToHostRatiosPage;
-use super::smallest_exoplanets::SmallestExoplanetsPage;
+use super::registry;
 use crate::metadata_helpers::{
     canonical_url, decode_path_segment, title_with_site,
 };
@@ -52,17 +44,12 @@ pub fn InsightDetailPage() -> impl IntoView {
                     <span>"Back to Insights"</span>
                 </A>
 
-                {move || match slug.get().as_str() {
-                    "smallest-exoplanets-radius" => view! { <SmallestExoplanetsPage/> }.into_any(),
-                    "largest-exoplanets-radius" => view! { <LargestExoplanetsPage/> }.into_any(),
-                    "most-distant-exoplanets" => view! { <MostDistantExoplanetsPage/> }.into_any(),
-                    "nearest-stellar-hosts" => view! { <NearestStellarHostsPage/> }.into_any(),
-                    "largest-planet-to-host-ratios" => view! { <LargestPlanetToHostRatiosPage/> }.into_any(),
-                    "most-equal-star-planet-pairs" => view! { <MostEqualStarPlanetPairsPage/> }.into_any(),
-                    "hottest-stellar-hosts" => view! { <HottestStellarHostsPage/> }.into_any(),
-                    "systems-with-most-planets" => view! { <SystemsWithMostPlanetsPage/> }.into_any(),
-                    "binary-star-systems" => view! { <BinaryStarSystemsPage/> }.into_any(),
-                    _ => view! {
+                {move || {
+                    let current_slug = slug.get();
+                    if let Some(page) = registry::find_page(&current_slug) {
+                        (page.render)()
+                    } else {
+                        view! {
                         <Title text=move || title_with_site(&format!("{} Insight", slug.get()))/>
                         <Meta name="description" content="Insights page for ranked exoplanet and stellar-host views."/>
                         <section class="insight-detail-shell">
@@ -74,7 +61,8 @@ pub fn InsightDetailPage() -> impl IntoView {
                                 </p>
                             </div>
                         </section>
-                    }.into_any(),
+                        }.into_any()
+                    }
                 }}
             </div>
         </div>

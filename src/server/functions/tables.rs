@@ -25,31 +25,30 @@ pub async fn get_stellarhosts_page(
     let state = expect_context::<ApiState>();
     let selected_columns = parse_columns(columns);
 
-    let (rows, total, total_all, columns) =
-        table_data::get_stellarhosts_data_cached(
-            &state.stellarhosts_df,
-            &state.table_cache,
-            table_data::TableQuery {
-                page,
-                limit,
-                sort_by,
-                order,
-                selected_columns,
-                filter,
-            },
-        )
-        .await
-        .map_err(|e: String| -> ServerFnError {
-            tracing::error!("get_stellarhosts_page error: {e}");
-            ServerFnError::ServerError(e)
-        })?;
+    let value = table_data::get_stellarhosts_data_cached(
+        &state.stellarhosts_df,
+        &state.table_cache,
+        table_data::TableQuery {
+            page,
+            limit,
+            sort_by,
+            order,
+            selected_columns,
+            filter,
+        },
+    )
+    .await
+    .map_err(|e: String| -> ServerFnError {
+        tracing::error!("get_stellarhosts_page error: {e}");
+        ServerFnError::ServerError(e)
+    })?;
 
-    tracing::info!("get_stellarhosts_page done: total={total}");
+    tracing::info!("get_stellarhosts_page done: total={}", value.total);
     Ok(TableData {
-        rows,
-        columns,
-        total,
-        total_all,
+        rows: value.rows,
+        columns: value.columns,
+        total: value.total,
+        total_all: value.total_all,
         page,
         limit,
     })
@@ -69,31 +68,30 @@ pub async fn get_exoplanets_page(
     let state = expect_context::<ApiState>();
     let selected_columns = parse_columns(columns);
 
-    let (rows, total, total_all, columns) =
-        table_data::get_exoplanets_data_cached(
-            &state.exoplanets_df,
-            &state.table_cache,
-            table_data::TableQuery {
-                page,
-                limit,
-                sort_by,
-                order,
-                selected_columns,
-                filter,
-            },
-        )
-        .await
-        .map_err(|e: String| -> ServerFnError {
-            tracing::error!("get_exoplanets_page error: {e}");
-            ServerFnError::ServerError(e)
-        })?;
+    let value = table_data::get_exoplanets_data_cached(
+        &state.exoplanets_df,
+        &state.table_cache,
+        table_data::TableQuery {
+            page,
+            limit,
+            sort_by,
+            order,
+            selected_columns,
+            filter,
+        },
+    )
+    .await
+    .map_err(|e: String| -> ServerFnError {
+        tracing::error!("get_exoplanets_page error: {e}");
+        ServerFnError::ServerError(e)
+    })?;
 
-    tracing::info!("get_exoplanets_page done: total={total}");
+    tracing::info!("get_exoplanets_page done: total={}", value.total);
     Ok(TableData {
-        rows,
-        columns,
-        total,
-        total_all,
+        rows: value.rows,
+        columns: value.columns,
+        total: value.total,
+        total_all: value.total_all,
         page,
         limit,
     })

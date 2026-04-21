@@ -9,6 +9,7 @@ mod largest_exoplanets;
 mod nearest_stellar_hosts;
 mod overview;
 mod planet_host_ratios;
+mod registry;
 mod smallest_exoplanets;
 
 pub use detail::InsightDetailLazy;

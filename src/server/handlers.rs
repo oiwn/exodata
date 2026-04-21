@@ -230,7 +230,7 @@ pub async fn get_stellarhosts(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns) = tables::get_stellarhosts_data_cached(
+    let value = tables::get_stellarhosts_data_cached(
         &state.stellarhosts_df,
         &state.table_cache,
         tables::TableQuery {
@@ -249,12 +249,12 @@ pub async fn get_stellarhosts(
     })?;
 
     Ok(Json(ApiResponse {
-        data: rows,
-        total,
-        total_all,
+        data: value.rows,
+        total: value.total,
+        total_all: value.total_all,
         page,
         limit,
-        columns,
+        columns: value.columns,
     }))
 }
 
@@ -287,7 +287,7 @@ pub async fn get_exoplanets(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns) = tables::get_exoplanets_data_cached(
+    let value = tables::get_exoplanets_data_cached(
         &state.exoplanets_df,
         &state.table_cache,
         tables::TableQuery {
@@ -306,12 +306,12 @@ pub async fn get_exoplanets(
     })?;
 
     Ok(Json(ApiResponse {
-        data: rows,
-        total,
-        total_all,
+        data: value.rows,
+        total: value.total,
+        total_all: value.total_all,
         page,
         limit,
-        columns,
+        columns: value.columns,
     }))
 }
 
@@ -492,16 +492,12 @@ pub fn build_sitemap_xml(
         format!("{site_url}/stellarhosts"),
         format!("{site_url}/exoplanets"),
         format!("{site_url}/insights"),
-        format!("{site_url}/insights/smallest-exoplanets-radius"),
-        format!("{site_url}/insights/largest-exoplanets-radius"),
-        format!("{site_url}/insights/most-distant-exoplanets"),
-        format!("{site_url}/insights/nearest-stellar-hosts"),
-        format!("{site_url}/insights/largest-planet-to-host-ratios"),
-        format!("{site_url}/insights/most-equal-star-planet-pairs"),
-        format!("{site_url}/insights/hottest-stellar-hosts"),
-        format!("{site_url}/insights/systems-with-most-planets"),
-        format!("{site_url}/insights/binary-star-systems"),
     ];
+    urls.extend(
+        exo_core::insights::INSIGHTS
+            .iter()
+            .map(|def| format!("{site_url}/insights/{}", def.meta.slug)),
+    );
 
     urls.extend(build_detail_urls(
         stellarhosts_df,

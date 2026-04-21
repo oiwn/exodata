@@ -25,6 +25,28 @@
 - [ ] add skill for agent how to use cli tool.
 - [ ] MCP server
 
+## Agent/tool access to insights
+
+- [ ] Do not require agents or lightweight tools to download parquet files just to run curated
+  insights. Keep local parquet execution for development, CI, and data verification, but make
+  remote execution the default shape for agent integrations.
+- [ ] Add REST endpoints backed by `exo_core::insights`:
+  - `GET /rest/insights` — list slug/title/category/description/limit
+  - `GET /rest/insights/{slug}` — run a validated predefined insight and return JSON rows
+- [ ] Add optional remote mode to CLI after the REST endpoints exist:
+  - `exo insights run <slug> --api-url https://exodata.space`
+  - `exo insights list --api-url https://exodata.space`
+- [ ] Build future MCP tools on top of the REST endpoint, not local parquet files:
+  - `list_insights()`
+  - `run_insight(slug)`
+- [ ] Keep `exo_core::insights` as the canonical registry for what each insight means, but keep
+  data access mode outside the core definition. Local CLI can execute SQL against parquet; web/API
+  can execute against server-held dataframes and cache results.
+- [ ] Consider static precomputed JSON snapshots for fixed top-N insights if runtime SQL becomes
+  unnecessary or too expensive:
+  - `/insights-data/index.json`
+  - `/insights-data/{slug}.json`
+
 ## Insights page
 
 - smallest exoplanets by radius
@@ -47,4 +69,3 @@
 - densest small exoplanets
 - lowest-density giant exoplanets
 - oldest stellar hosts with planets
-

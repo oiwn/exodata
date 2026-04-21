@@ -3,11 +3,9 @@ use crate::server::cache::{
     TableCache, TableCacheValue, TableKind, normalize_table_cache_key,
 };
 use polars::prelude::*;
-use serde_json::Value;
 
 /// Result type for table data operations.
-/// Returns: (rows, filtered_total, unfiltered_total, columns)
-pub type TableResult = Result<(Vec<Value>, usize, usize, Vec<String>), String>;
+pub type TableResult = Result<TableCacheValue, String>;
 
 /// Table configuration for generic data queries.
 pub struct TableConfig<'a> {
@@ -120,7 +118,12 @@ pub fn get_table_data(
     let columns: Vec<String> =
         columns_to_select.iter().map(|s| (*s).to_string()).collect();
 
-    Ok((rows, total, total_all, columns))
+    Ok(TableCacheValue {
+        rows,
+        columns,
+        total,
+        total_all,
+    })
 }
 
 pub fn get_stellarhosts_data(df: &DataFrame, query: TableQuery) -> TableResult {
@@ -154,12 +157,6 @@ pub fn get_exoplanets_data(df: &DataFrame, query: TableQuery) -> TableResult {
     )
 }
 
-fn table_result_from_cache_value(
-    cached: TableCacheValue,
-) -> (Vec<Value>, usize, usize, Vec<String>) {
-    (cached.rows, cached.total, cached.total_all, cached.columns)
-}
-
 pub async fn get_stellarhosts_data_cached(
     df: &DataFrame,
     table_cache: &TableCache,
@@ -176,30 +173,20 @@ pub async fn get_stellarhosts_data_cached(
     );
 
     if let Some(cached) = table_cache.get(&key).await {
-        return Ok(table_result_from_cache_value(cached));
+        return Ok(cached);
     }
 
     let df = df.clone();
-    let (rows, total, total_all, columns) =
+    let value =
         tokio::task::spawn_blocking(move || get_stellarhosts_data(&df, query))
             .await
             .map_err(|e| {
                 format!("Failed to join stellarhosts blocking task: {}", e)
             })??;
 
-    table_cache
-        .insert(
-            key,
-            TableCacheValue {
-                rows: rows.clone(),
-                columns: columns.clone(),
-                total,
-                total_all,
-            },
-        )
-        .await;
+    table_cache.insert(key, value.clone()).await;
 
-    Ok((rows, total, total_all, columns))
+    Ok(value)
 }
 
 pub async fn get_exoplanets_data_cached(
@@ -219,30 +206,20 @@ pub async fn get_exoplanets_data_cached(
 
     if let Some(cached) = table_cache.get(&key).await {
         tracing::debug!("exoplanets cache hit: {key:?}");
-        return Ok(table_result_from_cache_value(cached));
+        return Ok(cached);
     }
 
     tracing::debug!("exoplanets cache miss: {key:?}");
 
     let df = df.clone();
-    let (rows, total, total_all, columns) =
+    let value =
         tokio::task::spawn_blocking(move || get_exoplanets_data(&df, query))
             .await
             .map_err(|e| {
                 format!("Failed to join exoplanets blocking task: {}", e)
             })??;
 
-    table_cache
-        .insert(
-            key,
-            TableCacheValue {
-                rows: rows.clone(),
-                columns: columns.clone(),
-                total,
-                total_all,
-            },
-        )
-        .await;
+    table_cache.insert(key, value.clone()).await;
 
-    Ok((rows, total, total_all, columns))
+    Ok(value)
 }

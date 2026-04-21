@@ -6,6 +6,7 @@ edition = "2024"
 [workspace]
 members = [
     ".",
+    "crates/exo-types",
     "crates/exo-core",
     "crates/exo-cli",
 ]
@@ -31,6 +32,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = tr
 clap = { version = "4.5", features = ["derive"], optional = true }
 serde = { version = "1", features = ["derive"] }
 exo-core = { path = "crates/exo-core", optional = true }
+exo-types = { path = "crates/exo-types" }
 polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"], optional = true }
 serde_json = { version = "1", optional = true }
 percent-encoding = "2.3.2"

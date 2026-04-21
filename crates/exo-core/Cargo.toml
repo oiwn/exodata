@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet"] }
+exo-types = { path = "../exo-types" }
+polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"

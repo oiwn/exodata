@@ -1,13 +1,14 @@
 use leptos::prelude::*;
 
 use super::common::InsightListPageShell;
-use crate::server::functions::get_most_distant_exoplanets_insight;
+use crate::server::functions::get_insight;
+use exo_types::insights::distant_exoplanets::META;
 
 #[component]
 pub fn MostDistantExoplanetsPage() -> impl IntoView {
     let rows_resource = Resource::new(
-        move || (),
-        move |_| async move { get_most_distant_exoplanets_insight().await },
+        move || META.slug.to_string(),
+        move |slug| async move { get_insight(slug).await },
     );
 
     view! {

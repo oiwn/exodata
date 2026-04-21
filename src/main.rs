@@ -21,7 +21,9 @@ async fn start_server() {
     use exo_core::tables::overview as aggregation;
     use exoplanets_catalog::app::{App, shell};
     use exoplanets_catalog::metadata::AppMetadata;
-    use exoplanets_catalog::server::data::tables as server_tables;
+    use exoplanets_catalog::server::data::{
+        insights as server_insights, tables as server_tables,
+    };
     use exoplanets_catalog::server::functions::{
         ColumnMetadata as UiColumnMetadata, DataStats,
     };
@@ -178,6 +180,27 @@ async fn start_server() {
     tracing::info!(
         "table cache prewarm complete in {:?}",
         prewarm_started.elapsed()
+    );
+
+    let insight_prewarm_started = Instant::now();
+    for def in exo_core::insights::INSIGHTS {
+        server_insights::get_insight_cached(
+            &api_state.stellarhosts_df,
+            &api_state.exoplanets_df,
+            &api_state.insight_cache,
+            def.meta.slug,
+        )
+        .await
+        .unwrap_or_else(|e| {
+            panic!(
+                "Startup prewarm failed for insight {}: {}",
+                def.meta.slug, e
+            )
+        });
+    }
+    tracing::info!(
+        "insight cache prewarm complete in {:?}",
+        insight_prewarm_started.elapsed()
     );
 
     let ga_measurement_id = std::env::var("LEPTOS_GA_ID").ok();

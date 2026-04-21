@@ -1,13 +1,14 @@
 use leptos::prelude::*;
 
 use super::common::InsightListPageShell;
-use crate::server::functions::get_systems_with_most_planets_insight;
+use crate::server::functions::get_insight;
+use exo_types::insights::crowded_systems::META;
 
 #[component]
 pub fn SystemsWithMostPlanetsPage() -> impl IntoView {
     let rows_resource = Resource::new(
-        move || (),
-        move |_| async move { get_systems_with_most_planets_insight().await },
+        move || META.slug.to_string(),
+        move |slug| async move { get_insight(slug).await },
     );
 
     view! {

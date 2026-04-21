@@ -25,6 +25,8 @@ need to repeat it.
 **Action:** remove the guard from data functions once `TableResult` uses `TableCacheValue`
 and normalization is the single source of truth.
 
+^^^ something about cache miss.
+
 ---
 
 ## Part 3 — Known Dead Code (confirm, then delete)

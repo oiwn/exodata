@@ -1,13 +1,14 @@
 use leptos::prelude::*;
 
 use super::common::InsightListPageShell;
-use crate::server::functions::get_largest_exoplanets_by_radius_insight;
+use crate::server::functions::get_insight;
+use exo_types::insights::largest_exoplanets::META;
 
 #[component]
 pub fn LargestExoplanetsPage() -> impl IntoView {
     let rows_resource = Resource::new(
-        move || (),
-        move |_| async move { get_largest_exoplanets_by_radius_insight().await },
+        move || META.slug.to_string(),
+        move |slug| async move { get_insight(slug).await },
     );
 
     view! {

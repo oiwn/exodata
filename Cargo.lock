@@ -1179,6 +1179,7 @@ dependencies = [
  "comfy-table",
  "crossterm 0.28.1",
  "exo-core",
+ "exo-types",
  "indicatif",
  "polars",
  "predicates",
@@ -1193,11 +1194,16 @@ name = "exo-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "exo-types",
  "polars",
  "serde",
  "serde_json",
  "toml 0.9.12+spec-1.1.0",
 ]
+
+[[package]]
+name = "exo-types"
+version = "0.1.0"
 
 [[package]]
 name = "exoplanets-catalog"
@@ -1210,6 +1216,7 @@ dependencies = [
  "console_error_panic_hook",
  "crossterm 0.28.1",
  "exo-core",
+ "exo-types",
  "indicatif",
  "leptos",
  "leptos_axum",
