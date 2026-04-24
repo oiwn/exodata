@@ -86,10 +86,10 @@ enum InsightCommands {
     List,
     /// Run one insight query by slug
     #[command(
-        after_help = "Examples:\n  exo insights list\n  exo insights run smallest-exoplanets-radius\n  exo insights run nearest-stellar-hosts --data-dir data"
+        after_help = "Examples:\n  exodata insights list\n  exodata insights run smallest-exoplanets-radius\n  exodata insights run nearest-stellar-hosts --data-dir data"
     )]
     Run {
-        /// Insight slug to run. Use `exo insights list` to see available slugs.
+        /// Insight slug to run. Use `exodata insights list` to see available slugs.
         slug: String,
         /// Directory containing stellarhosts.parquet and exoplanets.parquet.
         #[arg(long, default_value = "data")]

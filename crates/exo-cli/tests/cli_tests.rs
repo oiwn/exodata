@@ -4,7 +4,7 @@ use std::process::Command;
 
 #[test]
 fn test_binary_runs_with_help() {
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("exo"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("exodata"));
 
     cmd.arg("--help");
 
@@ -15,7 +15,7 @@ fn test_binary_runs_with_help() {
 
 #[test]
 fn test_binary_runs_without_args() {
-    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("exo"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("exodata"));
 
     // Should fail with error message when no command provided
     cmd.assert()
