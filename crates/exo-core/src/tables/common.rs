@@ -139,11 +139,9 @@ pub fn print_histogram(histogram: &[HistogramBin], max_bar_width: usize) {
     let max_count = histogram.iter().map(|bin| bin.count).max().unwrap_or(1);
 
     for bin in histogram {
-        let bar_width = if max_count > 0 {
-            (bin.count * max_bar_width) / max_count
-        } else {
-            0
-        };
+        let bar_width = (bin.count * max_bar_width)
+            .checked_div(max_count)
+            .unwrap_or(0);
         let bar = "█".repeat(bar_width);
 
         println!(
