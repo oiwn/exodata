@@ -257,9 +257,12 @@ pub fn Table(
 /// * `order` - Sort order ("asc" or "desc")
 ///
 /// # Returns
-/// Query string like "page=1&sort=hostname&order=asc"
+/// Query string like "page=2&sort=hostname&order=asc"
 pub fn build_table_query(query: &TableQueryState) -> String {
-    let mut query_params = vec![format!("page={}", query.page)];
+    let mut query_params = Vec::new();
+    if query.page > 1 {
+        query_params.push(format!("page={}", query.page));
+    }
     if let Some(col) = query.sort_col.as_deref() {
         query_params.push(format!("sort={}", col));
         query_params.push(format!("order={}", query.sort_order));

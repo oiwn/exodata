@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./components/docs.css";
 @import "./components/exoplanet-detail.css";
 @import "./components/exoplanets-table.css";
 @import "./components/insights.css";

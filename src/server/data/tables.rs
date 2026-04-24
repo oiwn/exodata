@@ -22,6 +22,10 @@ pub struct TableQuery {
     pub filter: Option<String>,
 }
 
+pub fn normalize_table_page(page: usize) -> usize {
+    if page == 0 { 1 } else { page }
+}
+
 /// Generic table data query with shared pagination/sort/select logic.
 pub fn get_table_data(
     df: &DataFrame,
@@ -104,7 +108,7 @@ pub fn get_table_data(
     }
 
     let total = df.height();
-    let page = if page == 0 { 1 } else { page };
+    let page = normalize_table_page(page);
     let offset = (page - 1) * limit;
 
     if offset < df.height() {

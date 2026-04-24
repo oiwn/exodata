@@ -1,5 +1,6 @@
 use crate::components::{
     about::AboutLazy,
+    docs::DocsLazy,
     exoplanet_detail::ExoplanetDetailLazy,
     exoplanets_table::ExoplanetsTableLazy,
     footer::VersionFooter,
@@ -93,7 +94,9 @@ pub fn App() -> impl IntoView {
                 <Route path=path!("/exoplanets/:pl_name") view={Lazy::<ExoplanetDetailLazy>::new()} ssr=SsrMode::Async/>
                 <Route path=StaticSegment("insights") view={Lazy::<InsightsLazy>::new()} ssr=SsrMode::Async/>
                 <Route path=path!("/insights/:slug") view={Lazy::<InsightDetailLazy>::new()} ssr=SsrMode::Async/>
-                <Route path=StaticSegment("about") view={Lazy::<AboutLazy>::new()}/>
+                <Route path=StaticSegment("docs") view={Lazy::<DocsLazy>::new()} ssr=SsrMode::Async/>
+                <Route path=path!("/docs/:slug") view={Lazy::<DocsLazy>::new()} ssr=SsrMode::Async/>
+                <Route path=StaticSegment("about") view={Lazy::<AboutLazy>::new()} ssr=SsrMode::Async/>
             </Routes>
 
             <VersionFooter/>

@@ -219,7 +219,7 @@ pub async fn get_stellarhosts(
     State(state): State<ApiState>,
     Query(params): Query<QueryParams>,
 ) -> Result<Json<ApiResponse>, StatusCode> {
-    let page = params.page.unwrap_or(1);
+    let page = tables::normalize_table_page(params.page.unwrap_or(1));
     let limit = params.limit.unwrap_or(50).min(1000); // Cap at 1000
 
     // Parse columns parameter
@@ -276,7 +276,7 @@ pub async fn get_exoplanets(
     State(state): State<ApiState>,
     Query(params): Query<QueryParams>,
 ) -> Result<Json<ApiResponse>, StatusCode> {
-    let page = params.page.unwrap_or(1);
+    let page = tables::normalize_table_page(params.page.unwrap_or(1));
     let limit = params.limit.unwrap_or(50).min(1000); // Cap at 1000
 
     // Parse columns parameter
@@ -488,7 +488,9 @@ pub fn build_sitemap_xml(
     let site_url = site_url.trim_end_matches('/');
     let mut urls = vec![
         format!("{site_url}/"),
-        format!("{site_url}/about"),
+        format!("{site_url}/docs"),
+        format!("{site_url}/docs/cli"),
+        format!("{site_url}/docs/api"),
         format!("{site_url}/stellarhosts"),
         format!("{site_url}/exoplanets"),
         format!("{site_url}/insights"),

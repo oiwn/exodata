@@ -98,13 +98,12 @@ fn InsightErrorPanel(message: String) -> impl IntoView {
 fn InsightDataPanel(data: TableData) -> impl IntoView {
     let columns = data.columns.clone();
     let render_columns = render_columns(&columns);
+    let facts = insight_facts(&render_columns, &data.rows);
+    let rows = data.rows;
 
     view! {
         <div class="insight-data-panel">
-            <div class="insight-data-panel__summary">
-                <p class="insight-data-panel__summary-label">"Rows"</p>
-                <p class="insight-data-panel__summary-value">{data.rows.len().to_string()}</p>
-            </div>
+            <InsightFacts facts=facts/>
             <div class="insight-data-panel__table-wrap">
                 <table class="insight-data-panel__table">
                     <thead>
@@ -116,11 +115,25 @@ fn InsightDataPanel(data: TableData) -> impl IntoView {
                         </tr>
                     </thead>
                     <tbody>
-                        {data.rows.into_iter().enumerate().map(|(idx, row)| {
+                        {rows.into_iter().enumerate().map(|(idx, row)| {
                             view! { <InsightDataRow rank=idx + 1 columns=render_columns.clone() row=row/> }
                         }).collect::<Vec<_>>()}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn InsightFacts(facts: Vec<String>) -> impl IntoView {
+    view! {
+        <div class="insight-data-panel__facts">
+            <p class="insight-data-panel__facts-label">"What this view shows"</p>
+            <div class="insight-data-panel__facts-list">
+                {facts.into_iter().map(|fact| view! {
+                    <p class="insight-data-panel__fact">{fact}</p>
+                }).collect::<Vec<_>>()}
             </div>
         </div>
     }
@@ -250,11 +263,116 @@ fn format_cell(column: &str, value: &Value) -> String {
     }
 }
 
+fn insight_facts(columns: &[String], rows: &[Value]) -> Vec<String> {
+    let mut facts = Vec::new();
+
+    if let Some(column) = primary_metric_column(columns)
+        && let Some(range) = numeric_range(rows, column)
+    {
+        facts.push(format!(
+            "{} spans {} to {} across the ranked entries.",
+            label_for_column(column),
+            format_numeric_value(column, range.min),
+            format_numeric_value(column, range.max)
+        ));
+    }
+
+    if let Some(year_range) = numeric_range(rows, "disc_year") {
+        if (year_range.min - year_range.max).abs() < f64::EPSILON {
+            facts.push(format!(
+                "Discovery year is {} for the ranked entries with year data.",
+                format_numeric_value("disc_year", year_range.min)
+            ));
+        } else {
+            facts.push(format!(
+                "Discovery years run from {} to {}.",
+                format_numeric_value("disc_year", year_range.min),
+                format_numeric_value("disc_year", year_range.max)
+            ));
+        }
+    }
+
+    if columns.iter().any(|column| column == "pl_bmasse") {
+        let available = count_numeric_values(rows, "pl_bmasse");
+        if available == 0 {
+            facts.push(
+                "Mass is not available for these ranked entries.".to_string(),
+            );
+        } else if available < rows.len() {
+            facts.push(format!(
+                "Mass is available for {} of {} ranked entries.",
+                available,
+                rows.len()
+            ));
+        }
+    }
+
+    if facts.is_empty() {
+        facts.push(
+            "Rows are ordered by the insight-specific metric using current catalog values."
+                .to_string(),
+        );
+    }
+
+    facts
+}
+
+fn primary_metric_column(columns: &[String]) -> Option<&str> {
+    [
+        "pl_rade",
+        "pl_orbsmax",
+        "sy_dist",
+        "pl_host_radius_ratio",
+        "pl_host_radius_ratio_delta",
+        "st_teff",
+        "sy_pnum",
+        "sy_snum",
+    ]
+    .into_iter()
+    .find(|candidate| columns.iter().any(|column| column == candidate))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct NumericRange {
+    min: f64,
+    max: f64,
+}
+
+fn numeric_range(rows: &[Value], column: &str) -> Option<NumericRange> {
+    let mut values = rows
+        .iter()
+        .filter_map(|row| row.get(column).and_then(Value::as_f64));
+    let first = values.next()?;
+    let mut min = first;
+    let mut max = first;
+
+    for value in values {
+        min = min.min(value);
+        max = max.max(value);
+    }
+
+    Some(NumericRange { min, max })
+}
+
+fn count_numeric_values(rows: &[Value], column: &str) -> usize {
+    rows.iter()
+        .filter(|row| row.get(column).and_then(Value::as_f64).is_some())
+        .count()
+}
+
+fn format_numeric_value(column: &str, value: f64) -> String {
+    let value = Value::from(value);
+    format_cell(column, &value)
+}
+
 #[cfg(test)]
 mod tests {
     use leptos::serde_json::json;
 
-    use super::{HOST_LINK_COLUMN, href_for_column, render_columns};
+    use super::{
+        HOST_LINK_COLUMN, NumericRange, href_for_column, insight_facts,
+        numeric_range, render_columns,
+    };
 
     #[test]
     fn render_columns_hides_explicit_link_helper_columns() {
@@ -290,5 +408,47 @@ mod tests {
         let href = href_for_column("sy_name", &json!("Kepler-90"), &row);
 
         assert_eq!(href, None);
+    }
+
+    #[test]
+    fn numeric_range_ignores_missing_values() {
+        let rows = vec![
+            json!({ "pl_rade": 0.31 }),
+            json!({ "pl_rade": null }),
+            json!({ "pl_rade": 0.50 }),
+        ];
+
+        assert_eq!(
+            numeric_range(&rows, "pl_rade"),
+            Some(NumericRange {
+                min: 0.31,
+                max: 0.50
+            })
+        );
+    }
+
+    #[test]
+    fn insight_facts_describe_metric_range_and_missing_mass() {
+        let columns = vec![
+            "pl_name".to_string(),
+            "pl_rade".to_string(),
+            "pl_bmasse".to_string(),
+            "disc_year".to_string(),
+        ];
+        let rows = vec![
+            json!({ "pl_rade": 0.31, "pl_bmasse": 0.79, "disc_year": 2013 }),
+            json!({ "pl_rade": 0.50, "pl_bmasse": null, "disc_year": 2024 }),
+        ];
+
+        let facts = insight_facts(&columns, &rows);
+
+        assert_eq!(
+            facts,
+            vec![
+                "Radius spans 0.31 R⊕ to 0.50 R⊕ across the ranked entries.",
+                "Discovery years run from 2013 to 2024.",
+                "Mass is available for 1 of 2 ranked entries.",
+            ]
+        );
     }
 }

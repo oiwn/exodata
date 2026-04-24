@@ -11,6 +11,8 @@ pub use column_model::{
 };
 pub use pagination_links::PaginationLinks;
 pub use pagination_state::TablePaginationState;
-pub use query_navigation::{TableQueryState, navigate_table_query};
+pub use query_navigation::{
+    TableQueryState, build_table_url, navigate_table_query, normalize_table_page,
+};
 pub use query_signals::TableQuerySignals;
 pub use table::{Table, build_table_query};

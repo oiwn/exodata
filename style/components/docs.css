@@ -1,0 +1,73 @@
+.docs-page {
+  @apply min-h-screen bg-slate-950;
+}
+
+.docs-page__container {
+  @apply mx-auto max-w-4xl px-4 py-10 md:px-6 md:py-14;
+}
+
+.docs-content {
+  @apply text-base leading-7 text-slate-300;
+}
+
+.docs-content h1 {
+  @apply mb-6 text-4xl font-semibold tracking-tight text-white md:text-5xl;
+}
+
+.docs-content h2 {
+  @apply mt-10 mb-4 border-t border-slate-800 pt-8 text-2xl font-semibold text-white;
+}
+
+.docs-content h3 {
+  @apply mt-8 mb-3 text-xl font-semibold text-slate-100;
+}
+
+.docs-content p {
+  @apply my-4;
+}
+
+.docs-content a {
+  @apply text-sky-300 underline decoration-sky-500/40 underline-offset-4 transition-colors hover:text-sky-200;
+}
+
+.docs-content ul,
+.docs-content ol {
+  @apply my-4 pl-6;
+}
+
+.docs-content ul {
+  @apply list-disc;
+}
+
+.docs-content ol {
+  @apply list-decimal;
+}
+
+.docs-content li {
+  @apply my-2;
+}
+
+.docs-content code {
+  @apply rounded bg-slate-900 px-1.5 py-0.5 font-mono text-sm text-emerald-200;
+}
+
+.docs-content pre {
+  @apply my-5 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900 p-4;
+}
+
+.docs-content pre code {
+  @apply bg-transparent p-0 text-slate-100;
+}
+
+.docs-content table {
+  @apply my-6 min-w-full border-collapse overflow-hidden text-sm;
+}
+
+.docs-content th,
+.docs-content td {
+  @apply border border-slate-800 px-3 py-2 text-left align-top;
+}
+
+.docs-content th {
+  @apply bg-slate-900 font-semibold text-slate-100;
+}

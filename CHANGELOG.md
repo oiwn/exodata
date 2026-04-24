@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-04-22
+
+- Consolidated insight definitions around shared SQL execution:
+  - moved SQL-backed insight execution into `exo-core::insights`
+  - added lightweight shared insight metadata in `exo-types`
+  - kept hydrate/frontend insight metadata free of `exo-core` dependencies
+  - switched web insight details to one generic `get_insight(slug)` server function
+  - kept CLI insight commands on the same registry/executor as web SSR
+  - prewarmed all registered insight cache entries at startup
+- Simplified table and insight cache payload handling:
+  - changed table data operations to return `TableResult = Result<TableCacheValue, String>`
+  - removed tuple destructuring helpers for table payloads
+  - deleted stale table/server modules that were no longer used
+- Fixed insight table link-helper handling:
+  - system insights now return display `sy_name` separately from `host_link_hostname`
+  - hidden helper columns are filtered explicitly
+  - `sy_name` links now require `host_link_hostname` instead of falling back to displayed host text
+- Canonicalized table page-zero behavior:
+  - `page=0` is treated as page 1 for table data, REST responses, and Leptos server functions
+  - browser table routes replace `?page=0` and `?page=1` with canonical URLs that omit `page`
+  - sort, order, columns, and filter query parameters are preserved during canonicalization
+  - pagination links and table navigation omit `page` for page 1
+- Updated `specs/ctx.md` to summarize the completed refactor and current architecture
+- Verified with SSR/hydrate checks and focused tests for insight registry parity, canonical table URLs, and REST `page=0` normalization
+
 ## 2026-04-13
 
 - Refactored the exoplanet detail page into a feature-owned module and aligned it with the stellar-host detail design family:

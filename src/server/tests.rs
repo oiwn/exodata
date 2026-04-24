@@ -178,6 +178,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_get_stellarhosts_page_zero_reports_page_one() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/rest/stellarhosts?page=0&limit=2")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["data"].as_array().unwrap().len(), 2);
+        assert_eq!(json["page"], 1);
+        assert_eq!(json["limit"], 2);
+    }
+
+    #[tokio::test]
     async fn test_get_stellarhosts_with_sorting() {
         let app = create_test_app();
 
@@ -392,7 +415,10 @@ mod tests {
         let xml = String::from_utf8(body.to_vec()).unwrap();
 
         assert!(xml.contains("<loc>https://example.com/</loc>"));
-        assert!(xml.contains("<loc>https://example.com/about</loc>"));
+        assert!(xml.contains("<loc>https://example.com/docs</loc>"));
+        assert!(xml.contains("<loc>https://example.com/docs/cli</loc>"));
+        assert!(xml.contains("<loc>https://example.com/docs/api</loc>"));
+        assert!(!xml.contains("<loc>https://example.com/about</loc>"));
         assert!(xml.contains("<loc>https://example.com/stellarhosts</loc>"));
         assert!(xml.contains("<loc>https://example.com/exoplanets</loc>"));
         assert!(xml.contains("<loc>https://example.com/insights</loc>"));

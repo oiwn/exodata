@@ -162,16 +162,20 @@
   @apply text-sm text-slate-400;
 }
 
-.insight-data-panel__summary {
-  @apply mb-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-4;
+.insight-data-panel__facts {
+  @apply mb-5 rounded-lg border border-white/8 bg-white/4 px-4 py-4;
 }
 
-.insight-data-panel__summary-label {
+.insight-data-panel__facts-label {
   @apply text-xs uppercase tracking-[0.16em] text-slate-500;
 }
 
-.insight-data-panel__summary-value {
-  @apply mt-2 text-2xl font-semibold text-white;
+.insight-data-panel__facts-list {
+  @apply mt-3 grid gap-2 text-sm leading-6 text-slate-300 md:grid-cols-3;
+}
+
+.insight-data-panel__fact {
+  @apply max-w-prose;
 }
 
 .insight-data-panel__table-wrap {

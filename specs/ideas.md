@@ -22,8 +22,17 @@
 
 ## TODO:
 
+- [ ] short url so long list of parameters gone. easy to share.
 - [ ] add skill for agent how to use cli tool.
 - [ ] MCP server
+- [ ] Component from  selected Markdown files from `specs/`.
+  - Use `include_str!` so docs are compiled into the app binary.
+  - Render Markdown to HTML in a server function, not in the hydrate build.
+  - Use `SsrMode::Async` for docs routes so crawlers receive rendered docs HTML.
+  - Render the returned HTML inside the existing Leptos site shell so navbar/site interactivity
+    remains available.
+  - Start with a few flat pages: overview, frontend, tables, API, CLI/tooling, deployment.
+  - Keep mdBook experiment as a reference, but do not deploy it unless the direction changes.
 
 ## Agent/tool access to insights
 

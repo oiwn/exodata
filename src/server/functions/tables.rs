@@ -23,6 +23,7 @@ pub async fn get_stellarhosts_page(
         "get_stellarhosts_page called: page={page} columns={columns:?}"
     );
     let state = expect_context::<ApiState>();
+    let page = table_data::normalize_table_page(page);
     let selected_columns = parse_columns(columns);
 
     let value = table_data::get_stellarhosts_data_cached(
@@ -66,6 +67,7 @@ pub async fn get_exoplanets_page(
 ) -> Result<TableData, ServerFnError> {
     tracing::info!("get_exoplanets_page called: page={page} columns={columns:?}");
     let state = expect_context::<ApiState>();
+    let page = table_data::normalize_table_page(page);
     let selected_columns = parse_columns(columns);
 
     let value = table_data::get_exoplanets_data_cached(
