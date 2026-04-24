@@ -41,6 +41,7 @@ pub struct TableCacheValue {
 
 pub type TableCache = Cache<TableCacheKey, TableCacheValue>;
 pub type HostDetailCache = Cache<String, StellarHostDetail>;
+pub type InsightCache = Cache<String, TableCacheValue>;
 
 /// Build a table cache with max-entry bounds.
 pub fn build_table_cache(max_entries: u64) -> TableCache {
@@ -49,6 +50,11 @@ pub fn build_table_cache(max_entries: u64) -> TableCache {
 
 /// Build a host-detail cache with max-entry bounds.
 pub fn build_host_detail_cache(max_entries: u64) -> HostDetailCache {
+    Cache::builder().max_capacity(max_entries).build()
+}
+
+/// Build an insight cache with max-entry bounds.
+pub fn build_insight_cache(max_entries: u64) -> InsightCache {
     Cache::builder().max_capacity(max_entries).build()
 }
 

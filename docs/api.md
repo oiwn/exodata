@@ -1,103 +1,177 @@
 # REST API
 
-Base URL: `/rest`
+Exoplanets Catalog exposes NASA Exoplanet Archive data through JSON endpoints under `/rest`.
 
-Interactive docs available at `/swagger-ui` (OpenAPI spec at `/rest/openapi.json`).
+Interactive OpenAPI documentation is available at [`/swagger-ui`](/swagger-ui). The OpenAPI JSON document is available at [`/rest/openapi.json`](/rest/openapi.json).
 
-## Endpoints
+## Tables
+
+The API exposes two catalog tables:
+
+- `stellarhosts` - stellar host and system-level records
+- `exoplanets` - confirmed exoplanet records with host/system fields
+
+These are the same tables registered for SQL queries.
+
+## Data Endpoints
 
 ### GET /rest/stellarhosts
 
-Paginated stellar hosts data with sorting, column selection, and text filtering.
+Returns paginated stellar host rows.
 
-**Query Parameters:**
+Default columns:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `page` | usize | 1 | Page number |
-| `limit` | usize | 50 | Rows per page (max: 1000) |
-| `sort_by` | string | — | Column name to sort by |
-| `order` | string | `asc` | Sort order: `asc` or `desc` |
-| `columns` | string | — | Comma-separated list of columns to return |
-| `filter` | string | — | Text filter (partial match across all visible columns) |
-
-**Example:**
-
-```bash
-curl "http://localhost:3000/rest/stellarhosts?page=1&limit=20&sort_by=st_teff&order=desc&filter=Kepler"
-```
-
-**Response:**
-
-```json
-{
-  "data": [
-    { "hostname": "Kepler-452", "st_teff": 5757.0, "st_mass": 1.04, ... }
-  ],
-  "total": 1523,
-  "total_all": 5200,
-  "page": 1,
-  "limit": 20,
-  "columns": ["hostname", "st_teff", "st_mass"]
-}
+```text
+hostname, sy_dist, st_teff, st_mass, sy_pnum
 ```
 
 ### GET /rest/exoplanets
 
-Same parameters as `/rest/stellarhosts`, but for the exoplanets dataset.
+Returns paginated exoplanet rows.
+
+Default columns:
+
+```text
+pl_name, hostname, discoverymethod, disc_year, pl_orbper, pl_rade, pl_bmasse
+```
+
+### Query Parameters
+
+Both data endpoints accept the same parameters.
+
+| Parameter | Type   | Default | Description                                      |
+| --------- | ------ | ------- | ------------------------------------------------ |
+| `page`    | number | `1`     | Page number, starting at 1.                      |
+| `limit`   | number | `50`    | Rows per page. Values above 1000 are capped.     |
+| `sort_by` | string |         | Column name to sort by.                          |
+| `order`   | string | `asc`   | Sort direction: `asc` or `desc`.                 |
+| `columns` | string |         | Comma-separated list of columns to return.       |
+| `filter`  | string |         | Text filter applied by the table query pipeline. |
+
+Example:
 
 ```bash
-curl "http://localhost:3000/rest/exoplanets?filter=Kepler&sort_by=disc_year&order=desc"
+curl "https://exodata.space/rest/exoplanets?columns=pl_name,hostname,disc_year&sort_by=disc_year&order=desc&filter=Kepler&limit=20"
 ```
+
+Response shape:
+
+```json
+{
+  "data": [
+    {
+      "pl_name": "Kepler-452 b",
+      "hostname": "Kepler-452",
+      "disc_year": 2015
+    }
+  ],
+  "total": 1523,
+  "total_all": 5000,
+  "page": 1,
+  "limit": 20,
+  "columns": ["pl_name", "hostname", "disc_year"]
+}
+```
+
+`total` is the row count after filtering. `total_all` is the full table size before filtering.
+
+## Schema Endpoints
 
 ### GET /rest/stellarhosts/schema
 
-Column metadata for stellar hosts.
+Returns column names, Polars data types, descriptions, and units for the stellar host table.
 
-**Response:**
+### GET /rest/exoplanets/schema
+
+Returns column names, Polars data types, descriptions, and units for the exoplanet table.
+
+Example:
+
+```bash
+curl "https://exodata.space/rest/exoplanets/schema"
+```
+
+Response shape:
 
 ```json
 {
   "columns": [
     {
-      "name": "hostname",
-      "type": "String",
-      "description": "Stellar host name",
-      "unit": ""
+      "name": "pl_name",
+      "data_type": "String",
+      "description": "Planet Name"
+    },
+    {
+      "name": "pl_orbper",
+      "data_type": "Float64",
+      "description": "Orbital Period",
+      "unit": "days"
     }
   ],
-  "total_rows": 5200
+  "total_rows": 5000
 }
 ```
 
-### GET /rest/exoplanets/schema
+`description` and `unit` are omitted when metadata is unavailable for a column.
 
-Column metadata for exoplanets. Same structure as `/rest/stellarhosts/schema`.
+## SQL Query Endpoint
 
 ### GET /rest/query
 
-Execute SQL SELECT queries against both tables.
+Executes one read-only SQL `SELECT` statement against the registered catalog tables.
 
-**Query Parameters:**
+Available tables:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `sql` | string | required | SQL SELECT statement |
-| `limit` | usize | — | Override result limit (max: 10,000) |
+- `stellarhosts`
+- `exoplanets`
 
-Available tables: `stellarhosts`, `exoplanets`
+Query parameters:
 
-**Examples:**
+| Parameter | Type   | Default | Description                                  |
+| --------- | ------ | ------- | -------------------------------------------- |
+| `sql`     | string |         | Required SQL `SELECT` statement.             |
+| `limit`   | number | `1000`  | Maximum rows returned. Capped at 10000 rows. |
+
+Only one SQL statement is allowed. Non-`SELECT` statements are rejected. Queries run with a 30-second timeout.
+
+Examples:
 
 ```bash
-# Find hot Jupiters
-curl "http://localhost:3000/rest/query?sql=SELECT pl_name, pl_bmasse, pl_eqt FROM exoplanets WHERE pl_bmasse > 100 AND pl_eqt > 1000 LIMIT 10"
-
-# Join tables
-curl "http://localhost:3000/rest/query?sql=SELECT s.hostname, s.st_teff, e.pl_name FROM stellarhosts s JOIN exoplanets e ON s.hostname = e.hostname LIMIT 10"
-
-# Count by discovery method
-curl "http://localhost:3000/rest/query?sql=SELECT discoverymethod, COUNT(*) as cnt FROM exoplanets GROUP BY discoverymethod ORDER BY cnt DESC"
+curl "https://exodata.space/rest/query?sql=SELECT pl_name, hostname, disc_year FROM exoplanets ORDER BY disc_year DESC LIMIT 10"
 ```
 
-Only `SELECT` statements are allowed. Queries run with a 30-second timeout.
+```bash
+curl "https://exodata.space/rest/query?sql=SELECT s.hostname, s.st_teff, e.pl_name FROM stellarhosts s JOIN exoplanets e ON s.hostname = e.hostname LIMIT 10"
+```
+
+```bash
+curl "https://exodata.space/rest/query?sql=SELECT discoverymethod, COUNT(*) AS count FROM exoplanets GROUP BY discoverymethod ORDER BY count DESC"
+```
+
+Response shape:
+
+```json
+{
+  "data": [
+    {
+      "pl_name": "Kepler-452 b",
+      "hostname": "Kepler-452",
+      "disc_year": 2015
+    }
+  ],
+  "rows": 1,
+  "columns": ["pl_name", "hostname", "disc_year"],
+  "query": "SELECT pl_name, hostname, disc_year FROM exoplanets ORDER BY disc_year DESC LIMIT 10"
+}
+```
+
+## Errors
+
+The API uses standard HTTP status codes:
+
+| Status | Meaning                                    |
+| ------ | ------------------------------------------ |
+| `400`  | Invalid query parameters or invalid SQL.   |
+| `408`  | SQL query timed out.                       |
+| `500`  | Server-side data loading or query failure. |
+

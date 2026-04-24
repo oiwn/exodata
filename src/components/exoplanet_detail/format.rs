@@ -124,3 +124,86 @@ fn json_number_to_f64(value: &Value) -> Option<f64> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use leptos::serde_json::json;
+
+    #[test]
+    fn format_number_handles_integer_decimal_and_scientific_ranges() {
+        assert_eq!(format_number(12.0), "12");
+        assert_eq!(format_number(12.345), "12.35");
+        assert_eq!(format_number(345.67), "345.7");
+        assert_eq!(format_number(0.0012), "1.20e-3");
+    }
+
+    #[test]
+    fn format_value_applies_units_and_bool_labels() {
+        assert_eq!(format_value(&json!(2.5), "R⊕"), "2.50 R⊕");
+        assert_eq!(format_value(&json!(true), ""), "Yes");
+        assert_eq!(format_value(&Value::Null, ""), "—");
+    }
+
+    #[test]
+    fn first_non_empty_string_skips_null_and_blank_values() {
+        let records = vec![
+            json!({ "hostname": null }),
+            json!({ "hostname": "   " }),
+            json!({ "hostname": "Kepler-22" }),
+        ];
+
+        assert_eq!(
+            first_non_empty_string(&records, "hostname"),
+            Some("Kepler-22".to_string())
+        );
+    }
+
+    #[test]
+    fn median_numeric_value_uses_middle_or_average_of_two_values() {
+        let odd = vec![
+            json!({ "pl_rade": 1.0 }),
+            json!({ "pl_rade": 3.0 }),
+            json!({ "pl_rade": 2.0 }),
+        ];
+        let even = vec![
+            json!({ "pl_rade": 1.0 }),
+            json!({ "pl_rade": 2.0 }),
+            json!({ "pl_rade": 4.0 }),
+            json!({ "pl_rade": 10.0 }),
+        ];
+
+        assert_eq!(median_numeric_value(&odd, "pl_rade"), Some(2.0));
+        assert_eq!(median_numeric_value(&even, "pl_rade"), Some(3.0));
+    }
+
+    #[test]
+    fn planet_visual_class_prefers_temperature_then_size_bands() {
+        assert_eq!(
+            planet_visual_class(Some(2.0), Some(1300.0)),
+            "planet-visual--hot"
+        );
+        assert_eq!(
+            planet_visual_class(Some(9.0), Some(400.0)),
+            "planet-visual--giant"
+        );
+        assert_eq!(
+            planet_visual_class(Some(4.0), None),
+            "planet-visual--sub-neptune"
+        );
+        assert_eq!(
+            planet_visual_class(None, Some(150.0)),
+            "planet-visual--cold"
+        );
+        assert_eq!(
+            planet_visual_class(Some(1.0), Some(300.0)),
+            "planet-visual--temperate"
+        );
+    }
+
+    #[test]
+    fn comparison_scale_is_linear_and_handles_zero_denominator() {
+        assert_eq!(comparison_scale(2.8, 11.2), 0.25);
+        assert_eq!(comparison_scale(1.0, 0.0), 0.0);
+    }
+}

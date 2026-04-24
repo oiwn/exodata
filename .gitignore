@@ -1,5 +1,6 @@
 /target
 /dist
+/target-mdbook
 /data/*.csv
 /data/*.vot
 /data/*.toml

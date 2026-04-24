@@ -1,7 +1,8 @@
 use std::path::Path;
 
-use anyhow::Error;
-use comfy_table::Table;
+use anyhow::{Error, anyhow};
+use comfy_table::{Table, presets::ASCII_MARKDOWN};
+use exo_core::insights::{self, InsightInput};
 use exo_core::tables::common::{
     create_histogram, get_numeric_stats, load_data_with_limit, load_parquet,
     print_histogram,
@@ -491,6 +492,178 @@ pub fn execute_sql(query: &str, data_dir: &str) -> Result<(), Error> {
     println!("{}", result);
 
     Ok(())
+}
+
+/// List curated insight queries available through exo-core.
+pub fn list_insights() {
+    let mut table = minimal_table();
+    table.set_header(vec!["Slug", "Title", "Category", "Limit"]);
+
+    for &def in insights::INSIGHTS {
+        table.add_row(vec![
+            def.meta.slug.to_string(),
+            def.meta.title.to_string(),
+            def.meta.category.to_string(),
+            def.meta.limit.to_string(),
+        ]);
+    }
+
+    println!("{}", table);
+}
+
+/// Run one curated insight query by slug.
+pub fn run_insight(slug: &str, data_dir: &str) -> Result<(), Error> {
+    let frames = load_insight_frames(data_dir)?;
+    let def = insights::find_insight(slug)
+        .ok_or_else(|| anyhow!("unknown insight slug '{}'", slug))?;
+    let data = insights::run_insight_def(frames.input(), def)?;
+
+    print_insight_result(def, &data.frame)?;
+
+    Ok(())
+}
+
+/// Run all curated insight queries in registry order.
+pub fn run_all_insights(data_dir: &str) -> Result<(), Error> {
+    let frames = load_insight_frames(data_dir)?;
+    let mut failures = Vec::new();
+
+    for &def in insights::INSIGHTS {
+        match insights::run_insight_def(frames.input(), def) {
+            Ok(data) => {
+                if let Err(err) = print_insight_result(def, &data.frame) {
+                    failures.push(format!("{}: {}", def.meta.slug, err));
+                }
+            }
+            Err(err) => failures.push(format!("{}: {}", def.meta.slug, err)),
+        }
+    }
+
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(anyhow!(
+            "{} insight(s) failed:\n{}",
+            failures.len(),
+            failures.join("\n")
+        ))
+    }
+}
+
+struct InsightFrames {
+    stellarhosts: DataFrame,
+    exoplanets: DataFrame,
+}
+
+impl InsightFrames {
+    fn input(&self) -> InsightInput<'_> {
+        InsightInput {
+            stellarhosts: &self.stellarhosts,
+            exoplanets: &self.exoplanets,
+        }
+    }
+}
+
+fn load_insight_frames(data_dir: &str) -> Result<InsightFrames, Error> {
+    let stellarhosts_path = format!("{}/stellarhosts.parquet", data_dir);
+    let exoplanets_path = format!("{}/exoplanets.parquet", data_dir);
+
+    Ok(InsightFrames {
+        stellarhosts: load_parquet(&stellarhosts_path, None).map_err(|e| {
+            anyhow!("failed to load {}: {}", stellarhosts_path, e)
+        })?,
+        exoplanets: load_parquet(&exoplanets_path, None)
+            .map_err(|e| anyhow!("failed to load {}: {}", exoplanets_path, e))?,
+    })
+}
+
+fn print_insight_result(
+    def: &insights::InsightDef,
+    frame: &DataFrame,
+) -> Result<(), Error> {
+    println!();
+    println!("{}", def.meta.title);
+    println!("{}", def.meta.description);
+    println!("{} rows", frame.height());
+    println!();
+    println!("{}", dataframe_table(frame)?);
+
+    Ok(())
+}
+
+fn dataframe_table(frame: &DataFrame) -> Result<Table, Error> {
+    let columns = frame
+        .get_column_names()
+        .iter()
+        .filter(|name| !is_link_helper_column(name.as_str()))
+        .map(|name| name.to_string())
+        .collect::<Vec<_>>();
+    let mut table = minimal_table();
+    table.set_header(columns.clone());
+
+    for row_idx in 0..frame.height() {
+        let mut row = Vec::with_capacity(columns.len());
+
+        for column in &columns {
+            let value = frame
+                .column(column)
+                .map_err(|e| anyhow!("failed to read column {}: {}", column, e))?
+                .get(row_idx)
+                .map_err(|e| {
+                    anyhow!("failed to read {} at row {}: {}", column, row_idx, e)
+                })?;
+            row.push(format_any_value(value));
+        }
+
+        table.add_row(row);
+    }
+
+    Ok(table)
+}
+
+fn is_link_helper_column(column: &str) -> bool {
+    column == "host_link_hostname"
+}
+
+fn minimal_table() -> Table {
+    let mut table = Table::new();
+    table.load_preset(ASCII_MARKDOWN);
+    table
+}
+
+fn format_any_value(value: AnyValue<'_>) -> String {
+    match value {
+        AnyValue::Null => "N/A".to_string(),
+        AnyValue::Float64(value) => format_float(value),
+        AnyValue::Float32(value) => format_float(value as f64),
+        AnyValue::String(value) => value.to_string(),
+        AnyValue::StringOwned(value) => value.to_string(),
+        AnyValue::Int64(value) => value.to_string(),
+        AnyValue::Int32(value) => value.to_string(),
+        AnyValue::Int16(value) => value.to_string(),
+        AnyValue::Int8(value) => value.to_string(),
+        AnyValue::UInt64(value) => value.to_string(),
+        AnyValue::UInt32(value) => value.to_string(),
+        AnyValue::UInt16(value) => value.to_string(),
+        AnyValue::UInt8(value) => value.to_string(),
+        AnyValue::Boolean(value) => value.to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn format_float(value: f64) -> String {
+    if !value.is_finite() {
+        return value.to_string();
+    }
+
+    let mut text = format!("{:.4}", value);
+    while text.contains('.') && text.ends_with('0') {
+        text.pop();
+    }
+    if text.ends_with('.') {
+        text.pop();
+    }
+    text
 }
 
 /// View column metadata from a VOTable file

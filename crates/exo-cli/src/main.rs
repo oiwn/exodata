@@ -73,6 +73,34 @@ enum Commands {
         #[arg(long, default_value = "data")]
         data_dir: String,
     },
+    /// Run curated insight queries
+    Insights {
+        #[clap(subcommand)]
+        command: InsightCommands,
+    },
+}
+
+#[derive(Parser, Debug)]
+enum InsightCommands {
+    /// List available insight slugs and descriptions
+    List,
+    /// Run one insight query by slug
+    #[command(
+        after_help = "Examples:\n  exodata insights list\n  exodata insights run smallest-exoplanets-radius\n  exodata insights run nearest-stellar-hosts --data-dir data"
+    )]
+    Run {
+        /// Insight slug to run. Use `exodata insights list` to see available slugs.
+        slug: String,
+        /// Directory containing stellarhosts.parquet and exoplanets.parquet.
+        #[arg(long, default_value = "data")]
+        data_dir: String,
+    },
+    /// Run every insight query in registry order
+    RunAll {
+        /// Directory containing stellarhosts.parquet and exoplanets.parquet.
+        #[arg(long, default_value = "data")]
+        data_dir: String,
+    },
 }
 
 fn main() {
@@ -128,5 +156,20 @@ fn main() {
                 eprintln!("Error executing SQL: {}", e);
             }
         }
+        Commands::Insights { command } => match command {
+            InsightCommands::List => {
+                commands::list_insights();
+            }
+            InsightCommands::Run { slug, data_dir } => {
+                if let Err(e) = commands::run_insight(&slug, &data_dir) {
+                    eprintln!("Error running insight: {}", e);
+                }
+            }
+            InsightCommands::RunAll { data_dir } => {
+                if let Err(e) = commands::run_all_insights(&data_dir) {
+                    eprintln!("Error running insights: {}", e);
+                }
+            }
+        },
     }
 }

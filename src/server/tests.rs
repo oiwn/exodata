@@ -1,4 +1,5 @@
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -12,7 +13,9 @@ mod tests {
     use serde_json::Value;
     use tower::ServiceExt;
 
-    use crate::server::cache::{build_host_detail_cache, build_table_cache};
+    use crate::server::cache::{
+        build_host_detail_cache, build_insight_cache, build_table_cache,
+    };
     use crate::server::functions::DataStats;
     use crate::server::handlers::{
         ApiState, build_sitemap_xml, get_exoplanets, get_exoplanets_schema,
@@ -67,6 +70,7 @@ mod tests {
             }),
             table_cache: build_table_cache(64),
             host_detail_cache: build_host_detail_cache(64),
+            insight_cache: build_insight_cache(16),
         }
     }
 
@@ -169,6 +173,29 @@ mod tests {
         assert_eq!(json["data"].as_array().unwrap().len(), 2);
         assert_eq!(json["total"], 3);
         assert_eq!(json["total_all"], 3);
+        assert_eq!(json["page"], 1);
+        assert_eq!(json["limit"], 2);
+    }
+
+    #[tokio::test]
+    async fn test_get_stellarhosts_page_zero_reports_page_one() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/rest/stellarhosts?page=0&limit=2")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["data"].as_array().unwrap().len(), 2);
         assert_eq!(json["page"], 1);
         assert_eq!(json["limit"], 2);
     }
@@ -388,9 +415,34 @@ mod tests {
         let xml = String::from_utf8(body.to_vec()).unwrap();
 
         assert!(xml.contains("<loc>https://example.com/</loc>"));
-        assert!(xml.contains("<loc>https://example.com/about</loc>"));
+        assert!(xml.contains("<loc>https://example.com/docs</loc>"));
+        assert!(xml.contains("<loc>https://example.com/docs/cli</loc>"));
+        assert!(xml.contains("<loc>https://example.com/docs/api</loc>"));
+        assert!(!xml.contains("<loc>https://example.com/about</loc>"));
         assert!(xml.contains("<loc>https://example.com/stellarhosts</loc>"));
         assert!(xml.contains("<loc>https://example.com/exoplanets</loc>"));
+        assert!(xml.contains("<loc>https://example.com/insights</loc>"));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/smallest-exoplanets-radius</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/largest-exoplanets-radius</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/most-distant-exoplanets</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/nearest-stellar-hosts</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/largest-planet-to-host-ratios</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/most-equal-star-planet-pairs</loc>"
+        ));
+        assert!(xml.contains(
+            "<loc>https://example.com/insights/binary-star-systems</loc>"
+        ));
         assert!(
             xml.contains(
                 "<loc>https://example.com/stellarhosts/HD%20189733</loc>"

@@ -1,70 +1,123 @@
 # CLI Tools
 
-The project includes `exo-cli` for data exploration and metadata inspection.
+Exoplanets Catalog includes a local CLI for working with VOTable source files, Parquet datasets, metadata, SQL queries, and curated insights.
 
-All commands run via:
+Install from the repository:
 
 ```bash
-cargo run -p exo-cli -- <command>
+cargo install --path crates/exo-cli
+exodata --help
+```
+
+Build without installing:
+
+```bash
+cargo build -p exo-cli --release
+./target/release/exodata --help
 ```
 
 ## Commands
 
-### view-metadata
+Current commands:
 
-View column metadata from a VOTable file.
-
-```bash
-# All columns
-cargo run -p exo-cli -- view-metadata --path data/exoplanets.vot
-
-# Specific columns
-cargo run -p exo-cli -- view-metadata --path data/exoplanets.vot --columns "pl_name,pl_orbper,pl_rade,pl_bmasse"
-
-# Stellar hosts
-cargo run -p exo-cli -- view-metadata --path data/stellarhosts.vot
+```text
+view-fields
+view-metadata
+view-samples
+view-stats
+view-exoplanets-samples
+view-exoplanets-stats
+convert-raw-files
+sql
+insights
 ```
 
-### view-fields
+## Data Files
 
-Display field definitions from a VOTable file.
+By default, the CLI reads local files from `data/`:
 
-```bash
-cargo run -p exo-cli -- view-fields data/exoplanets.vot
+```text
+data/
+|-- stellarhosts.vot
+|-- exoplanets.vot
+|-- stellarhosts.parquet
+`-- exoplanets.parquet
 ```
 
-### sql
+## VOTable Commands
 
-Execute SQL queries against parquet files using Polars `SQLContext`.
-
-```bash
-cargo run -p exo-cli -- sql "SELECT hostname, COUNT(*) AS rows FROM stellarhosts WHERE LOWER(hostname) LIKE '%gliese%' GROUP BY hostname ORDER BY rows DESC"
-```
-
-Available tables: `stellarhosts`, `exoplanets`
-
-### view-samples / view-exoplanets-samples
-
-View sample rows from the parquet files.
+Inspect source files:
 
 ```bash
-cargo run -p exo-cli -- view-samples --limit 10
-cargo run -p exo-cli -- view-exoplanets-samples --limit 10
+exodata view-fields data/exoplanets.vot
+exodata view-metadata
+exodata view-metadata --path data/stellarhosts.vot --columns "hostname,st_teff,st_mass"
 ```
 
-### view-stats / view-exoplanets-stats
+## Sample Rows And Stats
 
-Display statistics for each dataset.
+Preview local parquet data:
 
 ```bash
-cargo run -p exo-cli -- view-stats
-cargo run -p exo-cli -- view-exoplanets-stats
+exodata view-samples --limit 10
+exodata view-samples --category stellar
+exodata view-exoplanets-samples --category orbital
 ```
 
-### convert-raw-files
-
-Convert VOTable (`.vot`) files to Parquet format.
+Show dataset statistics:
 
 ```bash
-cargo run -p exo-cli -- convert-raw-files --data-dir data
+exodata view-stats
+exodata view-exoplanets-stats
 ```
+
+## Convert Raw Files
+
+Convert `.vot` files in a directory to Parquet:
+
+```bash
+exodata convert-raw-files
+exodata convert-raw-files --data-dir data
+```
+
+## SQL
+
+Run SQL against local parquet files. Available tables:
+
+- `stellarhosts`
+- `exoplanets`
+
+Examples:
+
+```bash
+exodata sql "SELECT pl_name, hostname, disc_year FROM exoplanets ORDER BY disc_year DESC LIMIT 10"
+exodata sql "SELECT s.hostname, s.st_teff, e.pl_name FROM stellarhosts s JOIN exoplanets e ON s.hostname = e.hostname LIMIT 10"
+```
+
+Use `--data-dir` to point at another directory containing `stellarhosts.parquet` and `exoplanets.parquet`.
+
+## Insights
+
+List available insight slugs:
+
+```bash
+exodata insights list
+```
+
+Run one insight:
+
+```bash
+exodata insights run smallest-exoplanets-radius
+exodata insights run nearest-stellar-hosts --data-dir data
+```
+
+Run all insights:
+
+```bash
+exodata insights run-all
+```
+
+## Related Docs
+
+- [About](about.md)
+- [REST API](api.md)

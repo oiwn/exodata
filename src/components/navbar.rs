@@ -10,7 +10,10 @@ pub fn Navbar() -> impl IntoView {
     let is_root = move || pathname() == "/";
     let is_stellarhosts = move || pathname().starts_with("/stellarhosts");
     let is_exoplanets = move || pathname().starts_with("/exoplanets");
-    let is_about = move || pathname().starts_with("/about");
+    let is_insights = move || pathname().starts_with("/insights");
+    let is_docs = move || {
+        pathname().starts_with("/docs") || pathname().starts_with("/about")
+    };
 
     // Mobile menu state
     let (mobile_menu_open, set_mobile_menu_open) = signal(false);
@@ -84,16 +87,29 @@ pub fn Navbar() -> impl IntoView {
                         </A>
 
                         <A
-                            href="/about"
+                            href="/insights"
                             attr:class=move || {
-                                if is_about() {
+                                if is_insights() {
                                     active_class
                                 } else {
                                     link_class
                                 }
                             }
                         >
-                            "About"
+                            "Insights"
+                        </A>
+
+                        <A
+                            href="/docs"
+                            attr:class=move || {
+                                if is_docs() {
+                                    active_class
+                                } else {
+                                    link_class
+                                }
+                            }
+                        >
+                            "Docs"
                         </A>
 
                         <a
@@ -192,12 +208,20 @@ pub fn Navbar() -> impl IntoView {
                             "Exoplanets"
                         </A>
                         <A
-                            href="/about"
+                            href="/insights"
                             attr:class=move || {
-                                if is_about() { mobile_active_class } else { mobile_link_class }
+                                if is_insights() { mobile_active_class } else { mobile_link_class }
                             }
                         >
-                            "About"
+                            "Insights"
+                        </A>
+                        <A
+                            href="/docs"
+                            attr:class=move || {
+                                if is_docs() { mobile_active_class } else { mobile_link_class }
+                            }
+                        >
+                            "Docs"
                         </A>
 
                         <a

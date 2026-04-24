@@ -1,7 +1,9 @@
 use leptos::prelude::*;
 use leptos::serde_json::Value;
+use leptos_router::components::A;
 
 use super::format::format_json_value;
+use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::HostPlanets;
 
 #[component]
@@ -44,6 +46,7 @@ fn PlanetCard(planet: Value) -> impl IntoView {
         .and_then(|v| v.as_str())
         .unwrap_or("Unknown")
         .to_string();
+    let planet_href = format!("/exoplanets/{}", encode_path_segment(&name));
 
     let discovery_method = planet
         .get("discoverymethod")
@@ -90,7 +93,14 @@ fn PlanetCard(planet: Value) -> impl IntoView {
         <article class="host-planet-card">
             <div class="host-planet-card__header">
                 <div>
-                    <h3 class="host-planet-card__title">{name}</h3>
+                    <h3 class="host-planet-card__title">
+                        <A
+                            href=planet_href
+                            attr:class="text-inherit hover:text-cyan-300 transition-colors"
+                        >
+                            {name}
+                        </A>
+                    </h3>
                     <p class="host-planet-card__subtitle">{discovery_method}</p>
                 </div>
                 <div class="host-planet-card__glyph">

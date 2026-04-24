@@ -12,6 +12,13 @@ This spec exists so the exoplanet detail refactor is driven by an explicit page 
 - Current backend payload: `ExoplanetDetail { pl_name, records, metadata }`
 - This spec defines the target state for the next refactor phases.
 
+## **TODO ASAP**
+
+- Replace the thin exoplanet detail payload with a richer canonical summary/provenance contract.
+- Move exoplanet summary cards from first-row/client-derived values to backend-produced adopted values and disagreement stats.
+- Decide whether the exoplanet provenance section should gain working export actions or remain absent until a real export path exists.
+- Treat this backend/data-contract follow-up as the highest-priority remaining gap in the exoplanet detail work.
+
 ## Design Intent
 
 The exoplanet detail page must feel like the same product family as `stellarhost_detail`, while remaining planet-specific in content and structure.

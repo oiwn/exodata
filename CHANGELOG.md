@@ -1,7 +1,39 @@
 # Changelog
 
+## 2026-04-22
+
+- Consolidated insight definitions around shared SQL execution:
+  - moved SQL-backed insight execution into `exo-core::insights`
+  - added lightweight shared insight metadata in `exo-types`
+  - kept hydrate/frontend insight metadata free of `exo-core` dependencies
+  - switched web insight details to one generic `get_insight(slug)` server function
+  - kept CLI insight commands on the same registry/executor as web SSR
+  - prewarmed all registered insight cache entries at startup
+- Simplified table and insight cache payload handling:
+  - changed table data operations to return `TableResult = Result<TableCacheValue, String>`
+  - removed tuple destructuring helpers for table payloads
+  - deleted stale table/server modules that were no longer used
+- Fixed insight table link-helper handling:
+  - system insights now return display `sy_name` separately from `host_link_hostname`
+  - hidden helper columns are filtered explicitly
+  - `sy_name` links now require `host_link_hostname` instead of falling back to displayed host text
+- Canonicalized table page-zero behavior:
+  - `page=0` is treated as page 1 for table data, REST responses, and Leptos server functions
+  - browser table routes replace `?page=0` and `?page=1` with canonical URLs that omit `page`
+  - sort, order, columns, and filter query parameters are preserved during canonicalization
+  - pagination links and table navigation omit `page` for page 1
+- Updated `specs/ctx.md` to summarize the completed refactor and current architecture
+- Verified with SSR/hydrate checks and focused tests for insight registry parity, canonical table URLs, and REST `page=0` normalization
+
 ## 2026-04-13
 
+- Refactored the exoplanet detail page into a feature-owned module and aligned it with the stellar-host detail design family:
+  - added `specs/exoplanet-detail.md` to define page architecture, visual direction, and the target backend contract
+  - converted `src/components/exoplanet_detail.rs` into `src/components/exoplanet_detail/` with `page.rs`, `hero.rs`, `comparison.rs`, `summary.rs`, `records.rs`, and shared formatting helpers
+  - added semantic exoplanet detail styling in `style/components/exoplanet-detail.css` and imported it through `style/tailwind.css`
+  - replaced the old emoji-heavy page shell with a planet hero, generated planet visual, and a dedicated Earth/Jupiter radius comparison section
+  - corrected comparison scaling to use linear radius proportions while still filling the available comparison space
+  - replaced the one-card-per-record records section with a provenance-style summary + dense table layout modeled on stellar-host detail
 - Refactored the exoplanets table page to match the current stellar-hosts table architecture:
   - converted `src/components/exoplanets_table.rs` into a feature module with `mod.rs`, `page.rs`, and `sections.rs`
   - extracted page shell, header, loading, error, and pagination UI into smaller exoplanets-specific section components

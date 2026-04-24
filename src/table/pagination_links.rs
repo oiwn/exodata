@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-use crate::table::{TableQueryState, build_table_query};
+use crate::table::{TableQueryState, build_table_url};
 
 /// Computes which page numbers to show in the pagination bar.
 /// Returns a deduplicated, sorted list that includes:
@@ -54,7 +54,7 @@ pub fn PaginationLinks(
             columns.clone(),
             filter.clone(),
         );
-        format!("{}?{}", base_url, build_table_query(&query))
+        build_table_url(&base_url, &query)
     };
 
     let pages = compute_page_window(current_page, total_pages);
@@ -195,7 +195,7 @@ mod tests {
         #[test]
         fn test_renders_current_page_link() {
             let html = render(1, 10);
-            assert!(html.contains("href=\"/stellarhosts?page=1\""));
+            assert!(html.contains("href=\"/stellarhosts\""));
         }
 
         #[test]

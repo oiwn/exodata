@@ -21,7 +21,9 @@ async fn start_server() {
     use exo_core::tables::overview as aggregation;
     use exoplanets_catalog::app::{App, shell};
     use exoplanets_catalog::metadata::AppMetadata;
-    use exoplanets_catalog::server::common as server_common;
+    use exoplanets_catalog::server::data::{
+        insights as server_insights, tables as server_tables,
+    };
     use exoplanets_catalog::server::functions::{
         ColumnMetadata as UiColumnMetadata, DataStats,
     };
@@ -109,6 +111,7 @@ async fn start_server() {
 
     let table_cache = server::cache::build_table_cache(400);
     let host_detail_cache = server::cache::build_host_detail_cache(512);
+    let insight_cache = server::cache::build_insight_cache(32);
     let site_url = Arc::new(
         std::env::var("SITE_URL")
             .ok()
@@ -134,14 +137,15 @@ async fn start_server() {
         overview_stats,
         table_cache,
         host_detail_cache,
+        insight_cache,
     };
 
     // Prewarm default table cache entries before serving any requests.
     let prewarm_started = Instant::now();
-    server_common::get_stellarhosts_data_cached(
+    server_tables::get_stellarhosts_data_cached(
         &api_state.stellarhosts_df,
         &api_state.table_cache,
-        server_common::TableQuery {
+        server_tables::TableQuery {
             page: 1,
             limit: 50,
             sort_by: None,
@@ -157,10 +161,10 @@ async fn start_server() {
             e
         )
     });
-    server_common::get_exoplanets_data_cached(
+    server_tables::get_exoplanets_data_cached(
         &api_state.exoplanets_df,
         &api_state.table_cache,
-        server_common::TableQuery {
+        server_tables::TableQuery {
             page: 1,
             limit: 50,
             sort_by: None,
@@ -176,6 +180,27 @@ async fn start_server() {
     tracing::info!(
         "table cache prewarm complete in {:?}",
         prewarm_started.elapsed()
+    );
+
+    let insight_prewarm_started = Instant::now();
+    for def in exo_core::insights::INSIGHTS {
+        server_insights::get_insight_cached(
+            &api_state.stellarhosts_df,
+            &api_state.exoplanets_df,
+            &api_state.insight_cache,
+            def.meta.slug,
+        )
+        .await
+        .unwrap_or_else(|e| {
+            panic!(
+                "Startup prewarm failed for insight {}: {}",
+                def.meta.slug, e
+            )
+        });
+    }
+    tracing::info!(
+        "insight cache prewarm complete in {:?}",
+        insight_prewarm_started.elapsed()
     );
 
     let ga_measurement_id = std::env::var("LEPTOS_GA_ID").ok();

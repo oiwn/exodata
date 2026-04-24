@@ -10,6 +10,7 @@ use crate::server::functions::get_stellarhosts_page;
 use crate::table::{
     Table, TablePaginationState, TableQuerySignals, TableQueryState,
     build_column_model, is_err_or_lim, navigate_table_query,
+    normalize_table_page,
 };
 use leptos::prelude::*;
 use leptos_router::LazyRoute;
@@ -48,11 +49,13 @@ pub fn StellarHostsTablePage() -> impl IntoView {
     let query_map = use_query_map();
     let navigate = use_navigate();
 
-    let initial_page = query_map.with_untracked(|q| {
-        q.get("page")
-            .and_then(|p| p.parse::<usize>().ok())
-            .unwrap_or(1)
-    });
+    let initial_page_param =
+        query_map.with_untracked(|q| q.get("page").map(|p| p.to_string()));
+    let raw_initial_page = initial_page_param
+        .as_deref()
+        .and_then(|p| p.parse::<usize>().ok())
+        .unwrap_or(1);
+    let initial_page = normalize_table_page(raw_initial_page);
     let initial_sort_column =
         query_map.with_untracked(|q| q.get("sort").map(|s| s.to_string()));
     let initial_sort_order = query_map.with_untracked(|q| {
@@ -64,21 +67,56 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         q.get("filter").map(|f| f.to_string()).unwrap_or_default()
     });
 
-    let initial_columns = query_map.with_untracked(|q| {
-        q.get("columns")
-            .map(|s| {
-                s.split(',')
-                    .map(|col| col.trim().to_string())
-                    .filter(|col| !is_err_or_lim(col))
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_else(|| {
-                DEFAULT_STELLARHOSTS_COLUMNS
-                    .into_iter()
-                    .map(str::to_string)
-                    .collect()
-            })
-    });
+    let initial_columns_param =
+        query_map.with_untracked(|q| q.get("columns").map(|s| s.to_string()));
+    let parse_columns = |value: &str| {
+        value
+            .split(',')
+            .map(|col| col.trim().to_string())
+            .filter(|col| !is_err_or_lim(col))
+            .collect::<Vec<_>>()
+    };
+    let initial_columns = initial_columns_param
+        .as_deref()
+        .map(parse_columns)
+        .unwrap_or_else(|| {
+            DEFAULT_STELLARHOSTS_COLUMNS
+                .into_iter()
+                .map(str::to_string)
+                .collect()
+        });
+
+    let canonical_query =
+        if matches!(raw_initial_page, 0 | 1) && initial_page_param.is_some() {
+            let canonical_columns = initial_columns_param
+                .as_deref()
+                .map(parse_columns)
+                .unwrap_or_default();
+            Some(TableQueryState::new(
+                initial_page,
+                initial_sort_column.clone(),
+                initial_sort_order.clone(),
+                canonical_columns,
+                initial_filter.clone(),
+            ))
+        } else {
+            None
+        };
+
+    if let Some(canonical_query) = canonical_query.clone() {
+        let navigate = navigate.clone();
+        Effect::new(move |_| {
+            navigate_stellarhosts(
+                &navigate,
+                &canonical_query,
+                NavigateOptions {
+                    replace: true,
+                    scroll: false,
+                    ..Default::default()
+                },
+            );
+        });
+    }
 
     let table_state = TableQuerySignals::new(
         initial_page,

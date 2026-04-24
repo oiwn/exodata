@@ -6,6 +6,7 @@ edition = "2024"
 [workspace]
 members = [
     ".",
+    "crates/exo-types",
     "crates/exo-core",
     "crates/exo-cli",
 ]
@@ -31,9 +32,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = tr
 clap = { version = "4.5", features = ["derive"], optional = true }
 serde = { version = "1", features = ["derive"] }
 exo-core = { path = "crates/exo-core", optional = true }
+exo-types = { path = "crates/exo-types" }
 polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"], optional = true }
 serde_json = { version = "1", optional = true }
 percent-encoding = "2.3.2"
+pulldown-cmark = "0.13"
 comfy-table = { version = "7", optional = true }
 ratatui = { version = "0.29", features = ["all-widgets"], optional = true }
 crossterm = { version = "0.28", optional = true }
@@ -49,7 +52,7 @@ moka = { version = "0.12", features = ["future"] }
 
 [dev-dependencies]
 clap = { version = "4.5", features = ["derive"] }
-comfy-table = "7.2.1"
+comfy-table = "7"
 ratatui = { version = "0.29", features = ["all-widgets"] }
 crossterm = "0.28"
 anyhow = "1"
@@ -107,7 +110,6 @@ site-pkg-dir = "pkg"
 
 # Activates the tailwind build
 tailwind-input-file = "style/tailwind.css"
-tailwind-config-file = "tailwind.config.js"
 
 # Assets source dir. All files found here will be copied and synchronized to site-root.
 # The assets-dir cannot have a sub directory with the same name/path as site-pkg-dir.
@@ -129,9 +131,6 @@ end2end-dir = "end2end"
 
 #  The browserlist query used for optimizing the CSS.
 browserquery = "defaults"
-
-# The environment Leptos will run in, usually either "DEV" or "PROD"
-env = "DEV"
 
 # The features to use when compiling the bin target
 #

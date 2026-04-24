@@ -29,14 +29,26 @@ impl TableQueryState {
     }
 }
 
+pub fn normalize_table_page(page: usize) -> usize {
+    if page == 0 { 1 } else { page }
+}
+
+pub fn build_table_url(base_path: &str, query: &TableQueryState) -> String {
+    let query_string = build_table_query(query);
+    if query_string.is_empty() {
+        base_path.to_string()
+    } else {
+        format!("{base_path}?{query_string}")
+    }
+}
+
 pub fn navigate_table_query(
     navigate: &impl Fn(&str, NavigateOptions),
     base_path: &str,
     query: &TableQueryState,
     options: NavigateOptions,
 ) {
-    let query_string = build_table_query(query);
-    let url = format!("{base_path}?{query_string}");
+    let url = build_table_url(base_path, query);
     navigate(&url, options);
 }
 
@@ -94,5 +106,40 @@ mod tests {
             )
         );
         assert_eq!(captured_scroll.into_inner(), Some(false));
+    }
+
+    #[test]
+    fn build_table_url_omits_empty_query_suffix() {
+        let query = TableQueryState::new(
+            1,
+            None,
+            "asc".to_string(),
+            vec![],
+            "".to_string(),
+        );
+
+        assert_eq!(build_table_url("/stellarhosts", &query), "/stellarhosts");
+    }
+
+    #[test]
+    fn build_table_url_omits_page_one_but_keeps_other_params() {
+        let query = TableQueryState::new(
+            1,
+            Some("disc_year".to_string()),
+            "desc".to_string(),
+            vec![],
+            "kepler".to_string(),
+        );
+
+        assert_eq!(
+            build_table_url("/exoplanets", &query),
+            "/exoplanets?sort=disc_year&order=desc&filter=kepler"
+        );
+    }
+
+    #[test]
+    fn normalize_table_page_maps_zero_to_one() {
+        assert_eq!(normalize_table_page(0), 1);
+        assert_eq!(normalize_table_page(2), 2);
     }
 }

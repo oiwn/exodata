@@ -1,10 +1,12 @@
 pub mod about;
 // pub mod buy_me_coffee;
 pub mod column_selector;
+pub mod docs;
 pub mod exoplanet_detail;
 pub mod exoplanets_table;
 pub mod footer;
 pub mod google_analytics;
+pub mod insights;
 pub mod loading_overlay;
 pub mod navbar;
 pub mod overview;

@@ -29,16 +29,29 @@ ARG BUILD_TIMESTAMP=unknown
 ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
+COPY docs ./docs
 COPY src ./src
 COPY style ./style
 COPY public ./public
-COPY tailwind.config.js ./
 
 RUN cargo leptos build --release --split
 
+# Normalize the server binary name for the runtime image. cargo-leptos has used
+# different target names as the package and public command names changed.
+RUN mkdir -p /app/server-bin && \
+    if [ -x /app/target/release/exodata ]; then \
+        cp /app/target/release/exodata /app/server-bin/exodata; \
+    elif [ -x /app/target/release/exoplanets-catalog ]; then \
+        cp /app/target/release/exoplanets-catalog /app/server-bin/exodata; \
+    else \
+        echo "Server binary not found" >&2; \
+        ls -lah /app/target/release/ >&2; \
+        exit 1; \
+    fi
+
 # Debug: List where files actually are
 RUN echo "=== Listing target/release ===" && \
-    ls -lah /app/target/release/ | grep exoplanets || true && \
+    ls -lah /app/target/release/ | grep -E 'exodata|exoplanets' || true && \
     echo "=== Listing target/server/release ===" && \
     ls -lah /app/target/server/release/ 2>/dev/null || echo "Directory does not exist" && \
     echo "=== Listing target/site ===" && \
@@ -49,8 +62,8 @@ RUN apt-get update && apt-get install -y ca-certificates libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /app/target/release/exoplanets-catalog /app/
+COPY --from=builder /app/server-bin/exodata /app/exodata
 COPY --from=builder /app/target/site /app/site
 
 EXPOSE 3000
-CMD ["/app/exoplanets-catalog"]
+CMD ["/app/exodata"]

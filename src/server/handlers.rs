@@ -23,9 +23,9 @@ use sqlparser::parser::Parser;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
-use super::common;
+use super::data::{rows, tables};
 use super::functions::DataStats;
-use crate::server::cache::{HostDetailCache, TableCache};
+use crate::server::cache::{HostDetailCache, InsightCache, TableCache};
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
@@ -38,6 +38,7 @@ pub struct ApiState {
     pub overview_stats: Arc<DataStats>,
     pub table_cache: TableCache,
     pub host_detail_cache: HostDetailCache,
+    pub insight_cache: InsightCache,
 }
 
 /// Generic query parameters for data endpoints
@@ -218,7 +219,7 @@ pub async fn get_stellarhosts(
     State(state): State<ApiState>,
     Query(params): Query<QueryParams>,
 ) -> Result<Json<ApiResponse>, StatusCode> {
-    let page = params.page.unwrap_or(1);
+    let page = tables::normalize_table_page(params.page.unwrap_or(1));
     let limit = params.limit.unwrap_or(50).min(1000); // Cap at 1000
 
     // Parse columns parameter
@@ -229,10 +230,10 @@ pub async fn get_stellarhosts(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns) = common::get_stellarhosts_data_cached(
+    let value = tables::get_stellarhosts_data_cached(
         &state.stellarhosts_df,
         &state.table_cache,
-        common::TableQuery {
+        tables::TableQuery {
             page,
             limit,
             sort_by: params.sort_by,
@@ -248,12 +249,12 @@ pub async fn get_stellarhosts(
     })?;
 
     Ok(Json(ApiResponse {
-        data: rows,
-        total,
-        total_all,
+        data: value.rows,
+        total: value.total,
+        total_all: value.total_all,
         page,
         limit,
-        columns,
+        columns: value.columns,
     }))
 }
 
@@ -275,7 +276,7 @@ pub async fn get_exoplanets(
     State(state): State<ApiState>,
     Query(params): Query<QueryParams>,
 ) -> Result<Json<ApiResponse>, StatusCode> {
-    let page = params.page.unwrap_or(1);
+    let page = tables::normalize_table_page(params.page.unwrap_or(1));
     let limit = params.limit.unwrap_or(50).min(1000); // Cap at 1000
 
     // Parse columns parameter
@@ -286,10 +287,10 @@ pub async fn get_exoplanets(
     });
 
     // Use shared business logic from common.rs
-    let (rows, total, total_all, columns) = common::get_exoplanets_data_cached(
+    let value = tables::get_exoplanets_data_cached(
         &state.exoplanets_df,
         &state.table_cache,
-        common::TableQuery {
+        tables::TableQuery {
             page,
             limit,
             sort_by: params.sort_by,
@@ -305,12 +306,12 @@ pub async fn get_exoplanets(
     })?;
 
     Ok(Json(ApiResponse {
-        data: rows,
-        total,
-        total_all,
+        data: value.rows,
+        total: value.total,
+        total_all: value.total_all,
         page,
         limit,
-        columns,
+        columns: value.columns,
     }))
 }
 
@@ -406,7 +407,7 @@ pub async fn execute_sql(
             .iter()
             .map(|name| (*name).to_string())
             .collect::<Vec<_>>();
-        let data = common::dataframe_to_json(&df)?;
+        let data = rows::dataframe_to_json(&df)?;
 
         Ok::<_, String>((data, columns, rows))
     });
@@ -487,10 +488,18 @@ pub fn build_sitemap_xml(
     let site_url = site_url.trim_end_matches('/');
     let mut urls = vec![
         format!("{site_url}/"),
-        format!("{site_url}/about"),
+        format!("{site_url}/docs"),
+        format!("{site_url}/docs/cli"),
+        format!("{site_url}/docs/api"),
         format!("{site_url}/stellarhosts"),
         format!("{site_url}/exoplanets"),
+        format!("{site_url}/insights"),
     ];
+    urls.extend(
+        exo_core::insights::INSIGHTS
+            .iter()
+            .map(|def| format!("{site_url}/insights/{}", def.meta.slug)),
+    );
 
     urls.extend(build_detail_urls(
         stellarhosts_df,
