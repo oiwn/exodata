@@ -7,7 +7,6 @@ use leptos_router::hooks::use_location;
 pub fn Navbar() -> impl IntoView {
     let location = use_location();
     let pathname = move || location.pathname.get();
-    let is_root = move || pathname() == "/";
     let is_stellarhosts = move || pathname().starts_with("/stellarhosts");
     let is_exoplanets = move || pathname().starts_with("/exoplanets");
     let is_insights = move || pathname().starts_with("/insights");
@@ -39,27 +38,14 @@ pub fn Navbar() -> impl IntoView {
         <nav class="bg-slate-900/80 backdrop-blur-sm border-b border-purple-500/20 sticky top-0 z-50">
             <div class="container mx-auto px-4">
                 <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center">
+                    <A href="/" attr:class="flex items-center">
                         <span class="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
                             "🪐 Exoplanets"
                         </span>
-                    </div>
+                    </A>
 
                     // Desktop Navigation (hidden on mobile)
                     <div class="hidden md:flex space-x-2 text-gray-300">
-                        <A
-                            href="/"
-                            attr:class=move || {
-                                if is_root() {
-                                    active_class
-                                } else {
-                                    link_class
-                                }
-                            }
-                        >
-                            "Overview"
-                        </A>
-
                         <A
                             href="/stellarhosts"
                             attr:class=move || {
