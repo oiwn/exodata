@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://exodata.space/sitemap.xml
+Sitemap: https://exodata.space/sitemap-index.xml

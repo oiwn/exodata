@@ -48,7 +48,9 @@ jobs:
           ref: ${{ github.sha }}
 
       - id: build_time
-        run: echo "timestamp=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+        run: |
+          echo "timestamp=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - uses: docker/setup-buildx-action@v3
 
@@ -68,6 +70,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
             BUILD_TIMESTAMP=${{ steps.build_time.outputs.timestamp }}
+            BUILD_DATE=${{ steps.build_time.outputs.date }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

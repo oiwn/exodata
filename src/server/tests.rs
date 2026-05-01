@@ -18,8 +18,9 @@ mod tests {
     };
     use crate::server::functions::DataStats;
     use crate::server::handlers::{
-        ApiState, build_sitemap_xml, get_exoplanets, get_exoplanets_schema,
-        get_sitemap, get_stellarhosts, get_stellarhosts_schema,
+        ApiState, build_sitemaps, get_exoplanets, get_exoplanets_schema,
+        get_sitemap_exoplanets, get_sitemap_index, get_sitemap_static,
+        get_sitemap_stellarhosts, get_stellarhosts, get_stellarhosts_schema,
     };
 
     fn create_test_state() -> ApiState {
@@ -44,8 +45,9 @@ mod tests {
         }
         .unwrap();
 
-        let sitemap_xml = build_sitemap_xml(
+        let sitemaps = build_sitemaps(
             "https://example.com",
+            "2026-01-15",
             &stellarhosts_df,
             &exoplanets_df,
         )
@@ -53,7 +55,10 @@ mod tests {
 
         ApiState {
             site_url: Arc::new("https://example.com".to_string()),
-            sitemap_xml: Arc::new(sitemap_xml),
+            sitemap_index_xml: Arc::new(sitemaps.index),
+            sitemap_static_xml: Arc::new(sitemaps.static_pages),
+            sitemap_stellarhosts_xml: Arc::new(sitemaps.stellarhosts),
+            sitemap_exoplanets_xml: Arc::new(sitemaps.exoplanets),
             stellarhosts_df: Arc::new(stellarhosts_df),
             exoplanets_df: Arc::new(exoplanets_df),
             stellarhosts_metadata: Arc::new(HashMap::new()),
@@ -77,7 +82,19 @@ mod tests {
     fn create_test_app() -> Router {
         let state = create_test_state();
         Router::new()
-            .route("/sitemap.xml", axum::routing::get(get_sitemap))
+            .route("/sitemap-index.xml", axum::routing::get(get_sitemap_index))
+            .route(
+                "/sitemap-static.xml",
+                axum::routing::get(get_sitemap_static),
+            )
+            .route(
+                "/sitemap-stellarhosts.xml",
+                axum::routing::get(get_sitemap_stellarhosts),
+            )
+            .route(
+                "/sitemap-exoplanets.xml",
+                axum::routing::get(get_sitemap_exoplanets),
+            )
             .route("/rest/stellarhosts", axum::routing::get(get_stellarhosts))
             .route("/rest/exoplanets", axum::routing::get(get_exoplanets))
             .route(
@@ -393,11 +410,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_sitemap() {
+    async fn test_sitemap_index() {
         let app = create_test_app();
 
         let request = Request::builder()
-            .uri("/sitemap.xml")
+            .uri("/sitemap-index.xml")
             .body(Body::empty())
             .unwrap();
 
@@ -414,11 +431,36 @@ mod tests {
             .unwrap();
         let xml = String::from_utf8(body.to_vec()).unwrap();
 
+        assert!(xml.contains("<sitemapindex"));
+        assert!(xml.contains("https://example.com/sitemap-static.xml"));
+        assert!(xml.contains("https://example.com/sitemap-stellarhosts.xml"));
+        assert!(xml.contains("https://example.com/sitemap-exoplanets.xml"));
+        assert!(xml.contains("<lastmod>2026-01-15</lastmod>"));
+    }
+
+    #[tokio::test]
+    async fn test_sitemap_static() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/sitemap-static.xml")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let xml = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(xml.contains("<urlset"));
         assert!(xml.contains("<loc>https://example.com/</loc>"));
         assert!(xml.contains("<loc>https://example.com/docs</loc>"));
         assert!(xml.contains("<loc>https://example.com/docs/cli</loc>"));
         assert!(xml.contains("<loc>https://example.com/docs/api</loc>"));
-        assert!(!xml.contains("<loc>https://example.com/about</loc>"));
         assert!(xml.contains("<loc>https://example.com/stellarhosts</loc>"));
         assert!(xml.contains("<loc>https://example.com/exoplanets</loc>"));
         assert!(xml.contains("<loc>https://example.com/insights</loc>"));
@@ -443,13 +485,60 @@ mod tests {
         assert!(xml.contains(
             "<loc>https://example.com/insights/binary-star-systems</loc>"
         ));
+        assert!(xml.contains("<lastmod>2026-01-15</lastmod>"));
+        assert!(!xml.contains("/stellarhosts/"));
+        assert!(!xml.contains("/exoplanets/"));
+    }
+
+    #[tokio::test]
+    async fn test_sitemap_stellarhosts() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/sitemap-stellarhosts.xml")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let xml = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(xml.contains("<urlset"));
         assert!(
             xml.contains(
                 "<loc>https://example.com/stellarhosts/HD%20189733</loc>"
             )
         );
+        assert!(xml.contains("<lastmod>2026-01-15</lastmod>"));
+    }
+
+    #[tokio::test]
+    async fn test_sitemap_exoplanets() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/sitemap-exoplanets.xml")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let xml = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(xml.contains("<urlset"));
         assert!(xml.contains(
             "<loc>https://example.com/exoplanets/HD%20189733%20b</loc>"
         ));
+        assert!(xml.contains("<lastmod>2026-01-15</lastmod>"));
     }
 }

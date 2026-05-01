@@ -27,6 +27,8 @@ RUN ARCH=$(uname -m) && \
 WORKDIR /app
 ARG BUILD_TIMESTAMP=unknown
 ENV BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
+ARG BUILD_DATE=
+ENV BUILD_DATE=${BUILD_DATE}
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY docs ./docs
