@@ -14,6 +14,33 @@ pub fn main() {
 }
 
 #[cfg(feature = "ssr")]
+const BUILD_TIMESTAMP: &str = match option_env!("BUILD_TIMESTAMP") {
+    Some(value) => value,
+    None => "unknown",
+};
+
+#[cfg(feature = "ssr")]
+const BUILD_DATE: &str = match option_env!("BUILD_DATE") {
+    Some(value) => value,
+    None => "",
+};
+
+#[cfg(feature = "ssr")]
+fn compute_build_date(timestamp: &str, explicit_date: &str) -> String {
+    if !explicit_date.is_empty() {
+        return explicit_date.to_string();
+    }
+    if timestamp != "unknown" && !timestamp.is_empty() {
+        return timestamp.split(' ').next().unwrap_or("").to_string();
+    }
+    // Fallback: use current UTC date for local dev
+    use time::OffsetDateTime;
+    OffsetDateTime::now_utc()
+        .format(&time::macros::format_description!("[year]-[month]-[day]"))
+        .unwrap_or_default()
+}
+
+#[cfg(feature = "ssr")]
 async fn start_server() {
     use axum::Router;
     use exo_core::metadata;
@@ -118,18 +145,23 @@ async fn start_server() {
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| "https://exodata.space".to_string()),
     );
-    let sitemap_xml = Arc::new(
-        server::handlers::build_sitemap_xml(
+    let build_date = compute_build_date(BUILD_TIMESTAMP, BUILD_DATE);
+    let sitemaps = Arc::new(
+        server::handlers::build_sitemaps(
             site_url.as_str(),
+            &build_date,
             &stellarhosts_df,
             &exoplanets_df,
         )
-        .unwrap_or_else(|e| panic!("Failed to build sitemap.xml: {}", e)),
+        .unwrap_or_else(|e| panic!("Failed to build sitemaps: {}", e)),
     );
 
     let api_state = ApiState {
         site_url,
-        sitemap_xml,
+        sitemap_index_xml: Arc::new(sitemaps.index.clone()),
+        sitemap_static_xml: Arc::new(sitemaps.static_pages.clone()),
+        sitemap_stellarhosts_xml: Arc::new(sitemaps.stellarhosts.clone()),
+        sitemap_exoplanets_xml: Arc::new(sitemaps.exoplanets.clone()),
         stellarhosts_df,
         exoplanets_df,
         stellarhosts_metadata,

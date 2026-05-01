@@ -34,6 +34,7 @@ serde = { version = "1", features = ["derive"] }
 exo-core = { path = "crates/exo-core", optional = true }
 exo-types = { path = "crates/exo-types" }
 polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"], optional = true }
+time = { version = "0.3", features = ["macros", "formatting"], optional = true }
 serde_json = { version = "1", optional = true }
 percent-encoding = "2.3.2"
 pulldown-cmark = "0.13"
@@ -82,6 +83,7 @@ ssr = [
     # OpenAPI / Swagger
     "dep:utoipa",
     "dep:utoipa-swagger-ui",
+    "dep:time",
 ]
 default = ["ssr"]
 sqlparser = ["dep:sqlparser"]

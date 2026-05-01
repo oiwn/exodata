@@ -30,7 +30,10 @@ use crate::server::cache::{HostDetailCache, InsightCache, TableCache};
 #[derive(Debug, Clone)]
 pub struct ApiState {
     pub site_url: Arc<String>,
-    pub sitemap_xml: Arc<String>,
+    pub sitemap_index_xml: Arc<String>,
+    pub sitemap_static_xml: Arc<String>,
+    pub sitemap_stellarhosts_xml: Arc<String>,
+    pub sitemap_exoplanets_xml: Arc<String>,
     pub stellarhosts_df: Arc<DataFrame>,
     pub exoplanets_df: Arc<DataFrame>,
     pub stellarhosts_metadata: Arc<HashMap<String, ColumnMetadata>>,
@@ -185,7 +188,10 @@ pub fn api_routes(state: ApiState) -> Router {
 
 pub fn site_routes(state: ApiState) -> Router {
     Router::new()
-        .route("/sitemap.xml", get(get_sitemap))
+        .route("/sitemap-index.xml", get(get_sitemap_index))
+        .route("/sitemap-static.xml", get(get_sitemap_static))
+        .route("/sitemap-stellarhosts.xml", get(get_sitemap_stellarhosts))
+        .route("/sitemap-exoplanets.xml", get(get_sitemap_exoplanets))
         .with_state(state)
 }
 
@@ -194,11 +200,35 @@ pub fn swagger_ui() -> SwaggerUi {
     SwaggerUi::new("/swagger-ui").url("/rest/openapi.json", ApiDoc::openapi())
 }
 
-pub async fn get_sitemap(State(state): State<ApiState>) -> impl IntoResponse {
+async fn serve_xml(xml: Arc<String>) -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "application/xml; charset=utf-8")],
-        state.sitemap_xml.as_str().to_owned(),
+        xml.as_str().to_owned(),
     )
+}
+
+pub async fn get_sitemap_index(
+    State(state): State<ApiState>,
+) -> impl IntoResponse {
+    serve_xml(state.sitemap_index_xml).await
+}
+
+pub async fn get_sitemap_static(
+    State(state): State<ApiState>,
+) -> impl IntoResponse {
+    serve_xml(state.sitemap_static_xml).await
+}
+
+pub async fn get_sitemap_stellarhosts(
+    State(state): State<ApiState>,
+) -> impl IntoResponse {
+    serve_xml(state.sitemap_stellarhosts_xml).await
+}
+
+pub async fn get_sitemap_exoplanets(
+    State(state): State<ApiState>,
+) -> impl IntoResponse {
+    serve_xml(state.sitemap_exoplanets_xml).await
 }
 
 /// Get stellar hosts data
@@ -478,14 +508,40 @@ fn build_schema_response(
     }
 }
 
-// Generate sitemap
-// TODO: move to the another file
-pub fn build_sitemap_xml(
+pub struct SitemapSet {
+    pub index: String,
+    pub static_pages: String,
+    pub stellarhosts: String,
+    pub exoplanets: String,
+}
+
+pub fn build_sitemaps(
     site_url: &str,
+    build_date: &str,
     stellarhosts_df: &DataFrame,
     exoplanets_df: &DataFrame,
-) -> Result<String, String> {
+) -> Result<SitemapSet, String> {
     let site_url = site_url.trim_end_matches('/');
+
+    let static_urls = build_static_urls(site_url);
+    let stellarhost_urls = build_detail_urls(
+        stellarhosts_df,
+        "hostname",
+        site_url,
+        "/stellarhosts/",
+    )?;
+    let exoplanet_urls =
+        build_detail_urls(exoplanets_df, "pl_name", site_url, "/exoplanets/")?;
+
+    Ok(SitemapSet {
+        index: render_sitemap_index(site_url, build_date),
+        static_pages: render_urlset(&static_urls, build_date),
+        stellarhosts: render_urlset(&stellarhost_urls, build_date),
+        exoplanets: render_urlset(&exoplanet_urls, build_date),
+    })
+}
+
+fn build_static_urls(site_url: &str) -> Vec<String> {
     let mut urls = vec![
         format!("{site_url}/"),
         format!("{site_url}/docs"),
@@ -500,21 +556,43 @@ pub fn build_sitemap_xml(
             .iter()
             .map(|def| format!("{site_url}/insights/{}", def.meta.slug)),
     );
+    urls
+}
 
-    urls.extend(build_detail_urls(
-        stellarhosts_df,
-        "hostname",
-        site_url,
-        "/stellarhosts/",
-    )?);
-    urls.extend(build_detail_urls(
-        exoplanets_df,
-        "pl_name",
-        site_url,
-        "/exoplanets/",
-    )?);
+fn render_sitemap_index(site_url: &str, build_date: &str) -> String {
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+    );
 
-    Ok(render_sitemap(&urls))
+    for slug in &["static", "stellarhosts", "exoplanets"] {
+        xml.push_str("  <sitemap>\n");
+        xml.push_str(&format!("    <loc>{site_url}/sitemap-{slug}.xml</loc>\n"));
+        if !build_date.is_empty() {
+            xml.push_str(&format!("    <lastmod>{build_date}</lastmod>\n"));
+        }
+        xml.push_str("  </sitemap>\n");
+    }
+
+    xml.push_str("</sitemapindex>\n");
+    xml
+}
+
+fn render_urlset(urls: &[String], build_date: &str) -> String {
+    let mut xml = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
+    );
+
+    for url in urls {
+        xml.push_str("  <url>\n");
+        xml.push_str(&format!("    <loc>{}</loc>\n", escape_xml(url)));
+        if !build_date.is_empty() {
+            xml.push_str(&format!("    <lastmod>{build_date}</lastmod>\n"));
+        }
+        xml.push_str("  </url>\n");
+    }
+
+    xml.push_str("</urlset>\n");
+    xml
 }
 
 fn build_detail_urls(
@@ -547,21 +625,6 @@ fn build_detail_urls(
             )
         })
         .collect())
-}
-
-fn render_sitemap(urls: &[String]) -> String {
-    let mut xml = String::from(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
-    );
-
-    for url in urls {
-        xml.push_str("  <url><loc>");
-        xml.push_str(&escape_xml(url));
-        xml.push_str("</loc></url>\n");
-    }
-
-    xml.push_str("</urlset>\n");
-    xml
 }
 
 fn escape_xml(value: &str) -> String {
