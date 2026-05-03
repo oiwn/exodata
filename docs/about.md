@@ -24,7 +24,7 @@ See [REST API](api.md) for parameters and examples.
 
 ## CLI
 
-The `exo-cli` package builds the `exodata` terminal client:
+The `exodata` package builds the `exodata` terminal client:
 
 - query the live REST API
 - use downloaded local data offline

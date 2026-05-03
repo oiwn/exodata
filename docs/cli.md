@@ -6,7 +6,7 @@ API, use downloaded local data offline, and print table, JSON, or CSV output.
 Install from crates.io:
 
 ```bash
-cargo install exo-cli
+cargo install exodata
 exodata --help
 ```
 
@@ -20,7 +20,7 @@ exodata --help
 Build without installing:
 
 ```bash
-cargo build -p exo-cli --release
+cargo build -p exodata --release
 ./target/release/exodata --help
 ```
 

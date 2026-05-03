@@ -10,8 +10,8 @@ cargo test
 cargo test --workspace
 
 # Specific crate
-cargo test -p exo-cli
-cargo test -p exo-core
+cargo test -p exodata
+cargo test -p exodata-core
 
 # With output
 cargo test -- --nocapture

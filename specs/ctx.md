@@ -2,9 +2,8 @@
 
 ## Summary
 
-`exodata` is the public CLI binary for Exoplanets Catalog. The crates.io
-package/crate name remains `exo-cli`, and the source folder is
-`crates/exo-cli`.
+`exodata` is the public CLI binary and crates.io package for Exoplanets
+Catalog. The source folder remains `crates/exo-cli`.
 
 The current release task is to make the CLI friendlier for third-party users,
 finish documentation cleanup, and leave a clear MCP-server follow-up plan.
@@ -46,8 +45,31 @@ finish documentation cleanup, and leave a clear MCP-server follow-up plan.
   feature flag is introduced yet.
 - `specs/cli.md` is the active technical source of truth for CLI behavior.
 - `docs/cli.md` is the public third-party CLI documentation.
-- The crates.io package should be published as `exo-cli`; users install it
-  with `cargo install exo-cli`, which provides the `exodata` binary.
+- The crates.io package should be published as `exodata`; users install it
+  with `cargo install exodata`, which provides the `exodata` binary.
+- crates.io package name conflict discovered:
+  - `exo-types 0.1.0` was published and then deleted by this project.
+  - `exo-core` is already owned by another project (`ruvnet/ruvector`) and
+    cannot be used.
+  - Publish-facing package names now use the `exodata` prefix:
+    - `crates/exo-types` package: `exodata-types`
+    - `crates/exo-core` package: `exodata-core`
+    - `crates/exo-cli` package: `exodata`
+  - Rust library crate names remain stable with `[lib] name = "exo_types"`,
+    `[lib] name = "exo_core"`, and `[lib] name = "exo_cli"` so code imports do
+    not need broad rewrites.
+  - Workspace dependencies use dependency aliases to keep import names stable,
+    e.g. `exo-core = { package = "exodata-core", ... }`.
+- `cargo info` verified on 2026-05-03 that `exodata`, `exodata-core`, and
+  `exodata-types` were not present in the crates.io index.
+- Local package rename verification passed:
+  - `cargo check -p exodata-types`
+  - `cargo check -p exodata-core`
+  - `cargo check -p exodata`
+  - `cargo publish -p exodata-types --dry-run --allow-dirty`
+- `cargo publish --dry-run` for `exodata-core` and `exodata` is expected to
+  fail until their preceding `exodata-*` dependencies have actually been
+  published to crates.io.
 - The former client-mode CLI spec has been merged into `specs/cli.md` and
   deleted.
 - MCP server implementation is deferred. The planned MCP surface should be

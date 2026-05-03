@@ -10,7 +10,7 @@ download-exoplanets:
   curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+ps" -L --max-time 3000 > data/exoplanets.vot
 
 stellarhosts-metadata:
-  cargo run -p exo-cli -- dev view-metadata --path data/stellarhosts.vot
+  cargo run -p exodata -- dev view-metadata --path data/stellarhosts.vot
 
 # =============================================================================
 # Ansible Deployment Commands

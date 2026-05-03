@@ -148,7 +148,7 @@ datatype = "CharASCII"
 
 **Usage:**
 ```bash
-cargo run -p exo-cli -- dev convert-raw-files --data-dir data
+cargo run -p exodata -- dev convert-raw-files --data-dir data
 # Generates .parquet and .toml files
 ```
 
@@ -249,7 +249,7 @@ src/
 **Manual Verification:**
 ```bash
 # Generate TOML files
-cargo run -p exo-cli -- dev convert-raw-files --data-dir data
+cargo run -p exodata -- dev convert-raw-files --data-dir data
 
 # Verify TOML format
 head -30 data/exoplanets-metadata.toml

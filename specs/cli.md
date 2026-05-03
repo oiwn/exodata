@@ -1,7 +1,7 @@
 # CLI Specification: exodata
 
 `exodata` is the public CLI binary for Exoplanets Catalog. The package/crate
-name remains `exo-cli`; the source folder is `crates/exo-cli`.
+name is `exodata`; the source folder remains `crates/exo-cli`.
 
 The CLI is primarily a third-party terminal client for the catalog API, with an
 offline local-data backend for users who download the static data bundle.
@@ -34,13 +34,13 @@ Global options:
 
 ## Installation And Publishing
 
-The crates.io package name is `exo-cli`; the installed binary name is
+The crates.io package name is `exodata`; the installed binary name is
 `exodata`.
 
 User installation after publish:
 
 ```bash
-cargo install exo-cli
+cargo install exodata
 exodata --help
 ```
 
@@ -53,14 +53,16 @@ cargo install --path crates/exo-cli
 Crates.io publishing order:
 
 ```bash
-cargo publish -p exo-types
-cargo publish -p exo-core
-cargo publish -p exo-cli
+cargo publish -p exodata-types
+cargo publish -p exodata-core
+cargo publish -p exodata
 ```
 
-`exo-core` and `exo-cli` use versioned path dependencies for local workspace
-development and crates.io publish compatibility. Their first `cargo package`
-verification requires `exo-types` to exist in the crates.io index.
+`exodata-core` and `exodata` use versioned path dependencies for local
+workspace development and crates.io publish compatibility. Their first
+`cargo package` verification requires `exodata-types` to exist in the crates.io
+index. Dependency aliases keep Rust import names as `exo_core` and
+`exo_types`.
 
 ## Backend Model
 

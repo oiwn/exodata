@@ -35,7 +35,7 @@ Open your browser to `http://127.0.0.1:3000`.
 | Topic | Description |
 |-------|-------------|
 | [REST API](docs/api.md) | Endpoints, query parameters, SQL queries, response formats |
-| [CLI Tools](docs/cli.md) | `exo-cli` package and `exodata` commands for catalog queries, downloads, and insights |
+| [CLI Tools](docs/cli.md) | `exodata` package and commands for catalog queries, downloads, and insights |
 | [Testing](docs/testing.md) | Unit tests, Playwright e2e, code coverage |
 | [Deployment](DEPLOY.md) | Docker, Ansible, DigitalOcean setup |
 | [Architecture](specs/overview.md) | System design and component overview |

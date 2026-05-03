@@ -48,8 +48,9 @@ See `docs/api.md` for request parameters and examples.
 
 ### CLI
 
-The workspace includes `exo-cli`, which builds the `exodata` public terminal
-client. It supports API-backed catalog access, offline local data, downloads,
+The workspace includes the `exodata` package in `crates/exo-cli`, which builds
+the `exodata` public terminal client. It supports API-backed catalog access,
+offline local data, downloads,
 config, structured output, curated insights, and agent skill instructions.
 
 Third-party oriented commands are top-level. Repository data preparation and
@@ -58,10 +59,10 @@ VOTable workflows live under `exodata dev`.
 Examples:
 
 ```bash
-cargo run -p exo-cli -- query "SELECT pl_name, hostname FROM exoplanets LIMIT 10"
-cargo run -p exo-cli -- insights list
-cargo run -p exo-cli -- insights run nearest-stellar-hosts
-cargo run -p exo-cli -- dev view-metadata --path data/exoplanets.vot
+cargo run -p exodata -- query "SELECT pl_name, hostname FROM exoplanets LIMIT 10"
+cargo run -p exodata -- insights list
+cargo run -p exodata -- insights run nearest-stellar-hosts
+cargo run -p exodata -- dev view-metadata --path data/exoplanets.vot
 ```
 
 See `docs/cli.md` and `specs/cli.md` for command details.
@@ -173,7 +174,7 @@ cargo leptos build --release
 Run the CLI:
 
 ```bash
-cargo run -p exo-cli -- --help
+cargo run -p exodata -- --help
 ```
 
 Run tests:

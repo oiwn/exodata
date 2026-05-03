@@ -33,34 +33,34 @@ curl -o data/exoplanets.vot \
 Reads all `.vot` files in `data/` and writes `.parquet` alongside them:
 
 ```bash
-cargo run --package exo-cli -- dev convert-raw-files
+cargo run --package exodata -- dev convert-raw-files
 ```
 
 Or with a custom data directory:
 
 ```bash
-cargo run --package exo-cli -- dev convert-raw-files --data-dir path/to/data
+cargo run --package exodata -- dev convert-raw-files --data-dir path/to/data
 ```
 
 ## Inspecting Data
 
 ```bash
 # View VOTable column headers
-cargo run --package exo-cli -- dev view-fields data/stellarhosts.vot
+cargo run --package exodata -- dev view-fields data/stellarhosts.vot
 
 # View column metadata (units, descriptions)
-cargo run --package exo-cli -- dev view-metadata --path data/exoplanets.vot
+cargo run --package exodata -- dev view-metadata --path data/exoplanets.vot
 
 # Sample rows from parquet
-cargo run --package exo-cli -- dev view-samples
-cargo run --package exo-cli -- dev view-exoplanets-samples
+cargo run --package exodata -- dev view-samples
+cargo run --package exodata -- dev view-exoplanets-samples
 
 # Statistics
-cargo run --package exo-cli -- dev view-stats
-cargo run --package exo-cli -- dev view-exoplanets-stats
+cargo run --package exodata -- dev view-stats
+cargo run --package exodata -- dev view-exoplanets-stats
 
 # Run SQL against parquet files (tables: stellarhosts, exoplanets)
-cargo run --package exo-cli -- dev sql "SELECT pl_name, pl_orbper FROM exoplanets LIMIT 10"
+cargo run --package exodata -- dev sql "SELECT pl_name, pl_orbper FROM exoplanets LIMIT 10"
 ```
 
 ## Full Update
@@ -71,5 +71,5 @@ curl -o data/stellarhosts.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/syn
 curl -o data/exoplanets.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+pscomppars&format=votable"
 
 # 2. Convert to parquet
-cargo run --package exo-cli -- dev convert-raw-files
+cargo run --package exodata -- dev convert-raw-files
 ```

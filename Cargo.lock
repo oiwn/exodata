@@ -1212,7 +1212,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "exo-cli"
+name = "exodata"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1222,8 +1222,8 @@ dependencies = [
  "crossterm 0.28.1",
  "csv",
  "dirs",
- "exo-core",
- "exo-types",
+ "exodata-core",
+ "exodata-types",
  "indicatif",
  "polars",
  "predicates",
@@ -1237,11 +1237,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "exo-core"
+name = "exodata-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "exo-types",
+ "exodata-types",
  "polars",
  "serde",
  "serde_json",
@@ -1249,7 +1249,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "exo-types"
+name = "exodata-types"
 version = "0.1.0"
 
 [[package]]
@@ -1262,8 +1262,8 @@ dependencies = [
  "comfy-table",
  "console_error_panic_hook",
  "crossterm 0.28.1",
- "exo-core",
- "exo-types",
+ "exodata-core",
+ "exodata-types",
  "indicatif",
  "leptos",
  "leptos_axum",

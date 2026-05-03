@@ -31,8 +31,8 @@ tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 clap = { version = "4.5", features = ["derive"], optional = true }
 serde = { version = "1", features = ["derive"] }
-exo-core = { path = "crates/exo-core", optional = true }
-exo-types = { path = "crates/exo-types" }
+exo-core = { package = "exodata-core", path = "crates/exo-core", optional = true }
+exo-types = { package = "exodata-types", path = "crates/exo-types" }
 polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"], optional = true }
 time = { version = "0.3", features = ["macros", "formatting"], optional = true }
 serde_json = { version = "1", optional = true }
