@@ -115,10 +115,10 @@ Added `ViewMetadata` command to exo-cli (`/crates/exo-cli/src/main.rs`):
 
 ```bash
 # View all metadata from a VOTable file
-exo view-metadata --path data/exoplanets.vot
+exodata dev view-metadata --path data/exoplanets.vot
 
 # View metadata for specific columns
-exo view-metadata --path data/exoplanets.vot --columns "pl_name,pl_orbper,pl_rade"
+exodata dev view-metadata --path data/exoplanets.vot --columns "pl_name,pl_orbper,pl_rade"
 ```
 
 ### 3. TOML Metadata Generation ✅
@@ -148,7 +148,7 @@ datatype = "CharASCII"
 
 **Usage:**
 ```bash
-cargo run -p exo-cli -- convert-raw-files --data-dir data
+cargo run -p exo-cli -- dev convert-raw-files --data-dir data
 # Generates .parquet and .toml files
 ```
 
@@ -249,7 +249,7 @@ src/
 **Manual Verification:**
 ```bash
 # Generate TOML files
-cargo run -p exo-cli -- convert-raw-files --data-dir data
+cargo run -p exo-cli -- dev convert-raw-files --data-dir data
 
 # Verify TOML format
 head -30 data/exoplanets-metadata.toml

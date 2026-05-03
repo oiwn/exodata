@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use axum::{
     Router,
-    extract::{Query, State},
+    extract::{Path as AxumPath, Query, State},
     http::{StatusCode, header},
     response::{IntoResponse, Json},
     routing::get,
@@ -23,7 +23,7 @@ use sqlparser::parser::Parser;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
-use super::data::{rows, tables};
+use super::data::{insights, rows, tables};
 use super::functions::DataStats;
 use crate::server::cache::{HostDetailCache, InsightCache, TableCache};
 
@@ -149,6 +149,25 @@ pub struct SqlResponse {
     pub query: String,
 }
 
+#[derive(Debug, Serialize, ToSchema)]
+pub struct InsightMetaResponse {
+    pub slug: String,
+    pub title: String,
+    pub category: String,
+    pub description: String,
+    pub kind: String,
+    pub limit: usize,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct InsightResponse {
+    pub meta: InsightMetaResponse,
+    #[schema(value_type = Vec<Object>)]
+    pub data: Vec<Value>,
+    pub rows: usize,
+    pub columns: Vec<String>,
+}
+
 /// OpenAPI documentation for the Exoplanets Catalog REST API
 #[derive(OpenApi)]
 #[openapi(
@@ -164,14 +183,17 @@ pub struct SqlResponse {
         get_stellarhosts_schema,
         get_exoplanets_schema,
         execute_sql,
+        get_insights,
+        get_insight,
     ),
     components(
-        schemas(ApiResponse, SchemaResponse, ColumnInfo, SqlResponse)
+        schemas(ApiResponse, SchemaResponse, ColumnInfo, SqlResponse, InsightMetaResponse, InsightResponse)
     ),
     tags(
         (name = "data", description = "Data query endpoints"),
         (name = "schema", description = "Schema information endpoints"),
-        (name = "sql", description = "SQL query endpoint")
+        (name = "sql", description = "SQL query endpoint"),
+        (name = "insights", description = "Curated insight endpoints")
     )
 )]
 pub struct ApiDoc;
@@ -183,6 +205,8 @@ pub fn api_routes(state: ApiState) -> Router {
         .route("/stellarhosts/schema", get(get_stellarhosts_schema))
         .route("/exoplanets/schema", get(get_exoplanets_schema))
         .route("/query", get(execute_sql))
+        .route("/insights", get(get_insights))
+        .route("/insights/{slug}", get(get_insight))
         .with_state(state)
 }
 
@@ -464,6 +488,75 @@ pub async fn execute_sql(
                 query,
             })),
         },
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/rest/insights",
+    responses(
+        (status = 200, description = "Available curated insights", body = Vec<InsightMetaResponse>)
+    ),
+    tag = "insights"
+)]
+pub async fn get_insights() -> Json<Vec<InsightMetaResponse>> {
+    Json(
+        exo_core::insights::INSIGHTS
+            .iter()
+            .map(|def| insight_meta_response(def.meta))
+            .collect(),
+    )
+}
+
+#[utoipa::path(
+    get,
+    path = "/rest/insights/{slug}",
+    params(
+        ("slug" = String, Path, description = "Insight slug")
+    ),
+    responses(
+        (status = 200, description = "Curated insight result", body = InsightResponse),
+        (status = 404, description = "Unknown insight slug"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "insights"
+)]
+pub async fn get_insight(
+    State(state): State<ApiState>,
+    AxumPath(slug): AxumPath<String>,
+) -> Result<Json<InsightResponse>, StatusCode> {
+    let def =
+        exo_core::insights::find_insight(&slug).ok_or(StatusCode::NOT_FOUND)?;
+    let value = insights::get_insight_cached(
+        &state.stellarhosts_df,
+        &state.exoplanets_df,
+        &state.insight_cache,
+        &slug,
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to get insight {}: {}", slug, e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(InsightResponse {
+        meta: insight_meta_response(def.meta),
+        data: value.rows,
+        rows: value.total,
+        columns: value.columns,
+    }))
+}
+
+fn insight_meta_response(
+    meta: &'static exo_types::insights::InsightMeta,
+) -> InsightMetaResponse {
+    InsightMetaResponse {
+        slug: meta.slug.to_string(),
+        title: meta.title.to_string(),
+        category: meta.category.to_string(),
+        description: meta.description.to_string(),
+        kind: meta.kind.to_string(),
+        limit: meta.limit,
     }
 }
 

@@ -2,6 +2,9 @@
 name = "exo-types"
 version = "0.1.0"
 edition = "2024"
+description = "Shared serializable types for Exoplanets Catalog"
+license = "AGPL-3.0-only"
+repository = "https://github.com/oiwn/exoplanets-catalog"
+homepage = "https://exodata.space"
 
 [dependencies]
-

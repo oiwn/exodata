@@ -2,9 +2,13 @@
 name = "exo-core"
 version = "0.1.0"
 edition = "2024"
+description = "Core data loading, metadata, insight, and table logic for Exoplanets Catalog"
+license = "AGPL-3.0-only"
+repository = "https://github.com/oiwn/exoplanets-catalog"
+homepage = "https://exodata.space"
 
 [dependencies]
-exo-types = { path = "../exo-types" }
+exo-types = { version = "0.1.0", path = "../exo-types" }
 polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

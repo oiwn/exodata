@@ -23,7 +23,6 @@
 ## TODO:
 
 - [ ] short url so long list of parameters gone. easy to share.
-- [ ] add skill for agent how to use cli tool.
 - [ ] MCP server
 - [ ] Component from  selected Markdown files from `specs/`.
   - Use `include_str!` so docs are compiled into the app binary.

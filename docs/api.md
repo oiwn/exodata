@@ -165,6 +165,66 @@ Response shape:
 }
 ```
 
+## Insight Endpoints
+
+### GET /rest/insights
+
+Returns available curated insights.
+
+Example:
+
+```bash
+curl "https://exodata.space/rest/insights"
+```
+
+Response shape:
+
+```json
+[
+  {
+    "slug": "nearest-stellar-hosts",
+    "title": "Nearest Stellar Hosts",
+    "category": "stellarhosts",
+    "description": "Nearest stellar hosts in the catalog",
+    "kind": "ranking",
+    "limit": 10
+  }
+]
+```
+
+### GET /rest/insights/{slug}
+
+Runs one predefined curated insight and returns JSON rows.
+
+Example:
+
+```bash
+curl "https://exodata.space/rest/insights/nearest-stellar-hosts"
+```
+
+Response shape:
+
+```json
+{
+  "meta": {
+    "slug": "nearest-stellar-hosts",
+    "title": "Nearest Stellar Hosts",
+    "category": "stellarhosts",
+    "description": "Nearest stellar hosts in the catalog",
+    "kind": "ranking",
+    "limit": 10
+  },
+  "data": [
+    {
+      "hostname": "Proxima Cen",
+      "sy_dist": 1.30119
+    }
+  ],
+  "rows": 1,
+  "columns": ["hostname", "sy_dist"]
+}
+```
+
 ## Errors
 
 The API uses standard HTTP status codes:
@@ -172,6 +232,6 @@ The API uses standard HTTP status codes:
 | Status | Meaning                                    |
 | ------ | ------------------------------------------ |
 | `400`  | Invalid query parameters or invalid SQL.   |
+| `404`  | Unknown insight slug.                      |
 | `408`  | SQL query timed out.                       |
 | `500`  | Server-side data loading or query failure. |
-

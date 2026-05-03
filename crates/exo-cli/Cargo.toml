@@ -2,14 +2,22 @@
 name = "exo-cli"
 version = "0.1.0"
 edition = "2024"
+description = "Terminal client for Exoplanets Catalog data, SQL queries, schemas, downloads, and insights"
+license = "AGPL-3.0-only"
+repository = "https://github.com/oiwn/exoplanets-catalog"
+homepage = "https://exodata.space"
+
+[lib]
+name = "exo_cli"
+path = "src/lib.rs"
 
 [[bin]]
 name = "exodata"
 path = "src/main.rs"
 
 [dependencies]
-exo-core = { path = "../exo-core" }
-exo-types = { path = "../exo-types" }
+exo-core = { version = "0.1.0", path = "../exo-core" }
+exo-types = { version = "0.1.0", path = "../exo-types" }
 clap = { version = "4.5", features = ["derive"] }
 comfy-table = "7.2"
 ratatui = { version = "0.29", features = ["all-widgets"] }
