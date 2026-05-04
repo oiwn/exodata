@@ -88,3 +88,58 @@ pub fn distinct_value_count(
 
     Ok(distinct.height())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use polars::df;
+    use serde_json::json;
+
+    #[test]
+    fn dataframe_to_json_handles_supported_types_and_nulls() {
+        let df = df! {
+            "name" => &[Some("Kepler-10"), None],
+            "mass" => &[Some(1.4_f64), None],
+            "radius" => &[Some(1.1_f32), None],
+            "year64" => &[Some(2011_i64), None],
+            "year32" => &[Some(2011_i32), None],
+            "count32" => &[Some(2_u32), None],
+            "count64" => &[Some(3_u64), None],
+        }
+        .unwrap();
+
+        let rows = dataframe_to_json(&df).unwrap();
+
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0]["name"], json!("Kepler-10"));
+        assert_eq!(rows[0]["mass"], json!(1.4));
+        assert_eq!(rows[0]["radius"], json!(1.1_f32));
+        assert_eq!(rows[0]["year64"], json!(2011));
+        assert_eq!(rows[0]["year32"], json!(2011));
+        assert_eq!(rows[0]["count32"], json!(2));
+        assert_eq!(rows[0]["count64"], json!(3));
+        assert!(rows[1]["name"].is_null());
+        assert!(rows[1]["mass"].is_null());
+    }
+
+    #[test]
+    fn distinct_value_count_counts_unique_column_values() {
+        let df = df! {
+            "hostname" => &["A", "A", "B", "C"],
+        }
+        .unwrap();
+
+        assert_eq!(distinct_value_count(&df, "hostname").unwrap(), 3);
+    }
+
+    #[test]
+    fn distinct_value_count_reports_missing_column() {
+        let df = df! {
+            "hostname" => &["A"],
+        }
+        .unwrap();
+
+        let error = distinct_value_count(&df, "missing").unwrap_err();
+        assert!(error.contains("missing"));
+    }
+}

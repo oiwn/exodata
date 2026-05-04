@@ -139,3 +139,52 @@ fn any_value_to_json(value: AnyValue<'_>) -> Value {
         other => json!(other.to_string()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use polars::df;
+    use serde_json::json;
+
+    #[test]
+    fn output_format_from_config_accepts_known_values() {
+        assert_eq!(
+            OutputFormat::from_config("table").unwrap(),
+            OutputFormat::Table
+        );
+        assert_eq!(
+            OutputFormat::from_config(" JSON ").unwrap(),
+            OutputFormat::Json
+        );
+        assert_eq!(OutputFormat::from_config("csv").unwrap(), OutputFormat::Csv);
+        assert!(OutputFormat::from_config("yaml").is_err());
+    }
+
+    #[test]
+    fn dataframe_to_json_converts_common_any_values() {
+        let frame = df! {
+            "name" => &[Some("Kepler-10"), None],
+            "confirmed" => &[Some(true), None],
+            "mass" => &[Some(3.33_f64), None],
+            "radius" => &[Some(1.47_f32), None],
+            "i64_col" => &[Some(-2_i64), None],
+            "i32_col" => &[Some(-1_i32), None],
+            "u64_col" => &[Some(2_u64), None],
+            "u32_col" => &[Some(1_u32), None],
+        }
+        .unwrap();
+
+        let rows = dataframe_to_json(&frame).unwrap();
+
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0]["name"], json!("Kepler-10"));
+        assert_eq!(rows[0]["confirmed"], json!(true));
+        assert_eq!(rows[0]["mass"], json!(3.33));
+        assert_eq!(rows[0]["radius"], json!(1.47_f32));
+        assert_eq!(rows[0]["i64_col"], json!(-2));
+        assert_eq!(rows[0]["i32_col"], json!(-1));
+        assert_eq!(rows[0]["u64_col"], json!(2));
+        assert_eq!(rows[0]["u32_col"], json!(1));
+        assert!(rows[1]["name"].is_null());
+    }
+}

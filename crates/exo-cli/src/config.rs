@@ -257,3 +257,115 @@ fn default_data_dir_string() -> String {
 fn default_output_format() -> String {
     "table".to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backend_display_uses_config_values() {
+        assert_eq!(Backend::Auto.to_string(), "auto");
+        assert_eq!(Backend::Api.to_string(), "api");
+        assert_eq!(Backend::Local.to_string(), "local");
+    }
+
+    #[test]
+    fn default_config_uses_public_api_and_table_output() {
+        let config = Config::default();
+
+        assert_eq!(config.default_backend, Backend::Auto);
+        assert_eq!(config.api.base_url, "https://exodata.space");
+        assert_eq!(config.api.timeout_seconds, 30);
+        assert_eq!(config.output.format, "table");
+        assert!(!config.downloads.overwrite);
+    }
+
+    #[test]
+    fn explicit_backend_flag_overrides_config() {
+        let config = Config {
+            default_backend: Backend::Local,
+            ..Default::default()
+        };
+
+        assert_eq!(config.backend(Some(Backend::Api)), Backend::Api);
+    }
+
+    #[test]
+    fn url_and_path_flags_override_config_values() {
+        let config = Config {
+            api: ApiConfig {
+                base_url: "https://example.test/api/".to_string(),
+                timeout_seconds: 10,
+            },
+            local: LocalConfig {
+                data_dir: "local-data".to_string(),
+            },
+            downloads: DownloadConfig {
+                directory: "downloads".to_string(),
+                overwrite: true,
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            config.api_base_url(Some("https://override.test/".to_string())),
+            "https://override.test"
+        );
+        assert_eq!(config.api_base_url(None), "https://example.test/api");
+        assert_eq!(config.data_dir(Some("flag-data".to_string())), "flag-data");
+        assert_eq!(config.data_dir(None), "local-data");
+        assert_eq!(
+            config.download_dir(Some("flag-downloads".to_string())),
+            "flag-downloads"
+        );
+        assert_eq!(config.download_dir(None), "downloads");
+    }
+
+    #[test]
+    fn get_and_set_config_values_cover_supported_keys() {
+        let mut config = Config::default();
+
+        set_config_value(&mut config, "default_backend", "local").unwrap();
+        set_config_value(&mut config, "api.base_url", "https://api.test/")
+            .unwrap();
+        set_config_value(&mut config, "api.timeout_seconds", "15").unwrap();
+        set_config_value(&mut config, "local.data_dir", "data").unwrap();
+        set_config_value(&mut config, "downloads.directory", "dl").unwrap();
+        set_config_value(&mut config, "downloads.overwrite", "true").unwrap();
+        set_config_value(&mut config, "output.format", "json").unwrap();
+
+        assert_eq!(
+            get_config_value(&config, "default_backend").unwrap(),
+            "local"
+        );
+        assert_eq!(
+            get_config_value(&config, "api.base_url").unwrap(),
+            "https://api.test"
+        );
+        assert_eq!(
+            get_config_value(&config, "api.timeout_seconds").unwrap(),
+            "15"
+        );
+        assert_eq!(get_config_value(&config, "local.data_dir").unwrap(), "data");
+        assert_eq!(
+            get_config_value(&config, "downloads.directory").unwrap(),
+            "dl"
+        );
+        assert_eq!(
+            get_config_value(&config, "downloads.overwrite").unwrap(),
+            "true"
+        );
+        assert_eq!(get_config_value(&config, "output.format").unwrap(), "json");
+    }
+
+    #[test]
+    fn unknown_config_key_and_backend_are_errors() {
+        let mut config = Config::default();
+
+        assert!(get_config_value(&config, "missing").is_err());
+        assert!(set_config_value(&mut config, "missing", "value").is_err());
+        assert!(
+            set_config_value(&mut config, "default_backend", "remote").is_err()
+        );
+    }
+}

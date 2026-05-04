@@ -125,3 +125,127 @@ fn value_as_usize(value: &Value) -> Option<usize> {
 fn value_as_i64(value: Option<&Value>) -> Option<i64> {
     value.and_then(|v| v.as_i64())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::server::functions::{
+        ExoplanetDetail, HostIdentity, HostProvenanceSummary, HostStarSummary,
+        HostSystemSummary, NumericFieldSummary, StableValueSummary,
+        StellarHostDetail,
+    };
+    use leptos::serde_json::json;
+    use std::collections::HashMap;
+
+    fn host_detail() -> StellarHostDetail {
+        StellarHostDetail {
+            hostname: "TRAPPIST-1".to_string(),
+            identity: HostIdentity {
+                hostname: "TRAPPIST-1".to_string(),
+                aliases: HashMap::new(),
+            },
+            system: HostSystemSummary {
+                planet_count: Some(StableValueSummary {
+                    key: "sy_pnum".to_string(),
+                    label: "Planets".to_string(),
+                    unit: None,
+                    value: json!(7),
+                    distinct_values: vec![json!(7)],
+                    disputed: false,
+                }),
+                distance: Some(NumericFieldSummary {
+                    key: "sy_dist".to_string(),
+                    label: "Distance".to_string(),
+                    unit: Some("pc".to_string()),
+                    value: 12.43,
+                    measurement_count: 2,
+                    distinct_count: 1,
+                    min: 12.4,
+                    max: 12.5,
+                    disputed: false,
+                }),
+                ..Default::default()
+            },
+            star: HostStarSummary {
+                teff: Some(NumericFieldSummary {
+                    key: "st_teff".to_string(),
+                    label: "Temperature".to_string(),
+                    unit: Some("K".to_string()),
+                    value: 2566.0,
+                    measurement_count: 1,
+                    distinct_count: 1,
+                    min: 2566.0,
+                    max: 2566.0,
+                    disputed: false,
+                }),
+                ..Default::default()
+            },
+            provenance: HostProvenanceSummary {
+                record_count: 1,
+                stellar_refs: vec![],
+                system_refs: vec![],
+                key_field_stats: vec![],
+            },
+            records: vec![],
+            provenance_columns: vec![],
+            metadata: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn canonical_url_handles_root_empty_and_nested_paths() {
+        assert_eq!(canonical_url(""), "https://exodata.space/");
+        assert_eq!(canonical_url("/"), "https://exodata.space/");
+        assert_eq!(
+            canonical_url("/stellarhosts/TRAPPIST-1"),
+            "https://exodata.space/stellarhosts/TRAPPIST-1"
+        );
+    }
+
+    #[test]
+    fn path_segments_round_trip_reserved_characters() {
+        let encoded = encode_path_segment("Kepler-10 b/alpha");
+
+        assert_eq!(encoded, "Kepler%2D10%20b%2Falpha");
+        assert_eq!(decode_path_segment(&encoded), "Kepler-10 b/alpha");
+    }
+
+    #[test]
+    fn stellarhost_detail_description_includes_available_facts() {
+        let description = stellarhost_detail_description(&host_detail());
+
+        assert!(description.contains("TRAPPIST-1"));
+        assert!(description.contains("Effective temperature 2566 K."));
+        assert!(description.contains("Distance 12.4 pc."));
+        assert!(description.contains("7 confirmed planets"));
+    }
+
+    #[test]
+    fn exoplanet_detail_description_uses_first_record() {
+        let detail = ExoplanetDetail {
+            pl_name: "Kepler-10 b".to_string(),
+            records: vec![json!({
+                "hostname": "Kepler-10",
+                "discoverymethod": "Transit",
+                "disc_year": 2011
+            })],
+            metadata: HashMap::new(),
+        };
+
+        let description = exoplanet_detail_description(&detail);
+
+        assert!(description.contains("Kepler-10 b"));
+        assert!(description.contains("Host star: Kepler-10."));
+        assert!(description.contains("Discovery method: Transit."));
+        assert!(description.contains("Discovery year: 2011."));
+    }
+
+    #[test]
+    fn titles_include_site_suffix() {
+        assert_eq!(title_with_site("Docs"), "Docs | Exodata");
+        assert_eq!(overview_title(), "Exoplanets Catalog | Exodata");
+        assert_eq!(about_title(), "About the Catalog | Exodata");
+        assert_eq!(stellarhosts_title(), "Stellar Hosts | Exodata");
+        assert_eq!(exoplanets_title(), "Exoplanets | Exodata");
+    }
+}

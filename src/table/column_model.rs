@@ -90,3 +90,57 @@ pub fn build_column_model(
         hidden_columns,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn strings(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| (*value).to_string()).collect()
+    }
+
+    #[test]
+    fn detects_error_and_limit_companion_columns() {
+        assert!(is_err_or_lim("pl_radeerr1"));
+        assert!(is_err_or_lim("pl_radeerr2"));
+        assert!(is_err_or_lim("pl_radelim"));
+        assert!(!is_err_or_lim("pl_rade"));
+        assert!(!is_err_or_lim("pl_rade_error"));
+    }
+
+    #[test]
+    fn builds_display_and_fetch_columns_with_companions() {
+        let model = build_column_model(
+            &strings(&[
+                "pl_name",
+                "pl_rade",
+                "pl_radeerr1",
+                "pl_radeerr2",
+                "pl_radelim",
+                "hostname",
+            ]),
+            &strings(&["pl_name", "pl_rade", "pl_radeerr1", "hostname"]),
+        );
+
+        assert_eq!(
+            model.display_columns,
+            strings(&["pl_name", "pl_rade", "hostname"])
+        );
+        assert_eq!(
+            model.fetch_columns,
+            strings(&[
+                "pl_name",
+                "pl_rade",
+                "hostname",
+                "pl_radeerr1",
+                "pl_radeerr2",
+                "pl_radelim",
+            ])
+        );
+        assert!(model.hidden_columns.contains("pl_radeerr1"));
+        assert_eq!(model.groups["pl_rade"].base, "pl_rade");
+        assert_eq!(model.groups["pl_rade"].err1.as_deref(), Some("pl_radeerr1"));
+        assert_eq!(model.groups["pl_rade"].err2.as_deref(), Some("pl_radeerr2"));
+        assert_eq!(model.groups["pl_rade"].lim.as_deref(), Some("pl_radelim"));
+    }
+}
