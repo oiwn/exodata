@@ -216,10 +216,14 @@ The installed skill follows the Agent Skills directory convention and includes
 an `installed-by: exodata` marker. Existing `exodata` installs are updated;
 foreign/manual skill files are skipped.
 
-A future MCP server should be built on top of REST endpoints, not local
-parquet files. The initial planned MCP tools are:
+The hosted MCP server is mounted by the web service at `/mcp` and is built on
+top of server-side cached insight execution, not local parquet files. The
+server uses Streamable HTTP in stateless JSON response mode. The initial MCP
+tools are:
 
+- `health()`
 - `list_insights()`
 - `run_insight(slug)`
 
-No MCP server is part of the current release.
+The MCP surface is read-only. Arbitrary SQL and table browsing are intentionally
+not exposed through MCP in this release.

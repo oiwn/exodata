@@ -60,22 +60,35 @@ finish documentation cleanup, and leave a clear MCP-server follow-up plan.
     not need broad rewrites.
   - Workspace dependencies use dependency aliases to keep import names stable,
     e.g. `exo-core = { package = "exodata-core", ... }`.
-- `cargo info` verified on 2026-05-03 that `exodata`, `exodata-core`, and
-  `exodata-types` were not present in the crates.io index.
+- `cargo info` verified on 2026-05-03 before publishing that `exodata`,
+  `exodata-core`, and `exodata-types` were not present in the crates.io index.
+- `exodata-types 0.1.0` has been published.
+- `exodata-core 0.1.0` has been published.
+- `exodata 0.1.0` has been published.
 - Local package rename verification passed:
   - `cargo check -p exodata-types`
   - `cargo check -p exodata-core`
   - `cargo check -p exodata`
   - `cargo publish -p exodata-types --dry-run --allow-dirty`
-- `cargo publish --dry-run` for `exodata-core` and `exodata` is expected to
-  fail until their preceding `exodata-*` dependencies have actually been
-  published to crates.io.
+- `cargo info` verified on 2026-05-04 that `exodata 0.1.0` is visible in the
+  crates.io index.
 - The former client-mode CLI spec has been merged into `specs/cli.md` and
   deleted.
-- MCP server implementation is deferred. The planned MCP surface should be
-  backed by REST, initially:
+- Hosted MCP server implementation is active. The initial read-only surface is
+  mounted at `/mcp` and exposes:
+  - `health()`
   - `list_insights()`
   - `run_insight(slug)`
+- Local MCP smoke verified with curl/fish shell:
+  - `initialize` returns `serverInfo.name = "exodata"`.
+  - `tools/list` returns `health`, `list_insights`, and `run_insight`.
+  - `tools/call run_insight` works for `nearest-stellar-hosts`.
+- MCP transport was switched to stateless JSON response mode after Inspector
+  testing showed stateful session idle timeout/resume cleanup logs. Curl smoke
+  now works without `mcp-session-id`.
+- Docs Markdown links to non-Leptos same-origin service routes need
+  `rel="external"` so the client router does not intercept them. Applied to
+  `/swagger-ui` and `/rest/openapi.json` in `docs/api.md`.
 
 ## Backend Model
 

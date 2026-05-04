@@ -148,6 +148,9 @@ This uploads from `data/` directory:
 - `*.parquet` - Data files
 - `*.toml` - Metadata files
 
+Uploaded files are served by Nginx at `/data/` for CLI downloads, for example
+`https://exodata.space/data/stellarhosts.parquet`.
+
 ### 2.3 Deploy
 
 After the GitHub Actions build completes:
@@ -195,6 +198,12 @@ For data updates only:
 ```bash
 just ansible-upload-data
 just ansible-deploy  # Restart to pick up new data
+```
+
+If only the Nginx `/data/` serving rule changed, run:
+
+```bash
+just ansible-setup
 ```
 
 ---

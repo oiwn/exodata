@@ -292,6 +292,7 @@ async fn start_server() {
     let app = app
         .merge(server::site_routes(api_state.clone()))
         .merge(server::swagger_ui()) // Swagger UI at /swagger-ui
+        .nest_service("/mcp", server::mcp::mcp_routes(api_state.clone())) // MCP Streamable HTTP
         .nest_service("/rest", server::api_routes(api_state)); // REST API at /rest/*
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

@@ -1,8 +1,9 @@
 # REST API
 
 Exoplanets Catalog exposes NASA Exoplanet Archive data through JSON endpoints under `/rest`.
+It also exposes a read-only hosted MCP endpoint at `/mcp` for agent clients.
 
-Interactive OpenAPI documentation is available at [`/swagger-ui`](/swagger-ui). The OpenAPI JSON document is available at [`/rest/openapi.json`](/rest/openapi.json).
+Interactive OpenAPI documentation is available at <a href="/swagger-ui" rel="external">/swagger-ui</a>. The OpenAPI JSON document is available at <a href="/rest/openapi.json" rel="external">/rest/openapi.json</a>.
 
 ## Tables
 
@@ -224,6 +225,22 @@ Response shape:
   "columns": ["hostname", "sy_dist"]
 }
 ```
+
+## MCP Endpoint
+
+### /mcp
+
+Hosted Model Context Protocol endpoint using Streamable HTTP.
+
+Initial tools:
+
+- `health` - confirms the MCP server is alive.
+- `list_insights` - returns curated insight metadata.
+- `run_insight` - runs a curated insight by slug.
+
+The MCP surface is read-only and backed by the same cached insight data used by
+the REST insight endpoints. The server runs in stateless JSON response mode, so
+simple request/response clients do not need to manage MCP session IDs.
 
 ## Errors
 
