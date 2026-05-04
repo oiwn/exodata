@@ -1,4 +1,10 @@
+pub mod api;
+pub mod backend;
 pub mod commands;
+pub mod config;
 pub mod conversion;
+pub mod download;
+pub mod output;
+pub mod skill;
 pub mod votable_helpers;
 pub mod votable_loader;

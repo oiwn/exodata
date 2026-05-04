@@ -1,6 +1,14 @@
-# CLI Tools
+# CLI
 
-Exoplanets Catalog includes a local CLI for working with VOTable source files, Parquet datasets, metadata, SQL queries, and curated insights.
+`exodata` is the terminal client for Exoplanets Catalog. It can query the live
+API, use downloaded local data offline, and print table, JSON, or CSV output.
+
+Install from crates.io:
+
+```bash
+cargo install exodata
+exodata --help
+```
 
 Install from the repository:
 
@@ -12,89 +20,58 @@ exodata --help
 Build without installing:
 
 ```bash
-cargo build -p exo-cli --release
+cargo build -p exodata --release
 ./target/release/exodata --help
 ```
 
-## Commands
-
-Current commands:
+## Public Commands
 
 ```text
-view-fields
-view-metadata
-view-samples
-view-stats
-view-exoplanets-samples
-view-exoplanets-stats
-convert-raw-files
-sql
+query
+rows
+schema
 insights
+download
+config
+skill
+dev
 ```
 
-## Data Files
+Use `--backend api` for the live service, `--backend local` for a complete
+local dataset, or the default `--backend auto` to use local data when available
+and otherwise use the API.
 
-By default, the CLI reads local files from `data/`:
+Useful global options:
 
 ```text
-data/
-|-- stellarhosts.vot
-|-- exoplanets.vot
-|-- stellarhosts.parquet
-`-- exoplanets.parquet
+--backend <auto|api|local>
+--api-base-url <URL>
+--data-dir <PATH>
+--output <table|json|csv>
 ```
 
-## VOTable Commands
+## Query Data
 
-Inspect source files:
+Run SQL:
 
 ```bash
-exodata view-fields data/exoplanets.vot
-exodata view-metadata
-exodata view-metadata --path data/stellarhosts.vot --columns "hostname,st_teff,st_mass"
+exodata query "SELECT pl_name, hostname FROM exoplanets LIMIT 10"
+exodata query "SELECT pl_name, hostname, disc_year FROM exoplanets ORDER BY disc_year DESC LIMIT 10" --output json
 ```
 
-## Sample Rows And Stats
-
-Preview local parquet data:
+Browse rows:
 
 ```bash
-exodata view-samples --limit 10
-exodata view-samples --category stellar
-exodata view-exoplanets-samples --category orbital
+exodata rows exoplanets --columns pl_name,hostname,disc_year --limit 10
+exodata rows stellarhosts --columns hostname,sy_dist,st_teff --sort sy_dist --order asc --limit 10
 ```
 
-Show dataset statistics:
+View schema metadata:
 
 ```bash
-exodata view-stats
-exodata view-exoplanets-stats
+exodata schema exoplanets
+exodata schema stellarhosts --output json
 ```
-
-## Convert Raw Files
-
-Convert `.vot` files in a directory to Parquet:
-
-```bash
-exodata convert-raw-files
-exodata convert-raw-files --data-dir data
-```
-
-## SQL
-
-Run SQL against local parquet files. Available tables:
-
-- `stellarhosts`
-- `exoplanets`
-
-Examples:
-
-```bash
-exodata sql "SELECT pl_name, hostname, disc_year FROM exoplanets ORDER BY disc_year DESC LIMIT 10"
-exodata sql "SELECT s.hostname, s.st_teff, e.pl_name FROM stellarhosts s JOIN exoplanets e ON s.hostname = e.hostname LIMIT 10"
-```
-
-Use `--data-dir` to point at another directory containing `stellarhosts.parquet` and `exoplanets.parquet`.
 
 ## Insights
 
@@ -108,14 +85,74 @@ Run one insight:
 
 ```bash
 exodata insights run smallest-exoplanets-radius
-exodata insights run nearest-stellar-hosts --data-dir data
+exodata insights run nearest-stellar-hosts --output json
 ```
 
-Run all insights:
+## Offline Data
+
+Download the local data bundle:
 
 ```bash
-exodata insights run-all
+exodata download all
 ```
+
+The default offline data directory is `~/.exodata`:
+
+```text
+~/.exodata/
+|-- stellarhosts.parquet
+|-- exoplanets.parquet
+|-- stellarhosts-metadata.toml
+`-- exoplanets-metadata.toml
+```
+
+Use another directory explicitly:
+
+```bash
+exodata --backend local --data-dir data schema exoplanets
+```
+
+## Config
+
+```bash
+exodata config path
+exodata config get default_backend
+exodata config set default_backend local
+```
+
+## Agent Skill
+
+Install the Agent Skill for the current project:
+
+```bash
+exodata skill install local
+```
+
+Install it globally for your user:
+
+```bash
+exodata skill install global
+```
+
+Local install writes `.agents/skills/exodata/SKILL.md` under the current
+directory. Global install writes `~/.agents/skills/exodata/SKILL.md`.
+
+## Development Commands
+
+Repository maintainers can use `exodata dev` for VOTable inspection,
+conversion, local parquet SQL, and bulk insight verification:
+
+```bash
+exodata dev view-fields data/exoplanets.vot
+exodata dev view-metadata --path data/stellarhosts.vot --columns hostname,st_teff,st_mass
+exodata dev convert-raw-files --data-dir data
+exodata dev sql "SELECT pl_name, hostname FROM exoplanets LIMIT 10" --data-dir data
+exodata dev insights run-all --data-dir data
+```
+
+These commands are intentionally grouped away from the public top-level command
+surface because most third-party users do not need VOTable or data-preparation
+workflows.
 
 ## Related Docs
 

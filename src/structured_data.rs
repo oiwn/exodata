@@ -116,3 +116,111 @@ fn encode_segment(value: &str) -> String {
     )
     .to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::server::functions::{
+        CategoricalFieldSummary, ExoplanetDetail, HostIdentity,
+        HostProvenanceSummary, HostStarSummary, HostSystemSummary,
+        StellarHostDetail,
+    };
+    use std::collections::HashMap;
+
+    #[test]
+    fn website_schema_describes_site() {
+        let schema = website_schema();
+
+        assert_eq!(schema["@type"], "WebSite");
+        assert_eq!(schema["name"], "Exodata");
+        assert_eq!(schema["url"], "https://exodata.space/");
+        assert_eq!(schema["inLanguage"], "en");
+    }
+
+    #[test]
+    fn collection_schema_builds_absolute_url_and_parent_site() {
+        let schema =
+            collection_page_schema("Exoplanets", "Browse planets", "/exoplanets");
+
+        assert_eq!(schema["@type"], "CollectionPage");
+        assert_eq!(schema["url"], "https://exodata.space/exoplanets");
+        assert_eq!(schema["isPartOf"]["name"], "Exodata");
+    }
+
+    #[test]
+    fn stellarhost_dataset_schema_adds_spectral_keyword_and_encoded_url() {
+        let host = StellarHostDetail {
+            hostname: "Alpha Centauri A".to_string(),
+            identity: HostIdentity {
+                hostname: "Alpha Centauri A".to_string(),
+                aliases: HashMap::new(),
+            },
+            system: HostSystemSummary::default(),
+            star: HostStarSummary {
+                spectype: Some(CategoricalFieldSummary {
+                    key: "st_spectype".to_string(),
+                    label: "Spectral Type".to_string(),
+                    value: "G2 V".to_string(),
+                    counts: vec![],
+                    disputed: false,
+                }),
+                ..Default::default()
+            },
+            provenance: HostProvenanceSummary {
+                record_count: 0,
+                stellar_refs: vec![],
+                system_refs: vec![],
+                key_field_stats: vec![],
+            },
+            records: vec![],
+            provenance_columns: vec![],
+            metadata: HashMap::new(),
+        };
+
+        let schema = stellarhost_dataset_schema(&host);
+
+        assert_eq!(schema["@type"], "Dataset");
+        assert_eq!(
+            schema["url"],
+            "https://exodata.space/stellarhosts/Alpha%20Centauri%20A"
+        );
+        assert!(
+            schema["keywords"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("G2 V"))
+        );
+    }
+
+    #[test]
+    fn exoplanet_dataset_schema_adds_host_and_method_keywords() {
+        let detail = ExoplanetDetail {
+            pl_name: "Kepler-10 b".to_string(),
+            records: vec![json!({
+                "hostname": "Kepler-10",
+                "discoverymethod": "Transit"
+            })],
+            metadata: HashMap::new(),
+        };
+
+        let schema = exoplanet_dataset_schema(&detail);
+
+        assert_eq!(schema["@type"], "Dataset");
+        assert_eq!(
+            schema["url"],
+            "https://exodata.space/exoplanets/Kepler%2D10%20b"
+        );
+        assert!(
+            schema["keywords"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("Kepler-10"))
+        );
+        assert!(
+            schema["keywords"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("Transit"))
+        );
+    }
+}

@@ -35,6 +35,8 @@ REST endpoints are mounted under `/rest`:
 - `GET /rest/stellarhosts/schema` - stellar host column metadata
 - `GET /rest/exoplanets/schema` - exoplanet column metadata
 - `GET /rest/query?sql=SELECT...` - read-only SQL query endpoint
+- `GET /rest/insights` - curated insight metadata
+- `GET /rest/insights/{slug}` - curated insight results
 - `GET /rest/openapi.json` - OpenAPI specification used by Swagger UI
 
 Data endpoints support pagination, sorting, selected columns, and text
@@ -46,23 +48,21 @@ See `docs/api.md` for request parameters and examples.
 
 ### CLI
 
-The workspace includes `exo-cli` for local data inspection and development
-workflows:
+The workspace includes the `exodata` package in `crates/exo-cli`, which builds
+the `exodata` public terminal client. It supports API-backed catalog access,
+offline local data, downloads,
+config, structured output, curated insights, and agent skill instructions.
 
-- inspect VOTable fields and metadata
-- convert raw VOTable files to Parquet
-- preview stellar host and exoplanet rows
-- compute local dataset statistics
-- run SQL against local Parquet files
-- list and run curated insight queries
+Third-party oriented commands are top-level. Repository data preparation and
+VOTable workflows live under `exodata dev`.
 
 Examples:
 
 ```bash
-cargo run -p exo-cli -- view-metadata --path data/exoplanets.vot
-cargo run -p exo-cli -- sql "SELECT pl_name, hostname FROM exoplanets LIMIT 10"
-cargo run -p exo-cli -- insights list
-cargo run -p exo-cli -- insights run nearest-stellar-hosts
+cargo run -p exodata -- query "SELECT pl_name, hostname FROM exoplanets LIMIT 10"
+cargo run -p exodata -- insights list
+cargo run -p exodata -- insights run nearest-stellar-hosts
+cargo run -p exodata -- dev view-metadata --path data/exoplanets.vot
 ```
 
 See `docs/cli.md` and `specs/cli.md` for command details.
@@ -124,7 +124,7 @@ src/
 
 crates/
 ├── exo-core/                      # data loading, metadata, insights, table logic
-├── exo-cli/                       # local command-line tool
+├── exo-cli/                       # exodata command-line package source
 └── exo-types/                     # shared serializable types
 ```
 
@@ -133,7 +133,7 @@ crates/
 Public and technical documentation:
 
 - `docs/api.md` - REST API usage, SQL endpoint examples, response formats
-- `docs/cli.md` - local CLI usage
+- `docs/cli.md` - public CLI usage
 - `docs/testing.md` - unit tests, e2e tests, and coverage
 - `DEPLOY.md` - Docker, Ansible, DigitalOcean, and runtime deployment
 
@@ -141,7 +141,7 @@ Implementation specifications:
 
 - `specs/web-backend.md` - Axum server, REST API, server functions, state
 - `specs/web-frontend.md` - Leptos UI, routing, reactivity, hydration
-- `specs/cli.md` - detailed CLI command specification
+- `specs/cli.md` - active CLI command specification
 - `specs/data-management.md` - fetching, converting, and inspecting data
 - `specs/column-metadata.md` - metadata extraction and API/schema exposure
 - `specs/exoplanet-detail.md` - exoplanet detail page architecture
@@ -150,7 +150,7 @@ Implementation specifications:
 
 Working notes and internal planning:
 
-- `specs/ideas.md` - future ideas and documentation integration notes
+- `specs/ideas.md` - future ideas, including MCP follow-up
 - `specs/refactoring.md` - refactoring notes
 - `specs/ssr-streaming-issue.md` - production SSR streaming issue analysis
 - `specs/ctx.md` - temporary active-task context; clean after use
@@ -174,7 +174,7 @@ cargo leptos build --release
 Run the CLI:
 
 ```bash
-cargo run -p exo-cli -- --help
+cargo run -p exodata -- --help
 ```
 
 Run tests:

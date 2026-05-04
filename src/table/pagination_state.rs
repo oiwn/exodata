@@ -30,3 +30,21 @@ impl TablePaginationState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_preserves_all_fields() {
+        let state = TablePaginationState::new(11, 20, 95, 2, 10, true, true);
+
+        assert_eq!(state.start, 11);
+        assert_eq!(state.end, 20);
+        assert_eq!(state.total, 95);
+        assert_eq!(state.current_page, 2);
+        assert_eq!(state.total_pages, 10);
+        assert!(state.can_go_prev);
+        assert!(state.can_go_next);
+    }
+}

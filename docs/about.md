@@ -1,6 +1,6 @@
 # Exoplanets Catalog
 
-Exoplanets Catalog is an open-source data tool for exploring NASA Exoplanet Archive records. It provides a server-rendered website, REST API, SQL query endpoint, and local CLI for working with stellar host and exoplanet datasets.
+Exoplanets Catalog is an open-source data tool for exploring NASA Exoplanet Archive records. It provides a server-rendered website, REST API, SQL query endpoint, and CLI for working with stellar host and exoplanet datasets.
 
 The project is built in Rust with Leptos, Axum, Polars and Clap. Source VOTable exports are converted to Parquet, loaded into memory at server startup, and served through interactive pages and programmatic endpoints.
 
@@ -12,7 +12,7 @@ The project is built in Rust with Leptos, Axum, Polars and Clap. Source VOTable 
 - Explore [curated dataset views](/insights)
 - Query the catalog with the [REST API](api.md) and read-only SQL
 - Inspect column metadata, units, and data types through [schema endpoints](api.md)
-- Use the [CLI](cli.md) for local VOTable, Parquet, SQL, and insight workflows
+- Use the [CLI](cli.md) for API-backed queries, offline data, and curated insights
 
 Table pages keep sorting, filtering, pagination, and selected columns in the URL so views can be shared or revisited.
 
@@ -24,13 +24,13 @@ See [REST API](api.md) for parameters and examples.
 
 ## CLI
 
-The `exo-cli` package supports local data exploration and development workflows:
+The `exodata` package builds the `exodata` terminal client:
 
-- inspect VOTable fields and metadata
-- convert VOTable files to Parquet
-- preview stellar host and exoplanet rows
-- run SQL against local Parquet files
+- query the live REST API
+- use downloaded local data offline
+- inspect schemas and browse rows
 - list and run curated insight queries
+- run repository data-preparation commands under `exodata dev`
 
 See [CLI Tools](cli.md) for commands and examples.
 

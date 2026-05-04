@@ -189,3 +189,115 @@ pub fn get_planets_by_hostname(
 
     Ok((rows, column_names, filtered_metadata))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use polars::df;
+    use serde_json::json;
+
+    fn metadata_for(names: &[&str]) -> HashMap<String, ColumnMetadata> {
+        names
+            .iter()
+            .map(|name| {
+                (
+                    (*name).to_string(),
+                    ColumnMetadata {
+                        name: (*name).to_string(),
+                        description: Some(format!("{name} description")),
+                        unit: None,
+                        datatype: "char".to_string(),
+                    },
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn get_stellar_host_by_name_returns_matching_rows_and_metadata() {
+        let df = df! {
+            "hostname" => &["Kepler-10", "TRAPPIST-1", "Kepler-10"],
+            "sy_dist" => &[173.0, 12.4, 174.0],
+        }
+        .unwrap();
+        let metadata = metadata_for(&["hostname", "sy_dist"]);
+
+        let (rows, returned_metadata) =
+            get_stellar_host_by_name(&df, &metadata, "Kepler-10").unwrap();
+
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0]["hostname"], json!("Kepler-10"));
+        assert_eq!(returned_metadata.len(), 2);
+    }
+
+    #[test]
+    fn get_stellar_host_by_name_reports_missing_host() {
+        let df = df! {
+            "hostname" => &["Kepler-10"],
+        }
+        .unwrap();
+
+        let error = get_stellar_host_by_name(&df, &HashMap::new(), "Missing")
+            .unwrap_err();
+
+        assert!(error.contains("Stellar host 'Missing' not found"));
+    }
+
+    #[test]
+    fn get_exoplanet_by_name_returns_matching_records() {
+        let df = df! {
+            "pl_name" => &["Kepler-10 b", "Kepler-10 c"],
+            "hostname" => &["Kepler-10", "Kepler-10"],
+        }
+        .unwrap();
+
+        let (rows, _) =
+            get_exoplanet_by_name(&df, &HashMap::new(), "Kepler-10 c").unwrap();
+
+        assert_eq!(
+            rows,
+            vec![json!({
+                "pl_name": "Kepler-10 c",
+                "hostname": "Kepler-10"
+            })]
+        );
+    }
+
+    #[test]
+    fn get_exoplanet_by_name_reports_missing_planet() {
+        let df = df! {
+            "pl_name" => &["Kepler-10 b"],
+        }
+        .unwrap();
+
+        let error =
+            get_exoplanet_by_name(&df, &HashMap::new(), "Missing b").unwrap_err();
+
+        assert!(error.contains("Exoplanet 'Missing b' not found"));
+    }
+
+    #[test]
+    fn get_planets_by_hostname_selects_valid_columns_and_deduplicates() {
+        let df = df! {
+            "hostname" => &["Kepler-10", "Kepler-10", "TRAPPIST-1"],
+            "pl_name" => &["Kepler-10 b", "Kepler-10 b", "TRAPPIST-1 b"],
+            "discoverymethod" => &["Transit", "Transit", "Transit"],
+            "disc_year" => &[2011_i64, 2011, 2016],
+            "pl_rade" => &[1.47, 1.47, 1.12],
+        }
+        .unwrap();
+        let metadata = metadata_for(&["pl_name", "discoverymethod", "disc_year"]);
+
+        let (rows, columns, filtered_metadata) =
+            get_planets_by_hostname(&df, &metadata, "Kepler-10").unwrap();
+
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["pl_name"], json!("Kepler-10 b"));
+        assert_eq!(
+            columns,
+            vec!["pl_name", "discoverymethod", "disc_year", "pl_rade"]
+        );
+        assert!(filtered_metadata.contains_key("pl_name"));
+        assert!(!filtered_metadata.contains_key("hostname"));
+    }
+}

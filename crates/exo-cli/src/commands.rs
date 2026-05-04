@@ -468,6 +468,15 @@ fn display_basic_stats(
 
 /// Execute SQL query against parquet files
 pub fn execute_sql(query: &str, data_dir: &str) -> Result<(), Error> {
+    let result = execute_sql_frame(query, data_dir)?;
+    println!("{}", result);
+    Ok(())
+}
+
+pub fn execute_sql_frame(
+    query: &str,
+    data_dir: &str,
+) -> Result<DataFrame, Error> {
     let stellarhosts_path = format!("{}/stellarhosts.parquet", data_dir);
     let exoplanets_path = format!("{}/exoplanets.parquet", data_dir);
 
@@ -483,15 +492,33 @@ pub fn execute_sql(query: &str, data_dir: &str) -> Result<(), Error> {
         ctx.register("exoplanets", df.lazy());
     }
 
-    let result = ctx
-        .execute(query)
+    ctx.execute(query)
         .map_err(|e| anyhow::anyhow!("SQL error: {}", e))?
         .collect()
-        .map_err(|e| anyhow::anyhow!("Failed to collect result: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to collect result: {}", e))
+}
 
-    println!("{}", result);
+pub fn rows_frame(
+    table: &str,
+    data_dir: &str,
+    columns: Option<&str>,
+    sort_by: Option<&str>,
+    order: Option<&str>,
+    limit: usize,
+) -> Result<DataFrame, Error> {
+    let selected_columns = columns.unwrap_or("*");
+    let mut query = format!("SELECT {selected_columns} FROM {table}");
 
-    Ok(())
+    if let Some(sort_by) = sort_by {
+        let order = match order {
+            Some(value) if value.eq_ignore_ascii_case("desc") => "DESC",
+            _ => "ASC",
+        };
+        query.push_str(&format!(" ORDER BY {sort_by} {order}"));
+    }
+
+    query.push_str(&format!(" LIMIT {limit}"));
+    execute_sql_frame(&query, data_dir)
 }
 
 /// List curated insight queries available through exo-core.
