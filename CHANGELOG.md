@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-05-04
+
+- Expanded focused test coverage for release readiness:
+  - added CLI config and output conversion tests
+  - added metadata helper and structured data schema tests
+  - added server data row conversion, detail lookup, and summary transform tests
+  - added table column model and pagination state tests
+- Added LLM/agent integration surfaces:
+  - added the `exodata` agent skill so coding agents can install project-specific dataset instructions
+  - added a hosted MCP server exposing read-only `exodata` tools for dataset-aware reasoning
+  - enabled LLM clients to inspect catalog health, list insights, and run curated insights against the dataset
+- Improved local CI-style coverage from 34.73% to 47.55% line coverage with the existing `cargo-llvm-cov` workflow settings
+- Verified with `cargo fmt --check`, `cargo test --workspace`, and the CI-style `cargo llvm-cov --workspace --summary-only` command
+
 ## 2026-04-22
 
 - Consolidated insight definitions around shared SQL execution:
