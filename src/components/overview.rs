@@ -141,30 +141,34 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
 fn DetailedStats(stats: DataStats) -> impl IntoView {
     view! {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <StatSection
-                title="Discovery Methods"
-                subtitle="Distinct planets grouped by canonical method"
-                icon="🔭"
-                items=stats.discovery_methods
-            />
-            <StatSection
-                title="Planet Classifications"
-                subtitle="Distinct planets grouped by canonical radius"
-                icon="🌍"
-                items=stats.planet_size_categories
-            />
-            <StatSection
-                title="Discovery Years"
-                subtitle="Distinct planets grouped by earliest discovery year"
-                icon="📅"
-                items=stats.discovery_years
-            />
-            <StatSection
-                title="Orbital Periods"
-                subtitle="Distinct planets grouped by canonical period"
-                icon="🌀"
-                items=stats.orbital_period_buckets
-            />
+            <div class="space-y-6">
+                <StatSection
+                    title="Planet Classifications"
+                    subtitle="Distinct planets grouped by canonical radius"
+                    icon="🌍"
+                    items=stats.planet_size_categories
+                />
+                <StatSection
+                    title="Orbital Periods"
+                    subtitle="Distinct planets grouped by canonical period"
+                    icon="🌀"
+                    items=stats.orbital_period_buckets
+                />
+            </div>
+            <div class="space-y-6">
+                <StatSection
+                    title="Discovery Methods"
+                    subtitle="Distinct planets grouped by canonical method"
+                    icon="🔭"
+                    items=stats.discovery_methods
+                />
+                <StatSection
+                    title="Discovery Years"
+                    subtitle="Distinct planets grouped by earliest discovery year"
+                    icon="📅"
+                    items=stats.discovery_years
+                />
+            </div>
         </div>
     }
 }
