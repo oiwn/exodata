@@ -1,9 +1,11 @@
 use leptos::prelude::*;
+use leptos_router::components::A;
 
 use super::format::{
     first_non_empty_string, format_number, median_numeric_value,
     planet_visual_class,
 };
+use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::ExoplanetDetail;
 
 #[component]
@@ -17,9 +19,11 @@ pub fn PlanetHeroSection(detail: ExoplanetDetail) -> impl IntoView {
     let orbital_period = median_numeric_value(&detail.records, "pl_orbper");
     let equilibrium_temp = median_numeric_value(&detail.records, "pl_eqt");
     let visual_class = planet_visual_class(radius, equilibrium_temp);
+    let host_href = host
+        .as_ref()
+        .map(|host| format!("/stellarhosts/{}", encode_path_segment(host)));
 
     let subtitle_parts = [
-        host.clone(),
         radius.map(|value| format!("{} R⊕", format_number(value))),
         orbital_period.map(|value| format!("{} d orbit", format_number(value))),
     ]
@@ -28,10 +32,12 @@ pub fn PlanetHeroSection(detail: ExoplanetDetail) -> impl IntoView {
     .collect::<Vec<_>>();
 
     let subtitle = if subtitle_parts.is_empty() {
-        "Planet profile assembled from archive records".to_string()
+        None
     } else {
-        subtitle_parts.join(" • ")
+        Some(subtitle_parts.join(" • "))
     };
+    let fallback_subtitle =
+        "Planet profile assembled from archive records".to_string();
 
     view! {
         <section class="planet-hero">
@@ -44,7 +50,20 @@ pub fn PlanetHeroSection(detail: ExoplanetDetail) -> impl IntoView {
 
                     <div class="planet-hero__heading">
                         <h1 class="planet-hero__title">{detail.pl_name.clone()}</h1>
-                        <p class="planet-hero__subtitle">{subtitle}</p>
+                        <p class="planet-hero__subtitle">
+                            {match (host.clone(), host_href) {
+                                (Some(host), Some(href)) => view! {
+                                    <span class="planet-hero__host-prefix">"Host star "</span>
+                                    <A href=href attr:class="planet-hero__host-link">
+                                        {host}
+                                    </A>
+                                    <span>{subtitle.map(|subtitle| format!(" • {subtitle}")).unwrap_or_default()}</span>
+                                }.into_any(),
+                                _ => view! {
+                                    <span>{subtitle.unwrap_or(fallback_subtitle)}</span>
+                                }.into_any(),
+                            }}
+                        </p>
                     </div>
 
                     <div class="planet-hero__stats">

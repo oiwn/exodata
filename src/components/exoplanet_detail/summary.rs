@@ -1,7 +1,9 @@
 use leptos::prelude::*;
 use leptos::serde_json::Value;
+use leptos_router::components::A;
 
 use super::format::{format_value, property_display};
+use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::ExoplanetDetail;
 
 #[component]
@@ -39,6 +41,16 @@ pub fn PlanetSummarySection(detail: ExoplanetDetail) -> impl IntoView {
             <div class="planet-summary-grid">
                 {key_properties.iter().map(|(key, label, fallback_unit, modifier)| {
                     let value = property_display(&record, &metadata, key, fallback_unit);
+                    let href = if *key == "hostname" {
+                        record
+                            .get(*key)
+                            .and_then(Value::as_str)
+                            .map(str::trim)
+                            .filter(|value| !value.is_empty())
+                            .map(|host| format!("/stellarhosts/{}", encode_path_segment(host)))
+                    } else {
+                        None
+                    };
                     let description = metadata
                         .get(*key)
                         .and_then(|meta| meta.description.clone())
@@ -48,6 +60,7 @@ pub fn PlanetSummarySection(detail: ExoplanetDetail) -> impl IntoView {
                         <PropertyCard
                             label=label.to_string()
                             value=value
+                            href=href
                             description=description
                             modifier=modifier.to_string()
                         />
@@ -62,6 +75,7 @@ pub fn PlanetSummarySection(detail: ExoplanetDetail) -> impl IntoView {
 fn PropertyCard(
     label: String,
     value: String,
+    href: Option<String>,
     description: String,
     modifier: String,
 ) -> impl IntoView {
@@ -71,11 +85,26 @@ fn PropertyCard(
         description
     };
 
-    view! {
-        <article class=format!("planet-summary-card {modifier}") title=title>
-            <p class="planet-summary-card__label">{label}</p>
-            <p class="planet-summary-card__value">{value}</p>
-        </article>
+    match href {
+        Some(href) => view! {
+            <A
+                href=href
+                attr:class=format!("planet-summary-card planet-summary-card--interactive {modifier}")
+                attr:title=title
+            >
+                <p class="planet-summary-card__label">{label}</p>
+                <p class="planet-summary-card__value">{value}</p>
+                <span class="planet-summary-card__arrow" aria-hidden="true">"→"</span>
+            </A>
+        }
+        .into_any(),
+        None => view! {
+            <article class=format!("planet-summary-card {modifier}") title=title>
+                <p class="planet-summary-card__label">{label}</p>
+                <p class="planet-summary-card__value">{value}</p>
+            </article>
+        }
+        .into_any(),
     }
 }
 

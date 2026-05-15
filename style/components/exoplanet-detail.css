@@ -70,6 +70,14 @@
   @apply max-w-2xl text-base text-slate-300 md:text-lg;
 }
 
+.planet-hero__host-prefix {
+  @apply text-slate-400;
+}
+
+.planet-hero__host-link {
+  @apply font-semibold text-cyan-200 transition-colors hover:text-white hover:underline hover:decoration-cyan-100 hover:underline-offset-4;
+}
+
 .planet-hero__stats {
   @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
 }
@@ -213,7 +221,19 @@
 }
 
 .planet-summary-card {
-  @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30;
+  @apply relative rounded-[1.5rem] border border-slate-800 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/30;
+}
+
+.planet-summary-card--interactive {
+  @apply block cursor-pointer no-underline transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/45 hover:bg-slate-900/80 hover:shadow-cyan-950/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950;
+}
+
+.planet-summary-card--interactive .planet-summary-card__value {
+  @apply pr-8 text-cyan-100 transition-colors;
+}
+
+.planet-summary-card--interactive:hover .planet-summary-card__value {
+  @apply text-white;
 }
 
 .planet-summary-card__label {
@@ -222,6 +242,14 @@
 
 .planet-summary-card__value {
   @apply mt-3 text-3xl font-semibold text-white;
+}
+
+.planet-summary-card__arrow {
+  @apply absolute right-5 top-5 text-xl text-cyan-200/50 transition-all duration-200;
+}
+
+.planet-summary-card--interactive:hover .planet-summary-card__arrow {
+  @apply translate-x-1 text-cyan-100;
 }
 
 .planet-summary-card--blue {

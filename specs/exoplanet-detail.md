@@ -84,7 +84,7 @@ Purpose:
 
 Hero content:
 - planet name
-- host star name
+- host star name linked to `/stellarhosts/:hostname` when available
 - short subtitle derived from available canonical values
 - 3 to 4 hero stats
 - generated planet visual
@@ -151,6 +151,7 @@ Initial preferred fields:
 Field behavior:
 - numeric fields use one adopted value plus evidence metadata
 - categorical/stable fields show dominant or stable value plus disagreement signal when needed
+- `hostname` should link to the matching stellar host detail route when available
 - omitted fields should disappear cleanly if no useful data exists
 
 For numeric summaries, show:
