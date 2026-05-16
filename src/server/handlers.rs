@@ -1,19 +1,19 @@
 // REST API handlers for the exoplanets catalog
 // These handlers use the shared business logic from common.rs
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::{
     Router,
-    extract::{Path as AxumPath, Query, State},
+    extract::{OriginalUri, Path as AxumPath, Query, State},
     http::{StatusCode, header},
     response::{IntoResponse, Json},
     routing::get,
 };
 use exo_core::metadata::ColumnMetadata;
-use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
+use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use polars::prelude::*;
 use polars::sql::SQLContext;
 use serde::{Deserialize, Serialize};
@@ -32,8 +32,7 @@ pub struct ApiState {
     pub site_url: Arc<String>,
     pub sitemap_index_xml: Arc<String>,
     pub sitemap_static_xml: Arc<String>,
-    pub sitemap_stellarhosts_xml: Arc<String>,
-    pub sitemap_exoplanets_xml: Arc<String>,
+    pub sitemap_entity_xml: Arc<HashMap<String, Arc<String>>>,
     pub stellarhosts_df: Arc<DataFrame>,
     pub exoplanets_df: Arc<DataFrame>,
     pub stellarhosts_metadata: Arc<HashMap<String, ColumnMetadata>>,
@@ -211,12 +210,15 @@ pub fn api_routes(state: ApiState) -> Router {
 }
 
 pub fn site_routes(state: ApiState) -> Router {
-    Router::new()
+    let mut router = Router::new()
         .route("/sitemap-index.xml", get(get_sitemap_index))
-        .route("/sitemap-static.xml", get(get_sitemap_static))
-        .route("/sitemap-stellarhosts.xml", get(get_sitemap_stellarhosts))
-        .route("/sitemap-exoplanets.xml", get(get_sitemap_exoplanets))
-        .with_state(state)
+        .route("/sitemap-static.xml", get(get_sitemap_static));
+
+    for filename in state.sitemap_entity_xml.keys() {
+        router = router.route(&format!("/{filename}"), get(get_sitemap_entity));
+    }
+
+    router.with_state(state)
 }
 
 /// Returns the Swagger UI router (should be mounted at root level, not nested)
@@ -243,16 +245,15 @@ pub async fn get_sitemap_static(
     serve_xml(state.sitemap_static_xml).await
 }
 
-pub async fn get_sitemap_stellarhosts(
+pub async fn get_sitemap_entity(
     State(state): State<ApiState>,
+    OriginalUri(uri): OriginalUri,
 ) -> impl IntoResponse {
-    serve_xml(state.sitemap_stellarhosts_xml).await
-}
-
-pub async fn get_sitemap_exoplanets(
-    State(state): State<ApiState>,
-) -> impl IntoResponse {
-    serve_xml(state.sitemap_exoplanets_xml).await
+    let filename = uri.path().trim_start_matches('/');
+    match state.sitemap_entity_xml.get(filename) {
+        Some(xml) => serve_xml(xml.clone()).await.into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
 }
 
 /// Get stellar hosts data
@@ -601,11 +602,43 @@ fn build_schema_response(
     }
 }
 
+const SITEMAP_CHUNK_SIZE: usize = 1_000;
+
+const SITEMAP_PATH_SEGMENT_ENCODE_SET: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b'!')
+    .add(b'"')
+    .add(b'#')
+    .add(b'$')
+    .add(b'%')
+    .add(b'&')
+    .add(b'\'')
+    .add(b'(')
+    .add(b')')
+    .add(b'*')
+    .add(b'+')
+    .add(b',')
+    .add(b'/')
+    .add(b':')
+    .add(b';')
+    .add(b'<')
+    .add(b'=')
+    .add(b'>')
+    .add(b'?')
+    .add(b'@')
+    .add(b'[')
+    .add(b'\\')
+    .add(b']')
+    .add(b'^')
+    .add(b'`')
+    .add(b'{')
+    .add(b'|')
+    .add(b'}');
+
 pub struct SitemapSet {
     pub index: String,
     pub static_pages: String,
-    pub stellarhosts: String,
-    pub exoplanets: String,
+    pub entity_sitemaps: BTreeMap<String, String>,
 }
 
 pub fn build_sitemaps(
@@ -625,12 +658,23 @@ pub fn build_sitemaps(
     )?;
     let exoplanet_urls =
         build_detail_urls(exoplanets_df, "pl_name", site_url, "/exoplanets/")?;
+    let stellarhost_sitemaps =
+        build_chunked_sitemaps("stellarhosts", &stellarhost_urls, build_date);
+    let exoplanet_sitemaps =
+        build_chunked_sitemaps("exoplanets", &exoplanet_urls, build_date);
+
+    let sitemap_filenames = std::iter::once("sitemap-static.xml".to_string())
+        .chain(stellarhost_sitemaps.keys().cloned())
+        .chain(exoplanet_sitemaps.keys().cloned())
+        .collect::<Vec<_>>();
+    let mut entity_sitemaps = BTreeMap::new();
+    entity_sitemaps.extend(stellarhost_sitemaps);
+    entity_sitemaps.extend(exoplanet_sitemaps);
 
     Ok(SitemapSet {
-        index: render_sitemap_index(site_url, build_date),
+        index: render_sitemap_index(site_url, build_date, &sitemap_filenames),
         static_pages: render_urlset(&static_urls, build_date),
-        stellarhosts: render_urlset(&stellarhost_urls, build_date),
-        exoplanets: render_urlset(&exoplanet_urls, build_date),
+        entity_sitemaps,
     })
 }
 
@@ -652,14 +696,34 @@ fn build_static_urls(site_url: &str) -> Vec<String> {
     urls
 }
 
-fn render_sitemap_index(site_url: &str, build_date: &str) -> String {
+fn build_chunked_sitemaps(
+    slug: &str,
+    urls: &[String],
+    build_date: &str,
+) -> BTreeMap<String, String> {
+    urls.chunks(SITEMAP_CHUNK_SIZE)
+        .enumerate()
+        .map(|(idx, chunk)| {
+            (
+                format!("sitemap-{slug}-{}.xml", idx + 1),
+                render_urlset(chunk, build_date),
+            )
+        })
+        .collect()
+}
+
+fn render_sitemap_index(
+    site_url: &str,
+    build_date: &str,
+    sitemap_filenames: &[String],
+) -> String {
     let mut xml = String::from(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<sitemapindex xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n",
     );
 
-    for slug in &["static", "stellarhosts", "exoplanets"] {
+    for filename in sitemap_filenames {
         xml.push_str("  <sitemap>\n");
-        xml.push_str(&format!("    <loc>{site_url}/sitemap-{slug}.xml</loc>\n"));
+        xml.push_str(&format!("    <loc>{site_url}/{filename}</loc>\n"));
         if !build_date.is_empty() {
             xml.push_str(&format!("    <lastmod>{build_date}</lastmod>\n"));
         }
@@ -714,7 +778,7 @@ fn build_detail_urls(
         .map(|value| {
             format!(
                 "{site_url}{route_prefix}{}",
-                utf8_percent_encode(&value, NON_ALPHANUMERIC)
+                utf8_percent_encode(&value, SITEMAP_PATH_SEGMENT_ENCODE_SET)
             )
         })
         .collect())

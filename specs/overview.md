@@ -100,9 +100,10 @@ At startup the SSR server:
 2. Loads TOML metadata for both tables.
 3. Precomputes overview statistics.
 4. Builds table, detail, and insight caches.
-5. Builds a sitemap from static routes, insight routes, and object detail routes.
+5. Builds sitemap XML from static routes, insight routes, and object detail
+   routes.
 6. Serves Leptos routes, REST API routes, Swagger UI, static assets, and
-   `sitemap.xml` from the same Axum application.
+   sitemap index/child routes from the same Axum application.
 
 The website uses Leptos server functions for UI data loading and the REST API
 for external programmatic access. Both surfaces share the same in-memory data
