@@ -1,0 +1,6 @@
+server {
+    listen 80;
+    server_name {{ domain }};
+
+{% include '_locations_app.j2' %}
+}
