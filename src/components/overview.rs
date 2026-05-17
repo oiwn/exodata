@@ -140,8 +140,8 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
 #[component]
 fn DetailedStats(stats: DataStats) -> impl IntoView {
     view! {
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="space-y-6">
+        <div class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <StatSection
                     title="Planet Classifications"
                     subtitle="Distinct planets grouped by canonical radius"
@@ -155,7 +155,7 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
                     items=stats.orbital_period_buckets
                 />
             </div>
-            <div class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <StatSection
                     title="Discovery Methods"
                     subtitle="Distinct planets grouped by canonical method"
