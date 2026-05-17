@@ -160,8 +160,13 @@ async fn start_server() {
         site_url,
         sitemap_index_xml: Arc::new(sitemaps.index.clone()),
         sitemap_static_xml: Arc::new(sitemaps.static_pages.clone()),
-        sitemap_stellarhosts_xml: Arc::new(sitemaps.stellarhosts.clone()),
-        sitemap_exoplanets_xml: Arc::new(sitemaps.exoplanets.clone()),
+        sitemap_entity_xml: Arc::new(
+            sitemaps
+                .entity_sitemaps
+                .iter()
+                .map(|(filename, xml)| (filename.clone(), Arc::new(xml.clone())))
+                .collect(),
+        ),
         stellarhosts_df,
         exoplanets_df,
         stellarhosts_metadata,

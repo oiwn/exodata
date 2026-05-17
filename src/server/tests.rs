@@ -19,8 +19,7 @@ mod tests {
     use crate::server::functions::DataStats;
     use crate::server::handlers::{
         ApiState, build_sitemaps, get_exoplanets, get_exoplanets_schema,
-        get_sitemap_exoplanets, get_sitemap_index, get_sitemap_static,
-        get_sitemap_stellarhosts, get_stellarhosts, get_stellarhosts_schema,
+        get_stellarhosts, get_stellarhosts_schema, site_routes,
     };
 
     fn create_test_state() -> ApiState {
@@ -57,8 +56,13 @@ mod tests {
             site_url: Arc::new("https://example.com".to_string()),
             sitemap_index_xml: Arc::new(sitemaps.index),
             sitemap_static_xml: Arc::new(sitemaps.static_pages),
-            sitemap_stellarhosts_xml: Arc::new(sitemaps.stellarhosts),
-            sitemap_exoplanets_xml: Arc::new(sitemaps.exoplanets),
+            sitemap_entity_xml: Arc::new(
+                sitemaps
+                    .entity_sitemaps
+                    .into_iter()
+                    .map(|(filename, xml)| (filename, Arc::new(xml)))
+                    .collect(),
+            ),
             stellarhosts_df: Arc::new(stellarhosts_df),
             exoplanets_df: Arc::new(exoplanets_df),
             stellarhosts_metadata: Arc::new(HashMap::new()),
@@ -81,31 +85,20 @@ mod tests {
 
     fn create_test_app() -> Router {
         let state = create_test_state();
-        Router::new()
-            .route("/sitemap-index.xml", axum::routing::get(get_sitemap_index))
-            .route(
-                "/sitemap-static.xml",
-                axum::routing::get(get_sitemap_static),
-            )
-            .route(
-                "/sitemap-stellarhosts.xml",
-                axum::routing::get(get_sitemap_stellarhosts),
-            )
-            .route(
-                "/sitemap-exoplanets.xml",
-                axum::routing::get(get_sitemap_exoplanets),
-            )
-            .route("/rest/stellarhosts", axum::routing::get(get_stellarhosts))
-            .route("/rest/exoplanets", axum::routing::get(get_exoplanets))
-            .route(
-                "/rest/stellarhosts/schema",
-                axum::routing::get(get_stellarhosts_schema),
-            )
-            .route(
-                "/rest/exoplanets/schema",
-                axum::routing::get(get_exoplanets_schema),
-            )
-            .with_state(state)
+        site_routes(state.clone()).merge(
+            Router::new()
+                .route("/rest/stellarhosts", axum::routing::get(get_stellarhosts))
+                .route("/rest/exoplanets", axum::routing::get(get_exoplanets))
+                .route(
+                    "/rest/stellarhosts/schema",
+                    axum::routing::get(get_stellarhosts_schema),
+                )
+                .route(
+                    "/rest/exoplanets/schema",
+                    axum::routing::get(get_exoplanets_schema),
+                )
+                .with_state(state),
+        )
     }
 
     #[tokio::test]
@@ -433,8 +426,10 @@ mod tests {
 
         assert!(xml.contains("<sitemapindex"));
         assert!(xml.contains("https://example.com/sitemap-static.xml"));
-        assert!(xml.contains("https://example.com/sitemap-stellarhosts.xml"));
-        assert!(xml.contains("https://example.com/sitemap-exoplanets.xml"));
+        assert!(xml.contains("https://example.com/sitemap-stellarhosts-1.xml"));
+        assert!(xml.contains("https://example.com/sitemap-exoplanets-1.xml"));
+        assert!(!xml.contains("https://example.com/sitemap-stellarhosts.xml"));
+        assert!(!xml.contains("https://example.com/sitemap-exoplanets.xml"));
         assert!(xml.contains("<lastmod>2026-01-15</lastmod>"));
     }
 
@@ -495,7 +490,7 @@ mod tests {
         let app = create_test_app();
 
         let request = Request::builder()
-            .uri("/sitemap-stellarhosts.xml")
+            .uri("/sitemap-stellarhosts-1.xml")
             .body(Body::empty())
             .unwrap();
 
@@ -522,7 +517,7 @@ mod tests {
         let app = create_test_app();
 
         let request = Request::builder()
-            .uri("/sitemap-exoplanets.xml")
+            .uri("/sitemap-exoplanets-1.xml")
             .body(Body::empty())
             .unwrap();
 
@@ -540,5 +535,128 @@ mod tests {
             "<loc>https://example.com/exoplanets/HD%20189733%20b</loc>"
         ));
         assert!(xml.contains("<lastmod>2026-01-15</lastmod>"));
+    }
+
+    #[tokio::test]
+    async fn test_old_entity_sitemap_routes_return_not_found() {
+        let app = create_test_app();
+
+        for uri in ["/sitemap-stellarhosts.xml", "/sitemap-exoplanets.xml"] {
+            let request =
+                Request::builder().uri(uri).body(Body::empty()).unwrap();
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_unknown_entity_sitemap_chunk_returns_not_found() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/sitemap-exoplanets-999.xml")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn test_sitemap_entity_chunks_are_limited_and_indexed() {
+        let hostnames = (0..1001)
+            .map(|idx| format!("Host {idx}"))
+            .collect::<Vec<_>>();
+        let planet_names = (0..1001)
+            .map(|idx| format!("Planet {idx} b"))
+            .collect::<Vec<_>>();
+        let stellarhosts_df = df! {
+            "hostname" => hostnames,
+        }
+        .unwrap();
+        let exoplanets_df = df! {
+            "pl_name" => planet_names,
+        }
+        .unwrap();
+
+        let sitemaps = build_sitemaps(
+            "https://example.com",
+            "2026-01-15",
+            &stellarhosts_df,
+            &exoplanets_df,
+        )
+        .unwrap();
+
+        assert!(
+            sitemaps
+                .index
+                .contains("https://example.com/sitemap-static.xml")
+        );
+        assert!(
+            sitemaps
+                .index
+                .contains("https://example.com/sitemap-stellarhosts-1.xml")
+        );
+        assert!(
+            sitemaps
+                .index
+                .contains("https://example.com/sitemap-stellarhosts-2.xml")
+        );
+        assert!(
+            sitemaps
+                .index
+                .contains("https://example.com/sitemap-exoplanets-1.xml")
+        );
+        assert!(
+            sitemaps
+                .index
+                .contains("https://example.com/sitemap-exoplanets-2.xml")
+        );
+        assert!(!sitemaps.index.contains("sitemap-stellarhosts.xml"));
+        assert!(!sitemaps.index.contains("sitemap-exoplanets.xml"));
+
+        for xml in sitemaps.entity_sitemaps.values() {
+            assert!(xml.matches("<url>").count() <= 1_000);
+        }
+    }
+
+    #[test]
+    fn test_sitemap_detail_urls_dedupe_and_use_path_segment_encoding() {
+        let stellarhosts_df = df! {
+            "hostname" => &["Kepler-55", "Kepler-55", "A/B?c#d&e%f"],
+        }
+        .unwrap();
+        let exoplanets_df = df! {
+            "pl_name" => &["51 Eri b", "51 Eri b", "Kepler-55 b"],
+        }
+        .unwrap();
+
+        let sitemaps = build_sitemaps(
+            "https://example.com",
+            "2026-01-15",
+            &stellarhosts_df,
+            &exoplanets_df,
+        )
+        .unwrap();
+        let stellarhosts_xml = sitemaps
+            .entity_sitemaps
+            .get("sitemap-stellarhosts-1.xml")
+            .unwrap();
+        let exoplanets_xml = sitemaps
+            .entity_sitemaps
+            .get("sitemap-exoplanets-1.xml")
+            .unwrap();
+
+        assert_eq!(
+            stellarhosts_xml.matches("/stellarhosts/Kepler-55").count(),
+            1
+        );
+        assert_eq!(
+            exoplanets_xml.matches("/exoplanets/51%20Eri%20b").count(),
+            1
+        );
+        assert!(exoplanets_xml.contains("/exoplanets/Kepler-55%20b"));
+        assert!(stellarhosts_xml.contains("/stellarhosts/A%2FB%3Fc%23d%26e%25f"));
     }
 }
