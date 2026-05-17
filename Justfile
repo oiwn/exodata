@@ -9,6 +9,9 @@ download-stellarhosts:
 download-exoplanets:
   curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+ps" -L --max-time 3000 > data/exoplanets.vot
 
+convert-raw-files:
+  cargo run -p exodata -- dev convert-raw-files --data-dir data
+
 stellarhosts-metadata:
   cargo run -p exodata -- dev view-metadata --path data/stellarhosts.vot
 
