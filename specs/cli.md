@@ -217,13 +217,17 @@ an `installed-by: exodata` marker. Existing `exodata` installs are updated;
 foreign/manual skill files are skipped.
 
 The hosted MCP server is mounted by the web service at `/mcp` and is built on
-top of server-side cached insight execution, not local parquet files. The
-server uses Streamable HTTP in stateless JSON response mode. The initial MCP
-tools are:
+top of the server's in-memory catalog state, not local parquet files. The
+server uses Streamable HTTP in stateless JSON response mode. Current MCP tools
+are:
 
 - `health()`
 - `list_insights()`
 - `run_insight(slug)`
+- `describe_catalog(table, columns)`
+- `query_catalog(sql, limit)`
 
-The MCP surface is read-only. Arbitrary SQL and table browsing are intentionally
-not exposed through MCP in this release.
+The MCP surface is read-only. `query_catalog` accepts one SQL `SELECT`
+statement, registers `stellarhosts` and `exoplanets`, defaults to 100 rows, and
+caps MCP responses at 1000 rows. Agents should call `describe_catalog` before
+writing SQL when column names, units, or data types are uncertain.
