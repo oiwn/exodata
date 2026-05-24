@@ -1,5 +1,37 @@
 # Changelog
 
+## 2026-05-24
+
+- Made the hosted MCP server agent-ready for direct catalog querying:
+  - added MCP tool `describe_catalog(table, columns)` so agents can inspect
+    column descriptions, units, and data types before writing SQL
+  - added MCP tool `query_catalog(sql, limit)` accepting a single read-only
+    SQL `SELECT` against `stellarhosts` and `exoplanets`, default 100 rows
+    and capped at 1000
+  - updated MCP server instructions to point agents at the
+    describe-then-query flow
+- Extracted SQL validation/execution into a shared `src/server/data/sql.rs`
+  helper used by both REST `/rest/query` and MCP `query_catalog`:
+  - single table registration site for `stellarhosts` and `exoplanets`
+  - shared `validate_sql_select_only` now inspects `SetExpr` and rejects
+    `VALUES` and non-SELECT set operations that the prior REST-local check
+    let through
+  - shared `CatalogSqlError` / `CatalogSchemaError` with per-transport
+    status mappers (HTTP vs. MCP)
+- Folded REST `/rest/{table}/schema` onto the same shared
+  `sql::describe_catalog` helper used by MCP `describe_catalog`, removing
+  the last duplicate column-metadata builder
+- Added `source_datatype` (the type declared in column metadata TOML) to
+  the REST `SchemaResponse.columns[]` shape — additive, OpenAPI-compatible
+- Documented MCP connection URLs (local and hosted) and added agent-flow
+  examples in `docs/api.md` (basic query, join, aggregate, schema
+  discovery); refreshed `specs/cli.md` with the current tool surface
+- Added tests for tool listing, `describe_catalog`, `query_catalog`,
+  invalid SQL, non-`SELECT`, multiple statements, unknown table, and limit
+  capping
+- Verified with `cargo clippy --features ssr` and targeted `cargo test
+  --features ssr` runs for handlers, sql, and mcp suites
+
 ## 2026-05-04
 
 - Expanded focused test coverage for release readiness:

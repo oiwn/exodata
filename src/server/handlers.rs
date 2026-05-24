@@ -3,7 +3,6 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
-use std::time::Duration;
 
 use axum::{
     Router,
@@ -15,15 +14,12 @@ use axum::{
 use exo_core::metadata::ColumnMetadata;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use polars::prelude::*;
-use polars::sql::SQLContext;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlparser::dialect::GenericDialect;
-use sqlparser::parser::Parser;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
-use super::data::{insights, rows, tables};
+use super::data::{insights, sql, tables};
 use super::functions::DataStats;
 use crate::server::cache::{HostDetailCache, InsightCache, TableCache};
 
@@ -117,6 +113,10 @@ pub struct ColumnInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schema(example = "parsec")]
     pub unit: Option<String>,
+    /// Source datatype as declared in the column metadata file (if available)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(example = "double")]
+    pub source_datatype: Option<String>,
 }
 
 /// Query parameters for SQL endpoint
@@ -385,10 +385,11 @@ pub async fn get_exoplanets(
 pub async fn get_stellarhosts_schema(
     State(state): State<ApiState>,
 ) -> Json<SchemaResponse> {
-    let df = &*state.stellarhosts_df;
-    let metadata = &*state.stellarhosts_metadata;
-    let schema = build_schema_response(df, metadata);
-    Json(schema)
+    Json(build_schema_response(
+        "stellarhosts",
+        &state.stellarhosts_df,
+        &state.stellarhosts_metadata,
+    ))
 }
 
 /// Get exoplanets schema
@@ -406,10 +407,11 @@ pub async fn get_stellarhosts_schema(
 pub async fn get_exoplanets_schema(
     State(state): State<ApiState>,
 ) -> Json<SchemaResponse> {
-    let df = &*state.exoplanets_df;
-    let metadata = &*state.exoplanets_metadata;
-    let schema = build_schema_response(df, metadata);
-    Json(schema)
+    Json(build_schema_response(
+        "exoplanets",
+        &state.exoplanets_df,
+        &state.exoplanets_metadata,
+    ))
 }
 
 /// Execute a SQL query against the registered tables.
@@ -431,65 +433,22 @@ pub async fn execute_sql(
     State(state): State<ApiState>,
     Query(params): Query<SqlQueryParams>,
 ) -> Result<Json<SqlResponse>, StatusCode> {
-    let query = params.sql.trim().to_string();
-    if query.is_empty() {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    validate_sql_select_only(&query)?;
-
     let limit = params.limit.unwrap_or(1000).min(10000);
-    let query_for_exec = query.clone();
-    let stellarhosts_df = state.stellarhosts_df.clone();
-    let exoplanets_df = state.exoplanets_df.clone();
+    let result = sql::execute_catalog_sql(
+        state.stellarhosts_df.clone(),
+        state.exoplanets_df.clone(),
+        params.sql,
+        limit,
+    )
+    .await
+    .map_err(sql_error_status)?;
 
-    let handle = tokio::task::spawn_blocking(move || {
-        let mut ctx = SQLContext::new();
-        ctx.register("stellarhosts", stellarhosts_df.as_ref().clone().lazy());
-        ctx.register("exoplanets", exoplanets_df.as_ref().clone().lazy());
-
-        let lazy = ctx
-            .execute(&query_for_exec)
-            .map_err(|e| format!("SQL execution error: {}", e))?;
-        let df = lazy
-            .limit(limit as IdxSize)
-            .collect()
-            .map_err(|e| format!("Failed to collect SQL result: {}", e))?;
-
-        let rows = df.height();
-        let columns = df
-            .get_column_names()
-            .iter()
-            .map(|name| (*name).to_string())
-            .collect::<Vec<_>>();
-        let data = rows::dataframe_to_json(&df)?;
-
-        Ok::<_, String>((data, columns, rows))
-    });
-
-    let result = tokio::time::timeout(Duration::from_secs(30), handle).await;
-    match result {
-        Err(_) => {
-            tracing::warn!("SQL query timed out");
-            Err(StatusCode::REQUEST_TIMEOUT)
-        }
-        Ok(join_result) => match join_result {
-            Err(err) => {
-                tracing::error!("SQL query join error: {}", err);
-                Err(StatusCode::INTERNAL_SERVER_ERROR)
-            }
-            Ok(Err(err)) => {
-                tracing::warn!("SQL query failed: {}", err);
-                Err(StatusCode::BAD_REQUEST)
-            }
-            Ok(Ok((data, columns, rows))) => Ok(Json(SqlResponse {
-                data,
-                rows,
-                columns,
-                query,
-            })),
-        },
-    }
+    Ok(Json(SqlResponse {
+        data: result.data,
+        rows: result.rows,
+        columns: result.columns,
+        query: result.query,
+    }))
 }
 
 #[utoipa::path(
@@ -561,44 +520,44 @@ fn insight_meta_response(
     }
 }
 
-fn validate_sql_select_only(query: &str) -> Result<(), StatusCode> {
-    let dialect = GenericDialect {};
-    let statements = Parser::parse_sql(&dialect, query)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-
-    if statements.len() != 1 {
-        return Err(StatusCode::BAD_REQUEST);
-    }
-
-    match statements.first() {
-        Some(sqlparser::ast::Statement::Query(_)) => Ok(()),
-        _ => Err(StatusCode::BAD_REQUEST),
+fn sql_error_status(error: sql::CatalogSqlError) -> StatusCode {
+    match error {
+        sql::CatalogSqlError::Timeout => {
+            tracing::warn!("SQL query timed out");
+            StatusCode::REQUEST_TIMEOUT
+        }
+        sql::CatalogSqlError::Join(error) => {
+            tracing::error!("{error}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+        error => {
+            tracing::warn!("SQL query failed: {error}");
+            StatusCode::BAD_REQUEST
+        }
     }
 }
 
-/// Build schema response with column metadata
 fn build_schema_response(
+    table: &str,
     df: &DataFrame,
     metadata: &HashMap<String, ColumnMetadata>,
 ) -> SchemaResponse {
-    let columns: Vec<ColumnInfo> = df
-        .fields()
-        .iter()
-        .map(|field| {
-            let name = field.name().to_string();
-            let meta = metadata.get(&name);
-            ColumnInfo {
-                name: name.clone(),
-                data_type: format!("{:?}", field.dtype()),
-                description: meta.and_then(|m| m.description.clone()),
-                unit: meta.and_then(|m| m.unit.clone()),
-            }
-        })
-        .collect();
+    let description = sql::describe_catalog(table, df, metadata, None)
+        .expect("describe_catalog with None columns cannot fail");
 
     SchemaResponse {
-        columns,
-        total_rows: df.height(),
+        columns: description
+            .columns
+            .into_iter()
+            .map(|column| ColumnInfo {
+                name: column.name,
+                data_type: column.data_type,
+                description: column.description,
+                unit: column.unit,
+                source_datatype: column.source_datatype,
+            })
+            .collect(),
+        total_rows: description.total_rows,
     }
 }
 
