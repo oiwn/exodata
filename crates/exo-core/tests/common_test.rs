@@ -1,12 +1,13 @@
-use anyhow::Error;
 use exo_core::tables::common::{
     count_non_null_values, create_histogram, get_numeric_stats, load_parquet,
 };
 
+type TestResult = Result<(), Box<dyn std::error::Error>>;
+
 const EXOPLANETS_FIXTURE: &str = "tests/fixtures/exoplanets.fixture";
 
 #[test]
-fn test_load_parquet() -> Result<(), Error> {
+fn test_load_parquet() -> TestResult {
     let df = load_parquet(EXOPLANETS_FIXTURE, None)?;
     assert_eq!(df.height(), 100, "Should have 100 sampled rows");
     assert!(df.width() > 0, "Should have columns");
@@ -14,14 +15,14 @@ fn test_load_parquet() -> Result<(), Error> {
 }
 
 #[test]
-fn test_load_parquet_with_limit() -> Result<(), Error> {
+fn test_load_parquet_with_limit() -> TestResult {
     let df = load_parquet(EXOPLANETS_FIXTURE, Some(10))?;
     assert_eq!(df.height(), 10, "Should limit to 10 rows");
     Ok(())
 }
 
 #[test]
-fn test_count_non_null_values() -> Result<(), Error> {
+fn test_count_non_null_values() -> TestResult {
     let df = load_parquet(EXOPLANETS_FIXTURE, None)?;
     let count = count_non_null_values(&df, "pl_name")?;
     assert!(count > 0, "Should have non-null planet names");
@@ -29,7 +30,7 @@ fn test_count_non_null_values() -> Result<(), Error> {
     Ok(())
 }
 #[test]
-fn test_get_numeric_stats() -> Result<(), Error> {
+fn test_get_numeric_stats() -> TestResult {
     let df = load_parquet(EXOPLANETS_FIXTURE, None)?;
 
     if let Some(stats) = get_numeric_stats(&df, "pl_masse")? {
@@ -43,7 +44,7 @@ fn test_get_numeric_stats() -> Result<(), Error> {
 }
 
 #[test]
-fn test_create_histogram() -> Result<(), Error> {
+fn test_create_histogram() -> TestResult {
     let df = load_parquet(EXOPLANETS_FIXTURE, None)?;
     let histogram = create_histogram(&df, "pl_orbper", 0.0, 1000.0, 10)?;
 

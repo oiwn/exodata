@@ -1,7 +1,7 @@
-use anyhow::Error;
+type TestResult = Result<(), Box<dyn std::error::Error>>;
 
 #[test]
-fn test_exoplanets_loader() -> Result<(), Error> {
+fn test_exoplanets_loader() -> TestResult {
     use exo_core::tables::common::{load_data, load_data_with_limit};
 
     let df = load_data("tests/fixtures/exoplanets.fixture")?;
@@ -15,7 +15,7 @@ fn test_exoplanets_loader() -> Result<(), Error> {
 }
 
 #[test]
-fn test_stellarhosts_loader() -> Result<(), Error> {
+fn test_stellarhosts_loader() -> TestResult {
     use exo_core::tables::common::load_data;
 
     let df = load_data("tests/fixtures/stellarhosts.fixture")?;

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-05-25
+
+- Split MCP docs into a dedicated `docs/mcp.md` page (`/docs/mcp`) with
+  a "Connecting an Agent" section covering Claude Code, Crush, OpenCode,
+  and Codex CLI; `docs/api.md` now links out.
+- Added `crates/exo-cli/README.md` and crates.io metadata
+  (`readme`/`keywords`/`categories`); bumped `exodata` to `0.1.1`.
+- Workspace dependency cleanup: removed dead deps and orphaned
+  `examples/` folder; added `[workspace.dependencies]` for `polars`,
+  `serde`, `serde_json`, `toml`; dropped vestigial `sqlparser` feature.
+- Replaced `anyhow` with `thiserror` in `exo-core` so the library stops
+  leaking opaque errors through its public API; `exo-cli` keeps `anyhow`.
+
 ## 2026-05-24
 
 - Made the hosted MCP server agent-ready for direct catalog querying:

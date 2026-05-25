@@ -1,7 +1,25 @@
-use anyhow::{Context, Result, anyhow};
 use exo_types::insights::InsightMeta;
 use polars::prelude::*;
 use polars::sql::SQLContext;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum InsightError {
+    #[error("unknown insight slug '{0}'")]
+    UnknownSlug(String),
+    #[error("failed to execute insight SQL for {slug}")]
+    Execute {
+        slug: String,
+        #[source]
+        source: PolarsError,
+    },
+    #[error("failed to collect insight {slug}")]
+    Collect {
+        slug: String,
+        #[source]
+        source: PolarsError,
+    },
+}
 
 pub mod binary_systems;
 pub mod crowded_systems;
@@ -54,16 +72,19 @@ pub fn find_insight(slug: &str) -> Option<&'static InsightDef> {
     INSIGHTS.iter().copied().find(|def| def.meta.slug == slug)
 }
 
-pub fn run_insight(input: InsightInput<'_>, slug: &str) -> Result<InsightData> {
+pub fn run_insight(
+    input: InsightInput<'_>,
+    slug: &str,
+) -> Result<InsightData, InsightError> {
     let def = find_insight(slug)
-        .ok_or_else(|| anyhow!("unknown insight slug '{slug}'"))?;
+        .ok_or_else(|| InsightError::UnknownSlug(slug.to_string()))?;
     run_insight_def(input, def)
 }
 
 pub fn run_insight_def(
     input: InsightInput<'_>,
     def: &'static InsightDef,
-) -> Result<InsightData> {
+) -> Result<InsightData, InsightError> {
     let mut ctx = SQLContext::new();
 
     match def.table {
@@ -81,12 +102,14 @@ pub fn run_insight_def(
 
     let frame = ctx
         .execute(def.sql)
-        .with_context(|| {
-            format!("failed to execute insight SQL for {}", def.meta.slug)
+        .map_err(|source| InsightError::Execute {
+            slug: def.meta.slug.to_string(),
+            source,
         })?
         .collect()
-        .with_context(|| {
-            format!("failed to collect insight {}", def.meta.slug)
+        .map_err(|source| InsightError::Collect {
+            slug: def.meta.slug.to_string(),
+            source,
         })?;
     let columns = frame
         .get_column_names()
@@ -101,7 +124,9 @@ pub fn run_insight_def(
     })
 }
 
-pub fn run_all_insights(input: InsightInput<'_>) -> Result<Vec<InsightData>> {
+pub fn run_all_insights(
+    input: InsightInput<'_>,
+) -> Result<Vec<InsightData>, InsightError> {
     INSIGHTS
         .iter()
         .map(|&def| {

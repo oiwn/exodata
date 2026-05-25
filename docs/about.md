@@ -12,6 +12,7 @@ The project is built in Rust with Leptos, Axum, Polars and Clap. Source VOTable 
 - Explore [curated dataset views](/insights)
 - Query the catalog with the [REST API](api.md) and read-only SQL
 - Inspect column metadata, units, and data types through [schema endpoints](api.md)
+- Connect a coding agent to the hosted [MCP server](mcp.md)
 - Use the [CLI](cli.md) for API-backed queries, offline data, and curated insights
 
 Table pages keep sorting, filtering, pagination, and selected columns in the URL so views can be shared or revisited.
@@ -21,6 +22,16 @@ Table pages keep sorting, filtering, pagination, and selected columns in the URL
 REST endpoints are mounted under `/rest`.
 
 See [REST API](api.md) for parameters and examples.
+
+## MCP
+
+A read-only Model Context Protocol endpoint is hosted at
+`https://exodata.space/mcp` so coding agents can query the catalog directly.
+Tools: `health`, `list_insights`, `run_insight`, `describe_catalog`,
+`query_catalog`.
+
+See [MCP Server](mcp.md) for the tool list and per-client configuration
+(Claude Code, Crush, OpenCode, Codex CLI).
 
 ## CLI
 

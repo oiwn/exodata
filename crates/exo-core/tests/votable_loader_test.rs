@@ -1,7 +1,7 @@
-use anyhow::Error;
+type TestResult = Result<(), Box<dyn std::error::Error>>;
 
 #[test]
-fn test_fixture_loads_correctly() -> Result<(), Error> {
+fn test_fixture_loads_correctly() -> TestResult {
     // Verify fixture is valid Parquet
     use exo_core::tables::common::load_parquet;
     let df = load_parquet("tests/fixtures/exoplanets.fixture", None)?;
