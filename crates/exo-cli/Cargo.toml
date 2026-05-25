@@ -19,7 +19,7 @@ name = "exodata"
 path = "src/main.rs"
 
 [dependencies]
-exo-core = { package = "exodata-core", version = "0.1.0", path = "../exo-core" }
+exo-core = { package = "exodata-core", version = "0.2.0", path = "../exo-core" }
 exo-types = { package = "exodata-types", version = "0.1.0", path = "../exo-types" }
 clap = { version = "4.5", features = ["derive"] }
 comfy-table = "7.2"

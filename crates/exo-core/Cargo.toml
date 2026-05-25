@@ -1,6 +1,6 @@
 [package]
 name = "exodata-core"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Core data loading, metadata, insight, and table logic for Exoplanets Catalog"
 license = "AGPL-3.0-only"
