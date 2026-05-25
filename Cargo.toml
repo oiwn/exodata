@@ -12,6 +12,12 @@ members = [
 ]
 resolver = "2"
 
+[workspace.dependencies]
+polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.9"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -29,19 +35,14 @@ wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Window", "Document", "Element", "DomTokenList"], optional = true }
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
-clap = { version = "4.5", features = ["derive"], optional = true }
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true }
 exo-core = { package = "exodata-core", path = "crates/exo-core", optional = true }
 exo-types = { package = "exodata-types", path = "crates/exo-types" }
-polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"], optional = true }
+polars = { workspace = true, optional = true }
 time = { version = "0.3", features = ["macros", "formatting"], optional = true }
-serde_json = { version = "1", optional = true }
+serde_json = { workspace = true, optional = true }
 percent-encoding = "2.3.2"
 pulldown-cmark = "0.13"
-comfy-table = { version = "7", optional = true }
-ratatui = { version = "0.29", features = ["all-widgets"], optional = true }
-crossterm = { version = "0.28", optional = true }
-indicatif = { version = "0.18", optional = true }
 uuid = { version = "1", features = ["js"] }
 utoipa = { version = "5.4", features = ["axum_extras"], optional = true }
 utoipa-swagger-ui = { version = "9.0", features = ["axum"], optional = true }
@@ -53,13 +54,8 @@ rmcp = { version = "1.6.0", features = ["server", "macros", "transport-streamabl
 # markdown = "1.0.0-alpha"
 
 [dev-dependencies]
-clap = { version = "4.5", features = ["derive"] }
-comfy-table = "7"
-ratatui = { version = "0.29", features = ["all-widgets"] }
-crossterm = "0.28"
-anyhow = "1"
-polars = { version = "0.53", features = ["lazy", "temporal", "timezones", "parquet", "sql"] }
-serde_json = "1"
+polars = { workspace = true }
+serde_json = { workspace = true }
 rand = "0.9"
 
 [features]
@@ -79,7 +75,6 @@ ssr = [
     "dep:exo-core",
     "dep:polars",
     "dep:serde_json",
-    "dep:indicatif",
     "dep:sqlparser",
     # OpenAPI / Swagger
     "dep:utoipa",
@@ -89,7 +84,6 @@ ssr = [
     "dep:rmcp",
 ]
 default = ["ssr"]
-sqlparser = ["dep:sqlparser"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

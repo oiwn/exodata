@@ -1,13 +1,9 @@
 use std::fs::File;
 
-use anyhow::Error;
 use polars::prelude::*;
 
 /// Load a parquet file, optionally with a row limit for lightweight scans.
-pub fn load_parquet(
-    path: &str,
-    limit: Option<usize>,
-) -> Result<DataFrame, Error> {
+pub fn load_parquet(path: &str, limit: Option<usize>) -> PolarsResult<DataFrame> {
     let file = File::open(path)?;
     let mut df = ParquetReader::new(file).finish()?;
     if let Some(n) = limit {
@@ -17,7 +13,7 @@ pub fn load_parquet(
 }
 
 /// Load data from a parquet file (convenience wrapper)
-pub fn load_data(path: &str) -> Result<DataFrame, Error> {
+pub fn load_data(path: &str) -> PolarsResult<DataFrame> {
     load_parquet(path, None)
 }
 
@@ -25,7 +21,7 @@ pub fn load_data(path: &str) -> Result<DataFrame, Error> {
 pub fn load_data_with_limit(
     path: &str,
     limit: Option<usize>,
-) -> Result<DataFrame, Error> {
+) -> PolarsResult<DataFrame> {
     load_parquet(path, limit)
 }
 
@@ -33,7 +29,7 @@ pub fn load_data_with_limit(
 pub fn count_non_null_values(
     df: &DataFrame,
     col_name: &str,
-) -> Result<usize, Error> {
+) -> PolarsResult<usize> {
     if let Ok(col) = df.column(col_name)
         && let Some(series) = col.as_series()
     {
@@ -52,7 +48,7 @@ pub fn count_non_null_values(
 pub fn get_numeric_stats(
     df: &DataFrame,
     col_name: &str,
-) -> Result<Option<NumericStats>, Error> {
+) -> PolarsResult<Option<NumericStats>> {
     if let Ok(col) = df.column(col_name)
         && let Some(series) = col.as_series()
         && let Ok(f64_series) = series.f64()
@@ -87,7 +83,7 @@ pub fn create_histogram(
     min_val: f64,
     max_val: f64,
     bins: usize,
-) -> Result<Vec<HistogramBin>, Error> {
+) -> PolarsResult<Vec<HistogramBin>> {
     if let Ok(col) = df.column(col_name)
         && let Some(series) = col.as_series()
         && let Ok(f64_series) = series.f64()
