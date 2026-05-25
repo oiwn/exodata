@@ -1,7 +1,6 @@
 # REST API
 
-Exoplanets Catalog exposes NASA Exoplanet Archive data through JSON endpoints under `/rest`.
-It also exposes a read-only hosted MCP endpoint at `/mcp` for agent clients.
+Exoplanets Catalog exposes NASA Exoplanet Archive data through JSON endpoints under `/rest`. It also exposes a read-only hosted MCP endpoint at `/mcp` for agent clients.
 
 Interactive OpenAPI documentation is available at <a href="/swagger-ui" rel="external">/swagger-ui</a>. The OpenAPI JSON document is available at <a href="/rest/openapi.json" rel="external">/rest/openapi.json</a>.
 
@@ -234,70 +233,14 @@ Response shape:
 
 ## MCP Endpoint
 
-### /mcp
+The catalog also exposes a hosted, read-only [Model Context Protocol](https://modelcontextprotocol.io)
+endpoint at `/mcp` for agent clients. It shares the SQL validation and
+execution path with `/rest/query`, but uses agent-friendly defaults
+(100 rows default, 1000 cap) and ships connection snippets for Claude Code,
+Crush, OpenCode, and Codex CLI.
 
-Hosted Model Context Protocol endpoint using Streamable HTTP.
-
-Connection URLs:
-
-- Local: `http://127.0.0.1:3000/mcp`
-- Hosted: `https://exodata.space/mcp`
-
-Tools:
-
-- `health` - confirms the MCP server is alive.
-- `list_insights` - returns curated insight metadata.
-- `run_insight` - runs a curated insight by slug.
-- `describe_catalog` - returns column names, descriptions, units, and data
-  types for `stellarhosts` or `exoplanets`.
-- `query_catalog` - runs one read-only SQL `SELECT` query against
-  `stellarhosts` and `exoplanets`.
-
-The MCP surface is read-only. `query_catalog` uses the same SQL validation and
-execution path as `/rest/query`, but defaults to 100 returned rows and caps MCP
-responses at 1000 rows. The server runs in stateless JSON response mode, so
-simple request/response clients do not need to manage MCP session IDs.
-
-Recommended agent flow:
-
-1. Call `describe_catalog` for the table and columns relevant to the task.
-2. Use the returned metadata to write a SQL `SELECT`.
-3. Call `query_catalog` with the SQL and optional `limit`.
-
-Example `describe_catalog` arguments:
-
-```json
-{
-  "table": "exoplanets",
-  "columns": ["pl_name", "hostname", "pl_rade", "pl_eqt"]
-}
-```
-
-Example `query_catalog` arguments:
-
-```json
-{
-  "sql": "SELECT pl_name, hostname, pl_rade FROM exoplanets WHERE pl_rade BETWEEN 0.8 AND 1.2 ORDER BY pl_rade",
-  "limit": 25
-}
-```
-
-Join example:
-
-```json
-{
-  "sql": "SELECT s.hostname, s.st_teff, e.pl_name, e.pl_rade FROM stellarhosts s JOIN exoplanets e ON s.hostname = e.hostname ORDER BY e.pl_rade LIMIT 10"
-}
-```
-
-Aggregate example:
-
-```json
-{
-  "sql": "SELECT discoverymethod, COUNT(*) AS count FROM exoplanets GROUP BY discoverymethod ORDER BY count DESC",
-  "limit": 20
-}
-```
+See [MCP Server](mcp.md) for the tool list, limits, and per-client
+configuration.
 
 ## Errors
 

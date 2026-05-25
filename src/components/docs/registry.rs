@@ -34,6 +34,19 @@ pub static PAGES: &[DocPage] = &[
         keywords: &["Exodata API", "REST API", "OpenAPI", "SQL", "schema"],
         markdown: include_str!("../../../docs/api.md"),
     },
+    DocPage {
+        slug: "mcp",
+        title: "MCP Server",
+        description: "Connect coding agents to the Exodata read-only MCP server for catalog schema and SQL access. Includes Claude Code, Crush, OpenCode, and Codex CLI configuration.",
+        keywords: &[
+            "Exodata MCP",
+            "Model Context Protocol",
+            "agents",
+            "Claude Code",
+            "Codex",
+        ],
+        markdown: include_str!("../../../docs/mcp.md"),
+    },
 ];
 
 pub fn find_page(slug: &str) -> Option<&'static DocPage> {
@@ -54,6 +67,7 @@ pub fn route_for_doc_link(path: &str) -> Option<String> {
         "about.md" => "/docs",
         "cli.md" => "/docs/cli",
         "api.md" => "/docs/api",
+        "mcp.md" => "/docs/mcp",
         _ => return None,
     };
 
@@ -74,6 +88,10 @@ mod tests {
         assert_eq!(
             route_for_doc_link("api.md#sql-query-endpoint"),
             Some("/docs/api#sql-query-endpoint".to_string())
+        );
+        assert_eq!(
+            route_for_doc_link("mcp.md#connecting-an-agent"),
+            Some("/docs/mcp#connecting-an-agent".to_string())
         );
         assert_eq!(route_for_doc_link("specs/cli.md"), None);
     }

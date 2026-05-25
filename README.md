@@ -36,6 +36,7 @@ Open your browser to `http://127.0.0.1:3000`.
 | Topic | Description |
 |-------|-------------|
 | [REST API](docs/api.md) | Endpoints, query parameters, SQL queries, response formats |
+| [MCP Server](docs/mcp.md) | Hosted agent endpoint, tool list, and per-client configuration |
 | [CLI Tools](docs/cli.md) | `exodata` package and commands for catalog queries, downloads, and insights |
 | [Testing](docs/testing.md) | Unit tests, Playwright e2e, code coverage |
 | [Deployment](DEPLOY.md) | Docker, Ansible, DigitalOcean setup |

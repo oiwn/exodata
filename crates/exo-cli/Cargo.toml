@@ -1,11 +1,14 @@
 [package]
 name = "exodata"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Terminal client for Exoplanets Catalog data, SQL queries, schemas, downloads, and insights"
 license = "AGPL-3.0-only"
 repository = "https://github.com/oiwn/exoplanets-catalog"
 homepage = "https://exodata.space"
+readme = "README.md"
+keywords = ["exoplanets", "astronomy", "nasa", "catalog", "cli"]
+categories = ["command-line-utilities", "science"]
 
 [lib]
 name = "exo_cli"
