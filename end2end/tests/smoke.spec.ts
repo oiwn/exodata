@@ -1,4 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 
 type ErrorCapture = {
   consoleErrors: string[];
@@ -34,6 +39,55 @@ async function expectNoClientErrors(page: Page, capture: ErrorCapture) {
     capture.pageErrors,
     `Unexpected page errors:\n${capture.pageErrors.join("\n")}`,
   ).toEqual([]);
+}
+
+async function firstCatalogValue(
+  request: APIRequestContext,
+  endpoint: string,
+  field: string,
+): Promise<string> {
+  const response = await request.get(`${endpoint}?limit=1`);
+  expect(response.ok()).toBeTruthy();
+
+  const payload = await response.json();
+  const value = payload.data?.[0]?.[field];
+  expect(typeof value).toBe("string");
+
+  return value;
+}
+
+async function expectNoDocumentOverflow(page: Page) {
+  const dimensions = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(
+    dimensions.viewportWidth + 1,
+  );
+}
+
+async function expectTableWrapperContained(page: Page) {
+  const wrapper = page.locator(
+    ".planet-provenance__table-wrap, .host-provenance__table-wrap",
+  );
+
+  await expect(wrapper).toBeVisible();
+
+  const dimensions = await wrapper.evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      viewportWidth: window.innerWidth,
+      overflowX: style.overflowX,
+    };
+  });
+
+  expect(dimensions.clientWidth).toBeLessThanOrEqual(
+    dimensions.viewportWidth + 1,
+  );
+  expect(dimensions.scrollWidth).toBeGreaterThanOrEqual(dimensions.clientWidth);
+  expect(dimensions.overflowX).toBe("auto");
 }
 
 test.beforeEach(async ({ request }) => {
@@ -106,6 +160,31 @@ test("metadata is available after / -> client navigation to /stellarhosts", asyn
   await selectorToggle.click();
   await expect(page.getByRole("button", { name: /select all/i })).toBeVisible();
   await expect(page.locator("label").filter({ hasText: "st_refname" })).toBeVisible();
+
+  await expectNoClientErrors(page, capture);
+});
+
+test("detail provenance sections stay within a mobile viewport", async ({
+  page,
+  request,
+}) => {
+  const exoplanet = await firstCatalogValue(request, "/rest/exoplanets", "pl_name");
+  const host = await firstCatalogValue(request, "/rest/stellarhosts", "hostname");
+  const capture = captureClientErrors(page);
+
+  await page.setViewportSize({ width: 375, height: 812 });
+
+  for (const route of [
+    `/exoplanets/${encodeURIComponent(exoplanet)}`,
+    `/stellarhosts/${encodeURIComponent(host)}`,
+  ]) {
+    await page.goto(route);
+    await expect(
+      page.getByText("Evidence Summary", { exact: true }),
+    ).toBeVisible();
+    await expectNoDocumentOverflow(page);
+    await expectTableWrapperContained(page);
+  }
 
   await expectNoClientErrors(page, capture);
 });

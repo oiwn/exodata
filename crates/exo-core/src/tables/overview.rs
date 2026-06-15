@@ -7,9 +7,58 @@ use std::collections::HashMap;
 #[derive(Debug, Default)]
 struct PlanetAggregate {
     discovery_methods: HashMap<String, usize>,
+    detection_sources: HashMap<String, usize>,
     radii: Vec<f64>,
+    equilibrium_temperatures: Vec<f64>,
     orbital_periods: Vec<f64>,
     discovery_years: Vec<i32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum PlanetTemperatureBand {
+    Cold,
+    Temperate,
+    Mild,
+    Warm,
+    Hot,
+    VeryHot,
+    UltraHot,
+}
+
+impl PlanetTemperatureBand {
+    const HOT_TO_COLD: [Self; 7] = [
+        Self::UltraHot,
+        Self::VeryHot,
+        Self::Hot,
+        Self::Warm,
+        Self::Mild,
+        Self::Temperate,
+        Self::Cold,
+    ];
+
+    fn from_kelvin(temperature: f64) -> Self {
+        match temperature.floor() as u32 {
+            0..=199 => Self::Cold,
+            200..=349 => Self::Temperate,
+            350..=499 => Self::Mild,
+            500..=699 => Self::Warm,
+            700..=999 => Self::Hot,
+            1000..=1499 => Self::VeryHot,
+            1500.. => Self::UltraHot,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Cold => "Cold (< 200 K)",
+            Self::Temperate => "Temperate (200-350 K)",
+            Self::Mild => "Mild (350-500 K)",
+            Self::Warm => "Warm (500-700 K)",
+            Self::Hot => "Hot (700-1000 K)",
+            Self::VeryHot => "Very hot (1000-1500 K)",
+            Self::UltraHot => "Ultra-hot (> 1500 K)",
+        }
+    }
 }
 
 /// Temperature distribution data for histogram visualization
@@ -355,6 +404,29 @@ pub fn get_planet_size_categories(df: &DataFrame) -> Vec<(String, usize)> {
     categories_vec
 }
 
+/// Group distinct planets by canonical equilibrium temperature bucket
+pub fn get_planet_temperature_bands(df: &DataFrame) -> Vec<(String, usize)> {
+    let planets = build_planet_aggregates(df);
+    let mut bands = HashMap::new();
+
+    for aggregate in planets.values() {
+        if let Some(temperature) = median_f64(&aggregate.equilibrium_temperatures)
+        {
+            let band = PlanetTemperatureBand::from_kelvin(temperature);
+            *bands.entry(band).or_insert(0) += 1;
+        }
+    }
+
+    PlanetTemperatureBand::HOT_TO_COLD
+        .into_iter()
+        .filter_map(|band| {
+            bands
+                .get(&band)
+                .map(|count| (band.label().to_string(), *count))
+        })
+        .collect()
+}
+
 /// Get top N discovery years with distinct planet counts
 pub fn get_discovery_year_counts(
     df: &DataFrame,
@@ -402,12 +474,34 @@ pub fn get_orbital_period_buckets(df: &DataFrame) -> Vec<(String, usize)> {
     buckets_vec
 }
 
+/// Get top N detection sources with distinct planet counts
+pub fn get_detection_sources(
+    df: &DataFrame,
+    limit: usize,
+) -> Vec<(String, usize)> {
+    let planets = build_planet_aggregates(df);
+    let mut sources = HashMap::new();
+
+    for aggregate in planets.values() {
+        if let Some(source) = canonical_string(&aggregate.detection_sources) {
+            *sources.entry(source).or_insert(0) += 1;
+        }
+    }
+
+    let mut sources_vec: Vec<_> = sources.into_iter().collect();
+    sources_vec.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    sources_vec.truncate(limit);
+    sources_vec
+}
+
 fn build_planet_aggregates(df: &DataFrame) -> HashMap<String, PlanetAggregate> {
     let Ok(pl_name_col) = df.column("pl_name") else {
         return HashMap::new();
     };
     let discovery_method_col = df.column("discoverymethod").ok();
+    let discovery_facility_col = df.column("disc_facility").ok();
     let radius_col = df.column("pl_rade").ok();
+    let equilibrium_temperature_col = df.column("pl_eqt").ok();
     let orbital_period_col = df.column("pl_orbper").ok();
     let discovery_year_col = df.column("disc_year").ok();
 
@@ -427,11 +521,22 @@ fn build_planet_aggregates(df: &DataFrame) -> HashMap<String, PlanetAggregate> {
             *aggregate.discovery_methods.entry(method).or_insert(0) += 1;
         }
 
+        let source = detection_source_at(discovery_facility_col, row_idx);
+        *aggregate.detection_sources.entry(source).or_insert(0) += 1;
+
         if let Some(col) = radius_col.as_ref()
             && let Some(radius) = float_value_at(col, row_idx)
             && radius.is_finite()
         {
             aggregate.radii.push(radius);
+        }
+
+        if let Some(col) = equilibrium_temperature_col.as_ref()
+            && let Some(temperature) = float_value_at(col, row_idx)
+            && temperature.is_finite()
+            && temperature >= 0.0
+        {
+            aggregate.equilibrium_temperatures.push(temperature);
         }
 
         if let Some(col) = orbital_period_col.as_ref()
@@ -450,6 +555,33 @@ fn build_planet_aggregates(df: &DataFrame) -> HashMap<String, PlanetAggregate> {
     }
 
     planets
+}
+
+fn detection_source_at(facility_col: Option<&Column>, row_idx: usize) -> String {
+    facility_col
+        .and_then(|col| string_value_at(col, row_idx))
+        .and_then(|value| normalize_detection_source(&value))
+        .unwrap_or_else(|| "Other".to_string())
+}
+
+fn normalize_detection_source(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.contains("transiting exoplanet survey satellite")
+        || lower.contains("tess")
+    {
+        Some("TESS".to_string())
+    } else if lower.contains("k2") {
+        Some("K2".to_string())
+    } else if lower.contains("kepler") {
+        Some("Kepler".to_string())
+    } else {
+        Some(trimmed.to_string())
+    }
 }
 
 fn string_value_at(col: &Column, row_idx: usize) -> Option<String> {
@@ -509,8 +641,9 @@ fn median_f64(values: &[f64]) -> Option<f64> {
 #[cfg(test)]
 mod tests {
     use super::{
-        get_discovery_methods, get_discovery_year_counts,
-        get_orbital_period_buckets, get_planet_size_categories, get_total_counts,
+        get_detection_sources, get_discovery_methods, get_discovery_year_counts,
+        get_orbital_period_buckets, get_planet_size_categories,
+        get_planet_temperature_bands, get_total_counts,
     };
     use polars::df;
 
@@ -587,6 +720,64 @@ mod tests {
     }
 
     #[test]
+    fn planet_temperature_bands_use_one_canonical_temperature_per_planet() {
+        let exoplanets_df = df!(
+            "pl_name" => &[
+                "Planet A",
+                "Planet A",
+                "Planet B",
+                "Planet C",
+                "Planet D",
+                "Planet E",
+                "Planet F",
+                "Planet G",
+                "Planet H",
+                "Planet I",
+                "Planet J",
+                "Planet K",
+                "Planet L",
+                "Planet M",
+                "Planet N",
+                "Planet O",
+            ],
+            "pl_eqt" => &[
+                190.0,
+                210.0,
+                150.0,
+                450.0,
+                600.0,
+                800.0,
+                1100.0,
+                1700.0,
+                f64::NAN,
+                260.0,
+                199.9,
+                200.0,
+                349.9,
+                350.0,
+                1499.9,
+                1500.0,
+            ]
+        )
+        .unwrap();
+
+        let bands = get_planet_temperature_bands(&exoplanets_df);
+
+        assert_eq!(
+            bands,
+            vec![
+                ("Ultra-hot (> 1500 K)".to_string(), 2),
+                ("Very hot (1000-1500 K)".to_string(), 2),
+                ("Hot (700-1000 K)".to_string(), 1),
+                ("Warm (500-700 K)".to_string(), 1),
+                ("Mild (350-500 K)".to_string(), 2),
+                ("Temperate (200-350 K)".to_string(), 4),
+                ("Cold (< 200 K)".to_string(), 2),
+            ]
+        );
+    }
+
+    #[test]
     fn discovery_years_use_earliest_year_per_planet() {
         let exoplanets_df = df!(
             "pl_name" => &["Planet A", "Planet A", "Planet B", "Planet C", "Planet C"],
@@ -632,6 +823,58 @@ mod tests {
                 ("< 1 day".to_string(), 1),
                 ("> 1000 days".to_string(), 1),
             ]
+        );
+    }
+
+    #[test]
+    fn detection_sources_use_canonical_facility_per_planet() {
+        let exoplanets_df = df!(
+            "pl_name" => &[
+                "Planet A",
+                "Planet A",
+                "Planet B",
+                "Planet C",
+                "Planet D",
+                "Planet E",
+            ],
+            "disc_facility" => &[
+                "Transiting Exoplanet Survey Satellite (TESS)",
+                "Transiting Exoplanet Survey Satellite (TESS)",
+                "K2",
+                "Kepler",
+                "La Silla Observatory",
+                "",
+            ],
+        )
+        .unwrap();
+
+        let sources = get_detection_sources(&exoplanets_df, 10);
+
+        assert_eq!(
+            sources,
+            vec![
+                ("K2".to_string(), 1),
+                ("Kepler".to_string(), 1),
+                ("La Silla Observatory".to_string(), 1),
+                ("Other".to_string(), 1),
+                ("TESS".to_string(), 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn detection_sources_apply_limit_after_deterministic_sorting() {
+        let exoplanets_df = df!(
+            "pl_name" => &["Planet A", "Planet B", "Planet C", "Planet D"],
+            "disc_facility" => &["Kepler", "Kepler", "K2", "TESS"],
+        )
+        .unwrap();
+
+        let sources = get_detection_sources(&exoplanets_df, 2);
+
+        assert_eq!(
+            sources,
+            vec![("Kepler".to_string(), 2), ("K2".to_string(), 1)]
         );
     }
 }
