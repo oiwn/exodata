@@ -138,7 +138,7 @@
 }
 
 .host-detail-section__header {
-  @apply flex items-end justify-between gap-4;
+  @apply flex flex-col gap-3 md:flex-row md:items-end md:justify-between;
 }
 
 .host-detail-section__eyebrow {
@@ -266,7 +266,7 @@
 }
 
 .host-provenance__actions {
-  @apply flex gap-3;
+  @apply flex flex-wrap gap-3;
 }
 
 .host-provenance__action {
@@ -275,18 +275,21 @@
 
 .host-provenance__layout {
   @apply grid gap-4 xl:grid-cols-[1.25fr_3fr];
+  min-width: 0;
 }
 
 .host-provenance__panel {
   @apply rounded-[1.5rem] border border-slate-800 bg-slate-950/70 shadow-lg shadow-slate-950/30;
+  min-width: 0;
 }
 
 .host-provenance__panel--summary {
-  @apply p-6;
+  @apply p-4 sm:p-6;
 }
 
 .host-provenance__panel--table {
-  @apply p-5;
+  @apply overflow-hidden p-4 sm:p-5;
+  max-width: 100%;
 }
 
 .host-provenance__summary-grid {
@@ -331,6 +334,7 @@
 
 .host-provenance__table-wrap {
   @apply overflow-x-auto;
+  max-width: 100%;
 }
 
 .host-provenance__table {

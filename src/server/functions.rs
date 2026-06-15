@@ -24,6 +24,7 @@ pub use tables::{get_exoplanets_page, get_stellarhosts_page};
 // to avoid bringing exo-core dependencies into the client WASM bundle.
 // This will be resolved in the future by restructuring exo-core with feature
 // flags or extracting shared types into a separate lightweight crate.
+// TODO: there is exo-types already, need to refactor
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ColumnMetadata {
     pub name: String,
@@ -53,6 +54,8 @@ pub struct DataStats {
     pub avg_stellar_distance: f64,
     pub discovery_methods: Vec<(String, usize)>,
     pub planet_size_categories: Vec<(String, usize)>,
+    pub planet_temperature_bands: Vec<(String, usize)>,
+    pub detection_sources: Vec<(String, usize)>,
     pub discovery_years: Vec<(String, usize)>,
     pub orbital_period_buckets: Vec<(String, usize)>,
 }

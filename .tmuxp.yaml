@@ -6,7 +6,7 @@ windows:
     start-directory: ./
     panes:
       - shell_command:
-        - helix
+        - hx
   - window_name: agent
     start-directory: ./
     panes:

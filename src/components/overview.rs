@@ -169,6 +169,20 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
                     items=stats.discovery_years
                 />
             </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <StatSection
+                    title="Planet Temperature Bands"
+                    subtitle="Distinct planets grouped by canonical equilibrium temperature"
+                    icon="🌡️"
+                    items=stats.planet_temperature_bands
+                />
+                <StatSection
+                    title="Detection Sources"
+                    subtitle="Distinct planets grouped by discovery facility"
+                    icon="🛰️"
+                    items=stats.detection_sources
+                />
+            </div>
         </div>
     }
 }
