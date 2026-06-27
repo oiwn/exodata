@@ -6,8 +6,10 @@ use std::sync::Arc;
 
 use axum::{
     Router,
+    body::Body,
     extract::{OriginalUri, Path as AxumPath, Query, State},
-    http::{StatusCode, header},
+    http::{Request, StatusCode, header},
+    middleware::Next,
     response::{IntoResponse, Json},
     routing::get,
 };
@@ -19,7 +21,7 @@ use serde_json::Value;
 use utoipa::{IntoParams, OpenApi, ToSchema};
 use utoipa_swagger_ui::SwaggerUi;
 
-use super::data::{insights, sql, tables};
+use super::data::{exports, insights, sql, tables};
 use super::functions::DataStats;
 use crate::server::cache::{HostDetailCache, InsightCache, TableCache};
 
@@ -253,6 +255,124 @@ pub async fn get_sitemap_entity(
     match state.sitemap_entity_xml.get(filename) {
         Some(xml) => serve_xml(xml.clone()).await.into_response(),
         None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+pub async fn detail_export_middleware(
+    State(state): State<ApiState>,
+    request: Request<Body>,
+    next: Next,
+) -> axum::response::Response {
+    if let Some((entity, name, format)) =
+        parse_detail_export_path(request.uri().path())
+    {
+        tracing::info!(
+            "serving detail export: path={} name={} format={}",
+            request.uri().path(),
+            name,
+            format.extension()
+        );
+        return match entity {
+            exports::ExportEntity::StellarHost => {
+                download_stellarhost(state, name, format).await
+            }
+            exports::ExportEntity::Exoplanet => {
+                download_exoplanet(state, name, format)
+            }
+        };
+    }
+
+    next.run(request).await
+}
+
+async fn download_stellarhost(
+    state: ApiState,
+    hostname: String,
+    format: exports::ExportFormat,
+) -> axum::response::Response {
+    match exports::export_stellarhost(
+        &state.stellarhosts_df,
+        &state.host_detail_cache,
+        &state.stellarhosts_metadata,
+        state.site_url.as_str(),
+        &hostname,
+        format,
+    )
+    .await
+    {
+        Ok(export) => export_response(export),
+        Err(error) => export_error_response(error),
+    }
+}
+
+fn download_exoplanet(
+    state: ApiState,
+    pl_name: String,
+    format: exports::ExportFormat,
+) -> axum::response::Response {
+    match exports::export_exoplanet(
+        &state.exoplanets_df,
+        &state.exoplanets_metadata,
+        state.site_url.as_str(),
+        &pl_name,
+        format,
+    ) {
+        Ok(export) => export_response(export),
+        Err(error) => export_error_response(error),
+    }
+}
+
+fn parse_detail_export_path(
+    path: &str,
+) -> Option<(exports::ExportEntity, String, exports::ExportFormat)> {
+    let (entity, name_with_suffix) = path
+        .strip_prefix("/stellarhosts/")
+        .map(|name| (exports::ExportEntity::StellarHost, name))
+        .or_else(|| {
+            path.strip_prefix("/exoplanets/")
+                .map(|name| (exports::ExportEntity::Exoplanet, name))
+        })?;
+
+    if name_with_suffix.contains('/') {
+        return None;
+    }
+
+    let (encoded_name, format) =
+        if let Some(name) = name_with_suffix.strip_suffix(".json") {
+            (name, exports::ExportFormat::Json)
+        } else if let Some(name) = name_with_suffix.strip_suffix(".csv") {
+            (name, exports::ExportFormat::Csv)
+        } else {
+            return None;
+        };
+
+    let name = percent_encoding::percent_decode_str(encoded_name)
+        .decode_utf8_lossy()
+        .into_owned();
+
+    Some((entity, name, format))
+}
+
+fn export_response(export: exports::DetailExport) -> axum::response::Response {
+    (
+        [
+            (header::CONTENT_TYPE, export.mime_type.to_string()),
+            (
+                header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{}\"", export.filename),
+            ),
+        ],
+        export.content,
+    )
+        .into_response()
+}
+
+fn export_error_response(error: String) -> axum::response::Response {
+    if error.contains("not found") {
+        StatusCode::NOT_FOUND.into_response()
+    } else {
+        tracing::error!("Failed to build detail export: {error}");
+        StatusCode::INTERNAL_SERVER_ERROR.into_response()
     }
 }
 

@@ -21,6 +21,7 @@ request/response clients do not need to manage MCP session IDs.
 | `run_insight`      | Runs a curated insight by slug.                                          |
 | `describe_catalog` | Returns column names, descriptions, units, and data types for a table.  |
 | `query_catalog`    | Runs one read-only SQL `SELECT` against `stellarhosts` and `exoplanets`. |
+| `download_detail`  | Returns one stellar host or exoplanet detail export as JSON or CSV.      |
 
 `query_catalog` uses the same SQL validation and execution path as
 [`/rest/query`](api.md#sql-query-endpoint).
@@ -78,6 +79,20 @@ Aggregate example:
   "limit": 20
 }
 ```
+
+Example `download_detail` arguments:
+
+```json
+{
+  "entity": "exoplanet",
+  "name": "Kepler-22 b",
+  "format": "json"
+}
+```
+
+`download_detail` returns `filename`, `mime_type`, `content`, and the matching
+browser download `url`. Supported entities are `stellarhost` and `exoplanet`;
+supported formats are `json` and `csv`.
 
 ## Connecting an Agent
 
@@ -149,6 +164,6 @@ stdio servers, so configure HTTP servers directly in `~/.codex/config.toml`:
 url = "https://exodata.space/mcp"
 ```
 
-After configuration, the agent should see five tools: `health`,
-`list_insights`, `run_insight`, `describe_catalog`, and `query_catalog`. Call
+After configuration, the agent should see six tools: `health`, `list_insights`,
+`run_insight`, `describe_catalog`, `query_catalog`, and `download_detail`. Call
 `health` first to confirm the connection.

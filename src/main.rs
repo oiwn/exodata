@@ -303,7 +303,11 @@ async fn start_server() {
         .merge(server::site_routes(api_state.clone()))
         .merge(server::swagger_ui()) // Swagger UI at /swagger-ui
         .nest_service("/mcp", server::mcp::mcp_routes(api_state.clone())) // MCP Streamable HTTP
-        .nest_service("/rest", server::api_routes(api_state)); // REST API at /rest/*
+        .nest_service("/rest", server::api_routes(api_state.clone())) // REST API at /rest/*
+        .layer(axum::middleware::from_fn_with_state(
+            api_state,
+            server::handlers::detail_export_middleware,
+        ));
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     tracing::info!("listening on http://{}", &addr);

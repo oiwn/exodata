@@ -7,7 +7,8 @@ mod tests {
     use axum::{
         Router,
         body::Body,
-        http::{Request, StatusCode},
+        http::{Request, StatusCode, header},
+        middleware,
     };
     use polars::prelude::*;
     use serde_json::Value;
@@ -87,20 +88,28 @@ mod tests {
 
     fn create_test_app() -> Router {
         let state = create_test_state();
-        site_routes(state.clone()).merge(
-            Router::new()
-                .route("/rest/stellarhosts", axum::routing::get(get_stellarhosts))
-                .route("/rest/exoplanets", axum::routing::get(get_exoplanets))
-                .route(
-                    "/rest/stellarhosts/schema",
-                    axum::routing::get(get_stellarhosts_schema),
-                )
-                .route(
-                    "/rest/exoplanets/schema",
-                    axum::routing::get(get_exoplanets_schema),
-                )
-                .with_state(state),
-        )
+        site_routes(state.clone())
+            .merge(
+                Router::new()
+                    .route(
+                        "/rest/stellarhosts",
+                        axum::routing::get(get_stellarhosts),
+                    )
+                    .route("/rest/exoplanets", axum::routing::get(get_exoplanets))
+                    .route(
+                        "/rest/stellarhosts/schema",
+                        axum::routing::get(get_stellarhosts_schema),
+                    )
+                    .route(
+                        "/rest/exoplanets/schema",
+                        axum::routing::get(get_exoplanets_schema),
+                    )
+                    .with_state(state.clone()),
+            )
+            .layer(middleware::from_fn_with_state(
+                state,
+                crate::server::handlers::detail_export_middleware,
+            ))
     }
 
     #[tokio::test]
@@ -133,6 +142,84 @@ mod tests {
             columns.iter().filter_map(|c| c.as_str()).collect();
         assert!(column_names.contains(&"hostname"));
         assert!(column_names.contains(&"sy_dist"));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_download_stellarhost_json_sets_attachment_headers() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/stellarhosts/HD%20189733.json")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(header::CONTENT_TYPE).unwrap(),
+            "application/json; charset=utf-8"
+        );
+        assert_eq!(
+            response.headers().get(header::CONTENT_DISPOSITION).unwrap(),
+            "attachment; filename=\"stellarhost-HD_189733.json\""
+        );
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["hostname"], "HD 189733");
+        assert_eq!(json["records"].as_array().unwrap().len(), 1);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_download_exoplanet_csv_exports_full_source_rows() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/exoplanets/Kepler-22%20b.csv")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(header::CONTENT_TYPE).unwrap(),
+            "text/csv; charset=utf-8"
+        );
+        assert_eq!(
+            response.headers().get(header::CONTENT_DISPOSITION).unwrap(),
+            "attachment; filename=\"exoplanet-Kepler-22_b.csv\""
+        );
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let csv = String::from_utf8(body.to_vec()).unwrap();
+
+        assert!(csv.starts_with(
+            "pl_name,hostname,discoverymethod,disc_year,pl_orbper,pl_rade,pl_bmasse\n"
+        ));
+        assert!(
+            csv.contains("Kepler-22 b,Kepler-22,Transit,2011,289.9,2.38,2.25")
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_download_missing_detail_returns_not_found() {
+        let app = create_test_app();
+
+        let request = Request::builder()
+            .uri("/exoplanets/Missing%20b.json")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-06-27
+
+- Added detail-page exports for stellar hosts and exoplanets:
+  - `.json` suffix downloads return the full detail payload used by the page
+  - `.csv` suffix downloads return matching source-table rows
+  - export responses include attachment filenames and content types
+- Wired the existing detail-page provenance download buttons to real JSON/CSV
+  links with tooltips and native download behavior.
+- Added MCP `download_detail(entity, name, format)` for read-only JSON/CSV
+  detail exports, returning filename, MIME type, content, and URL.
+- Documented detail export usage in `docs/api.md`, `docs/mcp.md`, `docs/about.md`,
+  and the CLI README MCP summary.
+- Captured the implementation plan and TOON deferral in `specs/ctx.md`.
+- Verified with manual browser checks, `cargo clippy --all --workspace`, and
+  `cargo test --all --workspace`.
+
 ## 2026-05-25
 
 - Split MCP docs into a dedicated `docs/mcp.md` page (`/docs/mcp`) with

@@ -270,7 +270,7 @@
 }
 
 .host-provenance__action {
-  @apply rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300;
+  @apply rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300 no-underline hover:border-sky-500 hover:text-white;
 }
 
 .host-provenance__layout {

@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use super::ApiState;
-use super::data::{insights, sql};
+use super::data::{exports, insights, sql};
 
 #[derive(Debug, Clone)]
 pub struct ExodataMcp {
@@ -47,6 +47,16 @@ struct DescribeCatalogRequest {
     table: String,
     /// Optional subset of column names to describe.
     columns: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+struct DownloadDetailRequest {
+    /// Entity type: "stellarhost" or "exoplanet".
+    entity: String,
+    /// Detail page entity name, such as a hostname or planet name.
+    name: String,
+    /// Export format: "json" or "csv".
+    format: String,
 }
 
 pub fn mcp_routes(
@@ -186,6 +196,48 @@ impl ExodataMcp {
 
         Ok(CallToolResult::structured(json!(result)))
     }
+
+    #[tool(
+        description = "Download one stellar host or exoplanet detail export. Entities: stellarhost, exoplanet. Formats: json, csv."
+    )]
+    async fn download_detail(
+        &self,
+        Parameters(request): Parameters<DownloadDetailRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        let entity = exports::ExportEntity::parse(&request.entity)
+            .map_err(export_param_error)?;
+        let format = exports::ExportFormat::parse(&request.format)
+            .map_err(export_param_error)?;
+
+        let export = match entity {
+            exports::ExportEntity::StellarHost => {
+                exports::export_stellarhost(
+                    &self.state.stellarhosts_df,
+                    &self.state.host_detail_cache,
+                    &self.state.stellarhosts_metadata,
+                    self.state.site_url.as_str(),
+                    &request.name,
+                    format,
+                )
+                .await
+            }
+            exports::ExportEntity::Exoplanet => exports::export_exoplanet(
+                &self.state.exoplanets_df,
+                &self.state.exoplanets_metadata,
+                self.state.site_url.as_str(),
+                &request.name,
+                format,
+            ),
+        }
+        .map_err(export_data_error)?;
+
+        Ok(CallToolResult::structured(json!({
+            "filename": export.filename,
+            "mime_type": export.mime_type,
+            "content": export.content,
+            "url": export.url,
+        })))
+    }
 }
 
 #[tool_handler]
@@ -221,6 +273,18 @@ fn sql_error(error: sql::CatalogSqlError) -> McpError {
             error.to_string(),
             Some(json!({ "error": error.to_string() })),
         ),
+    }
+}
+
+fn export_param_error(error: String) -> McpError {
+    McpError::invalid_params(error.clone(), Some(json!({ "error": error })))
+}
+
+fn export_data_error(error: String) -> McpError {
+    if error.contains("not found") {
+        McpError::invalid_params(error.clone(), Some(json!({ "error": error })))
+    } else {
+        McpError::internal_error(error.clone(), Some(json!({ "error": error })))
     }
 }
 
@@ -366,6 +430,7 @@ mod tests {
         assert!(tool_names.contains(&"run_insight"));
         assert!(tool_names.contains(&"describe_catalog"));
         assert!(tool_names.contains(&"query_catalog"));
+        assert!(tool_names.contains(&"download_detail"));
     }
 
     #[test]
@@ -496,5 +561,44 @@ mod tests {
             .unwrap_err();
 
         assert!(error.message.contains("SQL execution error"));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn download_detail_returns_exoplanet_json_export() {
+        let mcp = ExodataMcp::new(create_test_state());
+
+        let result = mcp
+            .download_detail(Parameters(DownloadDetailRequest {
+                entity: "exoplanet".to_string(),
+                name: "Kepler-22 b".to_string(),
+                format: "json".to_string(),
+            }))
+            .await
+            .unwrap();
+        let content = result.structured_content.unwrap();
+
+        assert_eq!(content["filename"], "exoplanet-Kepler-22_b.json");
+        assert_eq!(content["mime_type"], "application/json; charset=utf-8");
+        assert_eq!(
+            content["url"],
+            "https://example.com/exoplanets/Kepler%2D22%20b.json"
+        );
+        assert!(content["content"].as_str().unwrap().contains("Kepler-22 b"));
+    }
+
+    #[tokio::test]
+    async fn download_detail_rejects_invalid_format() {
+        let mcp = ExodataMcp::new(create_test_state());
+
+        let error = mcp
+            .download_detail(Parameters(DownloadDetailRequest {
+                entity: "exoplanet".to_string(),
+                name: "Kepler-22 b".to_string(),
+                format: "toon".to_string(),
+            }))
+            .await
+            .unwrap_err();
+
+        assert!(error.message.contains("format must be 'json' or 'csv'"));
     }
 }
