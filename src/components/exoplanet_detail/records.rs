@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use leptos::serde_json::Value;
 
 use super::format::{first_non_empty_string, format_value};
+use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::{ColumnMetadata, ExoplanetDetail};
 
 const PROVENANCE_COLUMNS: &[&str] = &[
@@ -30,6 +31,9 @@ const SUMMARY_STAT_KEYS: &[(&str, &str)] = &[
 #[component]
 pub fn PlanetRecordsSection(detail: ExoplanetDetail) -> impl IntoView {
     let rows = detail.records.len();
+    let encoded_name = encode_path_segment(&detail.pl_name);
+    let json_href = format!("/exoplanets/{encoded_name}.json");
+    let csv_href = format!("/exoplanets/{encoded_name}.csv");
     let ref_labels = collect_refs(&detail.records);
     let discovery_methods =
         distinct_non_empty_count(&detail.records, "discoverymethod");
@@ -44,8 +48,24 @@ pub fn PlanetRecordsSection(detail: ExoplanetDetail) -> impl IntoView {
                     <h2 class="planet-detail-section__title">"Underlying measurements and references"</h2>
                 </div>
                 <div class="planet-provenance__actions">
-                    <button class="planet-provenance__action" disabled>"Download JSON"</button>
-                    <button class="planet-provenance__action" disabled>"Download CSV"</button>
+                    <a
+                        class="planet-provenance__action"
+                        href=json_href
+                        title="Download full detail data as JSON"
+                        download
+                        rel="external"
+                    >
+                        "Download JSON"
+                    </a>
+                    <a
+                        class="planet-provenance__action"
+                        href=csv_href
+                        title="Download matching source rows as CSV"
+                        download
+                        rel="external"
+                    >
+                        "Download CSV"
+                    </a>
                 </div>
             </div>
 

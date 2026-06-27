@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use leptos::serde_json::Value;
 
 use super::format::{column_label, format_json_value};
+use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::StellarHostDetail;
 
 #[component]
@@ -9,6 +10,9 @@ pub fn ProvenanceSection(host: StellarHostDetail) -> impl IntoView {
     let stat_rows = host.provenance.key_field_stats.clone();
     let columns = host.provenance_columns.clone();
     let records = host.records.clone();
+    let encoded_name = encode_path_segment(&host.hostname);
+    let json_href = format!("/stellarhosts/{encoded_name}.json");
+    let csv_href = format!("/stellarhosts/{encoded_name}.csv");
 
     view! {
         <section class="host-detail-section">
@@ -18,8 +22,24 @@ pub fn ProvenanceSection(host: StellarHostDetail) -> impl IntoView {
                     <h2 class="host-detail-section__title">"Underlying measurements and references"</h2>
                 </div>
                 <div class="host-provenance__actions">
-                    <button class="host-provenance__action">"Download JSON"</button>
-                    <button class="host-provenance__action">"Download CSV"</button>
+                    <a
+                        class="host-provenance__action"
+                        href=json_href
+                        title="Download full detail data as JSON"
+                        download
+                        rel="external"
+                    >
+                        "Download JSON"
+                    </a>
+                    <a
+                        class="host-provenance__action"
+                        href=csv_href
+                        title="Download matching source rows as CSV"
+                        download
+                        rel="external"
+                    >
+                        "Download CSV"
+                    </a>
                 </div>
             </div>
 

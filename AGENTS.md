@@ -62,5 +62,8 @@ Turn implementation tasks into verifiable goals.
 - For validation changes, test invalid inputs and expected failures.
 - For refactors, verify behavior before and after when feasible.
 - For multi-step tasks, state a brief plan with a verification check for each step.
+- Prefer the fastest meaningful manual check once a feature is runnable. If the
+  manual check fails, stop broad test/diff loops and fix the observed behavior
+  directly.
 
 Strong success criteria allow independent progress. Weak criteria require clarification before coding.

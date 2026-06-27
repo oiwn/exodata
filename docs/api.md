@@ -171,6 +171,31 @@ Response shape:
 }
 ```
 
+## Detail Page Exports
+
+Detail pages can be downloaded from the page provenance section or by adding a
+format suffix to the detail URL.
+
+### Stellar Host Detail Exports
+
+```bash
+curl -OJ "https://exodata.space/stellarhosts/Kepler-22.json"
+curl -OJ "https://exodata.space/stellarhosts/Kepler-22.csv"
+```
+
+### Exoplanet Detail Exports
+
+```bash
+curl -OJ "https://exodata.space/exoplanets/Kepler-22%20b.json"
+curl -OJ "https://exodata.space/exoplanets/Kepler-22%20b.csv"
+```
+
+JSON exports return the full detail payload used by the server-rendered page,
+including records and metadata. CSV exports return the matching source-table
+rows for the selected stellar host or exoplanet. Export responses are served as
+attachments with a filename such as `stellarhost-Kepler-22.json` or
+`exoplanet-Kepler-22_b.csv`.
+
 ## Insight Endpoints
 
 ### GET /rest/insights
@@ -237,7 +262,8 @@ The catalog also exposes a hosted, read-only [Model Context Protocol](https://mo
 endpoint at `/mcp` for agent clients. It shares the SQL validation and
 execution path with `/rest/query`, but uses agent-friendly defaults
 (100 rows default, 1000 cap) and ships connection snippets for Claude Code,
-Crush, OpenCode, and Codex CLI.
+Crush, OpenCode, and Codex CLI. MCP also exposes a `download_detail` tool for
+the same JSON and CSV detail exports documented above.
 
 See [MCP Server](mcp.md) for the tool list, limits, and per-client
 configuration.
