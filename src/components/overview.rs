@@ -7,6 +7,7 @@ use crate::metadata_helpers::{
     canonical_url, overview_description, overview_title,
 };
 // Import server function and types - #[server] macro handles client/server compilation
+use crate::components::homepage_manual::HomepageManual;
 use crate::server::functions::{DataStats, get_stats};
 use crate::structured_data::{StructuredData, website_schema};
 
@@ -47,9 +48,12 @@ pub fn OverviewPage() -> impl IntoView {
                         <h1 class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-pulse">
                             "🌌 Exoplanet Archive"
                         </h1>
-                        <p class="text-xl text-gray-300 max-w-2xl mx-auto">
+                        <a
+                            href="#homepage-manual"
+                            class="block text-xl text-gray-300 max-w-2xl mx-auto transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-lg"
+                        >
                             "Exploring the cosmos: A comprehensive catalog of confirmed exoplanets and their host stars"
-                        </p>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -77,6 +81,7 @@ pub fn OverviewPage() -> impl IntoView {
                                 <div class="space-y-10">
                                     <StatsOverview stats=stats.clone()/>
                                     <DetailedStats stats=stats/>
+                                    <HomepageManual/>
                                 </div>
                             }),
                             Err(err) => {

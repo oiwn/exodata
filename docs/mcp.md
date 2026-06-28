@@ -4,10 +4,9 @@ Exoplanets Catalog exposes a read-only [Model Context Protocol](https://modelcon
 endpoint at `/mcp` so coding agents and LLM tooling can query the catalog
 directly.
 
-Connection URLs:
+Connection URL:
 
 - Hosted: `https://exodata.space/mcp`
-- Local: `http://127.0.0.1:3000/mcp`
 
 Transport: Streamable HTTP in stateless JSON response mode. Simple
 request/response clients do not need to manage MCP session IDs.

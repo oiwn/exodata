@@ -1,5 +1,5 @@
 mod page;
 pub mod registry;
-mod render;
+pub(crate) mod render;
 
 pub use page::DocsLazy;
