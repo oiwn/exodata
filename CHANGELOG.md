@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-06-28
+
+- Added a rounded homepage manual section sourced from `docs/index.md` and
+  rendered through the shared docs Markdown renderer.
+- Added homepage links for stable host/planet examples, JSON/CSV exports, REST
+  API docs, MCP docs, CLI docs, and Swagger UI.
+- Added hosted MCP setup command boxes with copy buttons for Codex, Claude Code,
+  OpenCode, and MCP Inspector, plus a compact CLI/MCP interaction card.
+- Moved the manual below the detailed homepage statistics and linked the hero
+  subtitle to it as an in-page anchor.
+- Removed the local MCP URL from the public MCP connection summary.
+- Verified with `cargo clippy --all --workspace`, `cargo test --workspace`, and
+  manual browser checks of layout and copy behavior.
+
 ## 2026-06-27
 
 - Added detail-page exports for stellar hosts and exoplanets:

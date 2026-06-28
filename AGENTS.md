@@ -65,5 +65,9 @@ Turn implementation tasks into verifiable goals.
 - Prefer the fastest meaningful manual check once a feature is runnable. If the
   manual check fails, stop broad test/diff loops and fix the observed behavior
   directly.
+- Once a change compiles, do not start additional broad verification loops before
+  the fastest meaningful manual check. If the user is expected to run the app or
+  inspect the UI manually, stop and hand them the exact command/URL/checklist
+  instead of continuing with more automated checks.
 
 Strong success criteria allow independent progress. Weak criteria require clarification before coding.

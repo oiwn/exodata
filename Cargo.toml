@@ -1,6 +1,6 @@
 [package]
 name = "exoplanets-catalog"
-version = "0.3.8"
+version = "0.3.9"
 edition = "2024"
 
 [workspace]
@@ -49,6 +49,7 @@ utoipa-swagger-ui = { version = "9.0", features = ["axum"], optional = true }
 sqlparser = { version = "0.60", optional = true }
 moka = { version = "0.12", features = ["future"] }
 rmcp = { version = "1.6.0", features = ["server", "macros", "transport-streamable-http-server", "schemars"], optional = true }
+leptos_i18n = "0.6.2"
 
 # [build-dependencies]
 # markdown = "1.0.0-alpha"

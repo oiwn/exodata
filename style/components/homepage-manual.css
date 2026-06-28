@@ -1,0 +1,132 @@
+.homepage-manual {
+  @apply scroll-mt-24 rounded-2xl border border-slate-700/70 bg-slate-950/80 px-4 py-10 md:py-12;
+}
+
+.homepage-manual__container {
+  @apply mx-auto max-w-6xl space-y-8;
+}
+
+.homepage-manual__intro {
+  @apply grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] lg:items-start;
+}
+
+.homepage-manual__prose {
+  @apply max-w-3xl text-base leading-7 text-slate-300;
+}
+
+.homepage-manual__prose h1 {
+  @apply mb-4 text-3xl font-semibold text-white md:text-4xl;
+}
+
+.homepage-manual__prose p {
+  @apply my-4;
+}
+
+.homepage-manual__section-heading {
+  @apply max-w-3xl space-y-2;
+}
+
+.homepage-manual__section-heading h2 {
+  @apply text-2xl font-semibold text-white;
+}
+
+.homepage-manual__section-heading p {
+  @apply text-sm leading-6 text-slate-400;
+}
+
+.homepage-manual__section-heading a {
+  @apply text-sky-300 underline decoration-sky-500/40 underline-offset-4 transition-colors hover:text-sky-200;
+}
+
+.homepage-manual__section-heading code {
+  @apply rounded bg-slate-900 px-1.5 py-0.5 font-mono text-sm text-emerald-200;
+}
+
+.homepage-manual__examples,
+.homepage-manual__mcp {
+  @apply space-y-4;
+}
+
+.homepage-manual__link-grid {
+  @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-5;
+}
+
+.homepage-manual-link {
+  @apply block min-w-0 rounded-lg border border-slate-700 bg-slate-900/70 p-4 text-left transition-colors hover:border-sky-500/70 hover:bg-slate-900;
+}
+
+.homepage-manual-link__title {
+  @apply block text-sm font-semibold text-slate-100;
+}
+
+.homepage-manual-link__description {
+  @apply mt-2 block text-sm leading-5 text-slate-400;
+}
+
+.homepage-manual__command-grid {
+  @apply grid gap-4 lg:grid-cols-2;
+}
+
+.homepage-command-box {
+  @apply min-w-0 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/80;
+}
+
+.homepage-command-box__header {
+  @apply flex items-center justify-between gap-3 border-b border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100;
+}
+
+.homepage-command-box__copy {
+  @apply shrink-0 rounded-md border border-slate-600 px-3 py-1 text-xs font-semibold text-slate-200 transition-colors hover:border-sky-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-500;
+}
+
+.homepage-command-box pre {
+  @apply overflow-x-auto whitespace-pre-wrap p-4 text-sm leading-6;
+}
+
+.homepage-command-box code {
+  @apply break-words font-mono text-emerald-200;
+}
+
+.homepage-command-box p {
+  @apply border-t border-slate-800 px-4 py-3 text-sm leading-6 text-slate-400;
+}
+
+.homepage-agent-card {
+  @apply min-w-0 rounded-lg border border-slate-700 bg-slate-900/80 p-5;
+}
+
+.homepage-agent-card__header {
+  @apply mb-4 flex items-center justify-between gap-4 text-sm font-semibold text-slate-100;
+}
+
+.homepage-agent-card__header span:last-child {
+  @apply rounded-full border border-emerald-500/40 px-3 py-1 text-xs text-emerald-200;
+}
+
+.homepage-agent-card__flow {
+  @apply space-y-4;
+}
+
+.homepage-agent-card__flow div {
+  @apply grid gap-1;
+}
+
+.homepage-agent-card__flow dt {
+  @apply text-xs font-semibold uppercase text-slate-500;
+}
+
+.homepage-agent-card__flow dd {
+  @apply min-w-0 text-sm leading-6 text-slate-300;
+}
+
+.homepage-agent-card__flow code {
+  @apply block overflow-x-auto rounded-md bg-slate-950 p-3 font-mono text-xs leading-5 text-emerald-200;
+}
+
+.homepage-agent-card__links {
+  @apply mt-5 flex flex-wrap gap-3;
+}
+
+.homepage-agent-card__links a {
+  @apply rounded-md border border-slate-600 px-3 py-2 text-sm font-semibold text-slate-200 transition-colors hover:border-sky-500 hover:text-white;
+}
