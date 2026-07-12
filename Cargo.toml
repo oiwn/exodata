@@ -1,6 +1,6 @@
 [package]
 name = "exoplanets-catalog"
-version = "0.3.9"
+version = "0.3.10"
 edition = "2024"
 
 [workspace]
@@ -49,7 +49,11 @@ utoipa-swagger-ui = { version = "9.0", features = ["axum"], optional = true }
 sqlparser = { version = "0.60", optional = true }
 moka = { version = "0.12", features = ["future"] }
 rmcp = { version = "1.6.0", features = ["server", "macros", "transport-streamable-http-server", "schemars"], optional = true }
-leptos_i18n = "0.6.2"
+leptos_i18n = { version = "0.6.2", default-features = false }
+
+[package.metadata.leptos-i18n]
+default = "en"
+locales = ["en", "zh-CN", "ja"]
 
 # [build-dependencies]
 # markdown = "1.0.0-alpha"
@@ -60,7 +64,7 @@ serde_json = { workspace = true }
 rand = "0.9"
 
 [features]
-hydrate = ["leptos/hydrate", "dep:web-sys"]
+hydrate = ["leptos/hydrate", "leptos_i18n/hydrate", "dep:web-sys"]
 ssr = [
     "dep:axum",
     "dep:tokio",
@@ -70,6 +74,7 @@ ssr = [
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",
+    "leptos_i18n/axum",
     "dep:tracing",
     "dep:tracing-subscriber",
     # data processing

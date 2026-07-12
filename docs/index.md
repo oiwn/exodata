@@ -1,13 +1,15 @@
-# Use the catalog, not just the table
+# [Reason over precise exoplanet data](#mcp-exoplanet-data)
 
-Exodata represents NASA Exoplanet Archive tables as a practical set of access
-paths for people, scripts, and AI-enabled tools.
+Exodata gives AI agents structured access to precise NASA Exoplanet Archive
+data through a hosted MCP server.
 
-Large scientific tables are powerful, but they are hard to scan by hand. This
-site keeps the table view available while adding shareable routes, focused
-JSON/CSV exports, REST and SQL endpoints, a local CLI, and an MCP server for
-natural-language-assisted catalog queries.
+Agents can inspect the catalog schema, compose SQL queries, and reason over the
+returned records instead of relying on general model knowledge or manually
+scanning large tables.
 
-Start with the website when you want to browse. Use exports when you need a
-single object record. Use the API, SQL endpoint, CLI, or MCP server when you
-want the dataset inside code, notebooks, local tools, or an agent workflow.
+Because the agent discovers the available tables and columns at runtime, its
+answers can stay grounded in catalog results. This is useful for comparisons,
+filtered searches, rankings, and follow-up questions where exact values matter.
+
+Connect a compatible MCP client to ask questions backed by the catalog's
+current structured data.

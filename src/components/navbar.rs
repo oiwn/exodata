@@ -3,15 +3,24 @@ use leptos::web_sys::KeyboardEvent;
 use leptos_router::components::A;
 use leptos_router::hooks::use_location;
 
+use crate::i18n::*;
+use crate::locale::{
+    locale_from_path, localized_path, localized_url, strip_locale_prefix,
+};
+
 #[component]
 pub fn Navbar() -> impl IntoView {
     let location = use_location();
+    let i18n = use_i18n();
     let pathname = move || location.pathname.get();
-    let is_stellarhosts = move || pathname().starts_with("/stellarhosts");
-    let is_exoplanets = move || pathname().starts_with("/exoplanets");
-    let is_insights = move || pathname().starts_with("/insights");
+    let current_path = move || strip_locale_prefix(&pathname()).to_string();
+    let current_locale = move || locale_from_path(&pathname());
+    let is_stellarhosts = move || current_path().starts_with("/stellarhosts");
+    let is_exoplanets = move || current_path().starts_with("/exoplanets");
+    let is_insights = move || current_path().starts_with("/insights");
     let is_docs = move || {
-        pathname().starts_with("/docs") || pathname().starts_with("/about")
+        current_path().starts_with("/docs")
+            || current_path().starts_with("/about")
     };
 
     // Mobile menu state
@@ -38,7 +47,7 @@ pub fn Navbar() -> impl IntoView {
         <nav class="bg-slate-900/80 backdrop-blur-sm border-b border-purple-500/20 sticky top-0 z-50">
             <div class="container mx-auto px-4">
                 <div class="flex justify-between items-center h-16">
-                    <A href="/" attr:class="flex items-center">
+                    <A href=move || localized_path("/", current_locale()) attr:class="flex items-center">
                         <span class="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
                             "🪐 Exoplanets"
                         </span>
@@ -47,7 +56,7 @@ pub fn Navbar() -> impl IntoView {
                     // Desktop Navigation (hidden on mobile)
                     <div class="hidden md:flex space-x-2 text-gray-300">
                         <A
-                            href="/stellarhosts"
+                            href=move || localized_path("/stellarhosts", current_locale())
                             attr:class=move || {
                                 if is_stellarhosts() {
                                     active_class
@@ -56,11 +65,11 @@ pub fn Navbar() -> impl IntoView {
                                 }
                             }
                         >
-                            "Stellar Hosts"
+                            {t!(i18n, nav.stellar_hosts)}
                         </A>
 
                         <A
-                            href="/exoplanets"
+                            href=move || localized_path("/exoplanets", current_locale())
                             attr:class=move || {
                                 if is_exoplanets() {
                                     active_class
@@ -69,11 +78,11 @@ pub fn Navbar() -> impl IntoView {
                                 }
                             }
                         >
-                            "Exoplanets"
+                            {t!(i18n, nav.exoplanets)}
                         </A>
 
                         <A
-                            href="/insights"
+                            href=move || localized_path("/insights", current_locale())
                             attr:class=move || {
                                 if is_insights() {
                                     active_class
@@ -82,11 +91,11 @@ pub fn Navbar() -> impl IntoView {
                                 }
                             }
                         >
-                            "Insights"
+                            {t!(i18n, nav.insights)}
                         </A>
 
                         <A
-                            href="/docs"
+                            href=move || localized_path("/docs", current_locale())
                             attr:class=move || {
                                 if is_docs() {
                                     active_class
@@ -95,7 +104,7 @@ pub fn Navbar() -> impl IntoView {
                                 }
                             }
                         >
-                            "Docs"
+                            {t!(i18n, nav.docs)}
                         </A>
 
                         <a
@@ -103,7 +112,7 @@ pub fn Navbar() -> impl IntoView {
                             class=link_class
                             target="_blank"
                         >
-                            "API"
+                            {t!(i18n, nav.api)}
                         </a>
 
                         <a
@@ -111,17 +120,18 @@ pub fn Navbar() -> impl IntoView {
                             class=icon_link_class
                             target="_blank"
                             rel="noopener noreferrer"
-                            aria-label="GitHub repository"
-                            title="GitHub repository"
+                            aria-label=move || t_string!(i18n, nav.github_repository)
+                            title=move || t_string!(i18n, nav.github_repository)
                         >
                             {github_icon()}
                         </a>
+                        <LanguageSwitcher/>
                     </div>
 
                     // Hamburger Button (visible on mobile only)
                     <button
                         class="md:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-white/10 transition-colors"
-                        aria-label="Open navigation menu"
+                        aria-label=move || t_string!(i18n, nav.open_menu)
                         aria-expanded=move || mobile_menu_open.get()
                         aria-controls="mobile-menu"
                         on:click=move |_| set_mobile_menu_open.set(true)
@@ -146,7 +156,7 @@ pub fn Navbar() -> impl IntoView {
                     id="mobile-menu"
                     class="relative z-10 flex flex-col h-full"
                     role="navigation"
-                    aria-label="Mobile navigation"
+                    aria-label=move || t_string!(i18n, nav.mobile_navigation)
                     on:keydown=move |e: KeyboardEvent| {
                         if e.key() == "Escape" {
                             set_mobile_menu_open.set(false);
@@ -160,7 +170,7 @@ pub fn Navbar() -> impl IntoView {
                         </span>
                         <button
                             class="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-white/10 transition-colors"
-                            aria-label="Close navigation menu"
+                            aria-label=move || t_string!(i18n, nav.close_menu)
                             on:click=move |_| set_mobile_menu_open.set(false)
                         >
                             {close_icon()}
@@ -170,44 +180,44 @@ pub fn Navbar() -> impl IntoView {
                     // Navigation Links
                     <div class="flex-1 flex flex-col items-center justify-center space-y-4 px-6">
                         <A
-                            href="/"
+                            href=move || localized_path("/", current_locale())
                             attr:class=move || {
-                                if pathname() == "/" { mobile_active_class } else { mobile_link_class }
+                                if current_path() == "/" { mobile_active_class } else { mobile_link_class }
                             }
                         >
-                            "Overview"
+                            {t!(i18n, nav.overview)}
                         </A>
                         <A
-                            href="/stellarhosts"
+                            href=move || localized_path("/stellarhosts", current_locale())
                             attr:class=move || {
                                 if is_stellarhosts() { mobile_active_class } else { mobile_link_class }
                             }
                         >
-                            "Stellar Hosts"
+                            {t!(i18n, nav.stellar_hosts)}
                         </A>
                         <A
-                            href="/exoplanets"
+                            href=move || localized_path("/exoplanets", current_locale())
                             attr:class=move || {
                                 if is_exoplanets() { mobile_active_class } else { mobile_link_class }
                             }
                         >
-                            "Exoplanets"
+                            {t!(i18n, nav.exoplanets)}
                         </A>
                         <A
-                            href="/insights"
+                            href=move || localized_path("/insights", current_locale())
                             attr:class=move || {
                                 if is_insights() { mobile_active_class } else { mobile_link_class }
                             }
                         >
-                            "Insights"
+                            {t!(i18n, nav.insights)}
                         </A>
                         <A
-                            href="/docs"
+                            href=move || localized_path("/docs", current_locale())
                             attr:class=move || {
                                 if is_docs() { mobile_active_class } else { mobile_link_class }
                             }
                         >
-                            "Docs"
+                            {t!(i18n, nav.docs)}
                         </A>
 
                         <a
@@ -215,8 +225,9 @@ pub fn Navbar() -> impl IntoView {
                             class=mobile_link_class
                             target="_blank"
                         >
-                            "API"
+                            {t!(i18n, nav.api)}
                         </a>
+                        <LanguageSwitcher/>
 
                         <a
                             href="https://github.com/oiwn/exoplanets-catalog"
@@ -233,6 +244,61 @@ pub fn Navbar() -> impl IntoView {
                 </div>
             </div>
         </Show>
+    }
+}
+
+#[component]
+fn LanguageSwitcher() -> impl IntoView {
+    let location = use_location();
+    let i18n = use_i18n();
+    let current_locale = move || locale_from_path(&location.pathname.get());
+    let href_for = move |locale| {
+        localized_url(
+            &location.pathname.get(),
+            &location.search.get(),
+            &location.hash.get(),
+            locale,
+        )
+    };
+    let option_class = move |locale| {
+        if current_locale() == locale {
+            "rounded-md bg-purple-500/25 px-2.5 py-1.5 text-xs font-semibold text-purple-200"
+        } else {
+            "rounded-md px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+        }
+    };
+
+    view! {
+        <div
+            class="flex items-center gap-0.5 rounded-lg border border-slate-700 bg-slate-950/60 p-1"
+            role="group"
+            aria-label=move || t_string!(i18n, nav.language)
+        >
+            <A
+                href=move || href_for(Locale::en)
+                attr:class=move || option_class(Locale::en)
+                attr:lang="en"
+                attr:title="English"
+            >
+                "EN"
+            </A>
+            <A
+                href=move || href_for(Locale::zh_CN)
+                attr:class=move || option_class(Locale::zh_CN)
+                attr:lang="zh-CN"
+                attr:title="简体中文"
+            >
+                "中文"
+            </A>
+            <A
+                href=move || href_for(Locale::ja)
+                attr:class=move || option_class(Locale::ja)
+                attr:lang="ja"
+                attr:title="日本語"
+            >
+                "日本語"
+            </A>
+        </div>
     }
 }
 

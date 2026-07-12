@@ -11,6 +11,19 @@ The frontend is a reactive single-page application (SPA) built with:
 - **Hydration** - Client-side interactivity after SSR
 - **WASM** - Client-side code compiled to WebAssembly
 
+## Localization
+
+The website uses `leptos_i18n` with compile-time JSON resources for English,
+Simplified Chinese, and Japanese. English is the default and remains
+unprefixed; `/zh-CN` and `/ja` select the other locales. Locale-prefixed aliases
+exist for website routes, while REST, MCP, Swagger, sitemap, and export URLs
+remain unprefixed.
+
+The active locale is derived only from the URL. The language switcher preserves
+the current path, query string, and fragment. In the first localization pass,
+global navigation, the footer, and the homepage are translated; table, detail,
+insight, and technical documentation content remains English.
+
 ## Architecture
 
 ```

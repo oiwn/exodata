@@ -340,10 +340,9 @@ fn parse_detail_export_path(
     let (encoded_name, format) =
         if let Some(name) = name_with_suffix.strip_suffix(".json") {
             (name, exports::ExportFormat::Json)
-        } else if let Some(name) = name_with_suffix.strip_suffix(".csv") {
-            (name, exports::ExportFormat::Csv)
         } else {
-            return None;
+            let name = name_with_suffix.strip_suffix(".csv")?;
+            (name, exports::ExportFormat::Csv)
         };
 
     let name = percent_encoding::percent_decode_str(encoded_name)
@@ -760,6 +759,8 @@ pub fn build_sitemaps(
 fn build_static_urls(site_url: &str) -> Vec<String> {
     let mut urls = vec![
         format!("{site_url}/"),
+        format!("{site_url}/zh-CN"),
+        format!("{site_url}/ja"),
         format!("{site_url}/docs"),
         format!("{site_url}/docs/cli"),
         format!("{site_url}/docs/api"),
