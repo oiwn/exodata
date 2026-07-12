@@ -35,6 +35,7 @@ COPY docs ./docs
 COPY src ./src
 COPY style ./style
 COPY public ./public
+COPY locales ./locales
 
 RUN cargo leptos build --release --split
 
