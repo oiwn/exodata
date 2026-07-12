@@ -1275,7 +1275,7 @@ version = "0.1.0"
 
 [[package]]
 name = "exoplanets-catalog"
-version = "0.3.10"
+version = "0.3.11"
 dependencies = [
  "axum",
  "console_error_panic_hook",
