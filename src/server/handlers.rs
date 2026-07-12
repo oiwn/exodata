@@ -760,6 +760,8 @@ pub fn build_sitemaps(
 fn build_static_urls(site_url: &str) -> Vec<String> {
     let mut urls = vec![
         format!("{site_url}/"),
+        format!("{site_url}/zh-CN"),
+        format!("{site_url}/ja"),
         format!("{site_url}/docs"),
         format!("{site_url}/docs/cli"),
         format!("{site_url}/docs/api"),

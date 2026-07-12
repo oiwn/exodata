@@ -542,6 +542,8 @@ mod tests {
 
         assert!(xml.contains("<urlset"));
         assert!(xml.contains("<loc>https://example.com/</loc>"));
+        assert!(xml.contains("<loc>https://example.com/zh-CN</loc>"));
+        assert!(xml.contains("<loc>https://example.com/ja</loc>"));
         assert!(xml.contains("<loc>https://example.com/docs</loc>"));
         assert!(xml.contains("<loc>https://example.com/docs/cli</loc>"));
         assert!(xml.contains("<loc>https://example.com/docs/api</loc>"));
@@ -572,6 +574,8 @@ mod tests {
         assert!(xml.contains("<lastmod>2026-01-15</lastmod>"));
         assert!(!xml.contains("/stellarhosts/"));
         assert!(!xml.contains("/exoplanets/"));
+        assert!(!xml.contains("/zh-CN/stellarhosts"));
+        assert!(!xml.contains("/ja/exoplanets"));
     }
 
     #[tokio::test]

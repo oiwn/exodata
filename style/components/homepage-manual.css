@@ -18,6 +18,10 @@
   @apply mb-4 text-3xl font-semibold text-white md:text-4xl;
 }
 
+.homepage-manual__prose h1 a {
+  @apply inline-block cursor-pointer no-underline transition-colors hover:text-sky-200 focus:rounded-sm focus:outline-none focus:ring-2 focus:ring-sky-400;
+}
+
 .homepage-manual__prose p {
   @apply my-4;
 }
@@ -28,6 +32,10 @@
 
 .homepage-manual__section-heading h2 {
   @apply text-2xl font-semibold text-white;
+}
+
+.homepage-manual__section-heading h2 a {
+  @apply inline-block cursor-pointer text-white no-underline transition-colors hover:text-sky-200 focus:rounded-sm focus:outline-none focus:ring-2 focus:ring-sky-400;
 }
 
 .homepage-manual__section-heading p {

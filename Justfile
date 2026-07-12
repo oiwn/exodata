@@ -2,18 +2,22 @@
 clippy:
   cargo clippy --all-targets --all-features -- -D warnings
 
-# Data download commands
-download-stellarhosts:
-  curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts" -L --max-time 3000 > data/stellarhosts.vot
+# Download both NASA VOTable sources.
+download-data:
+  mkdir -p data
+  curl --fail --location --remove-on-error --max-time 3000 --output data/stellarhosts.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts&format=votable"
+  curl --fail --location --remove-on-error --max-time 3000 --output data/exoplanets.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+pscomppars&format=votable"
 
-download-exoplanets:
-  curl "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+ps" -L --max-time 3000 > data/exoplanets.vot
-
+# Convert VOTables to Parquet and generate matching metadata TOML files.
 convert-raw-files:
   cargo run -p exodata -- dev convert-raw-files --data-dir data
 
-stellarhosts-metadata:
-  cargo run -p exodata -- dev view-metadata --path data/stellarhosts.vot
+# Confirm all runtime files exist and are non-empty.
+verify-data:
+  test -s data/stellarhosts.parquet
+  test -s data/exoplanets.parquet
+  test -s data/stellarhosts-metadata.toml
+  test -s data/exoplanets-metadata.toml
 
 # =============================================================================
 # Ansible Deployment Commands
@@ -44,7 +48,7 @@ ansible-deploy:
 ansible-ssl:
   cd {{ansible_dir}} && ansible-playbook {{ansible_args}} playbooks/ssl.yml
 
-# Upload parquet data files
+# Upload Parquet data and metadata TOML files
 ansible-upload-data:
   cd {{ansible_dir}} && ansible-playbook {{ansible_args}} playbooks/upload-data.yml
 

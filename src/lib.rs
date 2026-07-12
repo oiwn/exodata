@@ -3,6 +3,8 @@
 pub mod app;
 pub mod components;
 pub mod error_template;
+pub mod i18n;
+pub mod locale;
 pub mod metadata;
 pub mod metadata_helpers;
 pub mod structured_data;

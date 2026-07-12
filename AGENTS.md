@@ -14,6 +14,45 @@ This file defines agent workflow and points to project specifications. Implement
 4. When adding a new subsystem or feature, add/update the relevant spec in `specs/`.
 5. Keep AGENTS.md high-level; do not duplicate implementation details from specs.
 
+## Updating NASA Data Files
+
+Use the Justfile workflow; do not reconstruct the TAP URLs or deployment steps
+from memory.
+
+```bash
+# 1. Download both NASA VOTables.
+just download-data
+
+# 2. Convert both VOTables to Parquet and generate both metadata TOML files.
+just convert-raw-files
+
+# 3. Confirm all generated runtime files exist and are non-empty.
+just verify-data
+
+# 4. Upload Parquet and metadata TOML files through Ansible.
+just ansible-upload-data
+
+# 5. Restart the deployed application so it loads the new files.
+just ansible-deploy
+```
+
+If the VOTable files have already been downloaded, start with
+`just convert-raw-files`. Ansible commands require
+`infrastructure/ansible/.env` with `DROPLET_IP` configured.
+
+The expected source files are `data/stellarhosts.vot` and
+`data/exoplanets.vot`. Conversion generates and overwrites:
+
+- `data/stellarhosts.parquet`
+- `data/exoplanets.parquet`
+- `data/stellarhosts-metadata.toml`
+- `data/exoplanets-metadata.toml`
+
+`convert-raw-files` processes every `.vot` file in `data/`; remove temporary or
+old VOTables before running it. Upload only the generated Parquet/TOML files,
+then restart/deploy because the application loads them at startup. See
+`specs/data-management.md` and `DEPLOY.md` for technical details.
+
 ## Agent Rules
 1. **Explicit Instruction Compliance:** Do not perform actions (file edits or command execution) without explicit user request.
 2. **Confidence Threshold:** If below ~70% confidence about a request or outcome, stop and ask for clarification.

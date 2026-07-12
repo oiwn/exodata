@@ -3,9 +3,8 @@ use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
 use leptos_router::lazy_route;
 
-use crate::metadata_helpers::{
-    canonical_url, overview_description, overview_title,
-};
+use crate::metadata_helpers::{SITE_URL, canonical_url, title_with_site};
+use crate::{i18n::*, locale::localized_path};
 // Import server function and types - #[server] macro handles client/server compilation
 use crate::components::homepage_manual::HomepageManual;
 use crate::server::functions::{DataStats, get_stats};
@@ -29,14 +28,21 @@ impl LazyRoute for OverviewLazy {
 
 #[component]
 pub fn OverviewPage() -> impl IntoView {
+    let i18n = use_i18n();
+    let locale = i18n.get_locale_untracked();
+    let canonical_path = localized_path("/", locale);
     // Create a resource that calls the server function
     let stats_resource =
         Resource::new(move || (), move |_| async move { get_stats().await });
 
     view! {
-        <Title text=overview_title()/>
-        <Meta name="description" content=overview_description()/>
-        <Link rel="canonical" href=canonical_url("/")/>
+        <Title text=title_with_site(t_string!(i18n, home.title))/>
+        <Meta name="description" content=t_string!(i18n, home.description)/>
+        <Link rel="canonical" href=canonical_url(&canonical_path)/>
+        <Link rel="alternate" hreflang="en" href=format!("{SITE_URL}/")/>
+        <Link rel="alternate" hreflang="zh-CN" href=format!("{SITE_URL}/zh-CN")/>
+        <Link rel="alternate" hreflang="ja" href=format!("{SITE_URL}/ja")/>
+        <Link rel="alternate" hreflang="x-default" href=format!("{SITE_URL}/")/>
         <StructuredData value=website_schema()/>
         <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             // Header with cosmic background
@@ -46,13 +52,13 @@ pub fn OverviewPage() -> impl IntoView {
                 <div class="container mx-auto px-4 py-16 relative">
                     <div class="text-center space-y-4">
                         <h1 class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-pulse">
-                            "🌌 Exoplanet Archive"
+                            {t!(i18n, home.hero_title)}
                         </h1>
                         <a
-                            href="#homepage-manual"
+                            href="#mcp-exoplanet-data"
                             class="block text-xl text-gray-300 max-w-2xl mx-auto transition-colors hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-lg"
                         >
-                            "Exploring the cosmos: A comprehensive catalog of confirmed exoplanets and their host stars"
+                            {t!(i18n, home.hero_subtitle)}
                         </a>
                     </div>
                 </div>
@@ -70,7 +76,9 @@ pub fn OverviewPage() -> impl IntoView {
                                         "🪐"
                                     </div>
                                 </div>
-                                <span class="mt-6 text-lg text-gray-300 animate-pulse">"Loading cosmic data..."</span>
+                                <span class="mt-6 text-lg text-gray-300 animate-pulse">
+                                    {t!(i18n, home.loading)}
+                                </span>
                             </div>
                         }
                     }
@@ -85,13 +93,13 @@ pub fn OverviewPage() -> impl IntoView {
                                 </div>
                             }),
                             Err(err) => {
-                                let error_msg = format!("Error loading data: {}", err);
+                                let error_msg = format!("{}: {err}", t_string!(i18n, home.error_loading));
                                 leptos::either::Either::Right(view! {
                                     <div class="max-w-2xl mx-auto mt-10 bg-red-900/50 border-2 border-red-500 text-red-100 px-6 py-4 rounded-xl backdrop-blur-sm">
                                         <div class="flex items-center gap-3">
                                             <span class="text-2xl">"⚠️"</span>
                                             <div>
-                                                <h3 class="font-semibold text-lg">"Connection Error"</h3>
+                                                <h3 class="font-semibold text-lg">{t!(i18n, home.connection_error)}</h3>
                                                 <p class="text-sm text-red-200">{error_msg}</p>
                                             </div>
                                         </div>
@@ -108,34 +116,35 @@ pub fn OverviewPage() -> impl IntoView {
 
 #[component]
 fn StatsOverview(stats: DataStats) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
-                title="Stellar Systems"
+                title=t_string!(i18n, home.stellar_systems)
                 value=stats.stellarhosts_total.to_string()
                 icon="⭐"
-                subtitle="Host stars catalogued"
+                subtitle=t_string!(i18n, home.host_stars_catalogued)
                 gradient="from-blue-600 to-cyan-500"
             />
             <StatCard
-                title="Exoplanets"
+                title=t_string!(i18n, home.exoplanets)
                 value=stats.exoplanets_total.to_string()
                 icon="🪐"
-                subtitle="Distinct planets in the catalog"
+                subtitle=t_string!(i18n, home.distinct_planets)
                 gradient="from-purple-600 to-pink-500"
             />
             <StatCard
-                title="Avg Stellar Temp"
+                title=t_string!(i18n, home.average_temperature)
                 value=format!("{:.0} K", stats.avg_stellar_temp)
                 icon="🌡️"
-                subtitle="Mean effective temperature"
+                subtitle=t_string!(i18n, home.mean_temperature)
                 gradient="from-orange-600 to-red-500"
             />
             <StatCard
-                title="Avg Distance"
+                title=t_string!(i18n, home.average_distance)
                 value=format!("{:.1} pc", stats.avg_stellar_distance)
                 icon="📏"
-                subtitle="Mean system distance"
+                subtitle=t_string!(i18n, home.mean_distance)
                 gradient="from-green-600 to-emerald-500"
             />
         </div>
@@ -144,46 +153,47 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
 
 #[component]
 fn DetailedStats(stats: DataStats) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <StatSection
-                    title="Planet Classifications"
-                    subtitle="Distinct planets grouped by canonical radius"
+                    title=t_string!(i18n, home.planet_classifications)
+                    subtitle=t_string!(i18n, home.planet_classifications_subtitle)
                     icon="🌍"
                     items=stats.planet_size_categories
                 />
                 <StatSection
-                    title="Orbital Periods"
-                    subtitle="Distinct planets grouped by canonical period"
+                    title=t_string!(i18n, home.orbital_periods)
+                    subtitle=t_string!(i18n, home.orbital_periods_subtitle)
                     icon="🌀"
                     items=stats.orbital_period_buckets
                 />
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <StatSection
-                    title="Discovery Methods"
-                    subtitle="Distinct planets grouped by canonical method"
+                    title=t_string!(i18n, home.discovery_methods)
+                    subtitle=t_string!(i18n, home.discovery_methods_subtitle)
                     icon="🔭"
                     items=stats.discovery_methods
                 />
                 <StatSection
-                    title="Discovery Years"
-                    subtitle="Distinct planets grouped by earliest discovery year"
+                    title=t_string!(i18n, home.discovery_years)
+                    subtitle=t_string!(i18n, home.discovery_years_subtitle)
                     icon="📅"
                     items=stats.discovery_years
                 />
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <StatSection
-                    title="Planet Temperature Bands"
-                    subtitle="Distinct planets grouped by canonical equilibrium temperature"
+                    title=t_string!(i18n, home.temperature_bands)
+                    subtitle=t_string!(i18n, home.temperature_bands_subtitle)
                     icon="🌡️"
                     items=stats.planet_temperature_bands
                 />
                 <StatSection
-                    title="Detection Sources"
-                    subtitle="Distinct planets grouped by discovery facility"
+                    title=t_string!(i18n, home.detection_sources)
+                    subtitle=t_string!(i18n, home.detection_sources_subtitle)
                     icon="🛰️"
                     items=stats.detection_sources
                 />
@@ -200,6 +210,7 @@ fn StatCard(
     subtitle: &'static str,
     gradient: &'static str,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="group relative overflow-hidden rounded-2xl bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-6 transition-all duration-300 hover:scale-105 hover:border-slate-500 hover:shadow-2xl hover:shadow-purple-500/20">
             // Gradient overlay
@@ -209,7 +220,7 @@ fn StatCard(
                 <div class="flex items-start justify-between mb-4">
                     <span class="text-5xl filter drop-shadow-lg">{icon}</span>
                     <div class=format!("px-3 py-1 rounded-full bg-gradient-to-r {} text-white text-xs font-bold", gradient)>
-                        "LIVE"
+                        {t!(i18n, home.live)}
                     </div>
                 </div>
 
