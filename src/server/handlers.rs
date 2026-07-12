@@ -340,10 +340,9 @@ fn parse_detail_export_path(
     let (encoded_name, format) =
         if let Some(name) = name_with_suffix.strip_suffix(".json") {
             (name, exports::ExportFormat::Json)
-        } else if let Some(name) = name_with_suffix.strip_suffix(".csv") {
-            (name, exports::ExportFormat::Csv)
         } else {
-            return None;
+            let name = name_with_suffix.strip_suffix(".csv")?;
+            (name, exports::ExportFormat::Csv)
         };
 
     let name = percent_encoding::percent_decode_str(encoded_name)
