@@ -22,6 +22,7 @@ The website exposes the catalog through browsable, shareable routes:
 - `/swagger-ui` - interactive OpenAPI documentation
 
 ^^^ this should be valid relative urls, i want them to be rendered on server, maybe render component can generate links according to the router?
+&&& Public routes are documented as root-relative paths (for example, `/exoplanets`). The Leptos router renders those routes during SSR; it does not generate link destinations from route declarations. UI links should use the existing locale-aware path helper so that a link preserves the active locale and URL state.
 
 The table routes preserve query state in the URL so sorted, filtered, and column-customized views can be shared.
 
@@ -153,6 +154,8 @@ Working notes and internal planning:
 
 - `specs/ideas.md` - future ideas, including MCP follow-up
 - `specs/refactoring.md` - refactoring notes
+- `specs/architecture-cleanup-roadmap.md` - staged technical-debt and
+  architecture cleanup plan
 - `specs/ssr-streaming-issue.md` - production SSR streaming issue analysis
 - `specs/ctx.md` - temporary active-task context; clean after use
 

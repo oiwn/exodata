@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-19
+
+- Modernized all ten `src` Rust module entry files from `mod.rs` to the
+  adjacent `name.rs` layout, retaining the existing module paths and child
+  directories.
+- Verified with `cargo fmt`, `cargo check`, and manual checks of the overview,
+  catalog tables, detail pages, insights, and docs.
+
 ## 2026-06-28
 
 - Added a rounded homepage manual section sourced from `docs/index.md` and
