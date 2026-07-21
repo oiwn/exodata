@@ -1,4 +1,4 @@
-use exo_core::metadata::ColumnMetadata;
+use exo_types::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};

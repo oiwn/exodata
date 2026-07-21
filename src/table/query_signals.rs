@@ -59,57 +59,11 @@ impl TableQuerySignals {
         )
     }
 
-    pub fn query_with_page(&self, page: usize) -> TableQueryState {
-        TableQueryState::new(
-            page,
-            self.sort_column.get(),
-            self.sort_order.get(),
-            self.selected_columns.get(),
-            self.filter_text.get(),
-        )
-    }
-
-    pub fn query_with_sort(
-        &self,
-        page: usize,
-        sort_column: Option<String>,
-        sort_order: String,
-    ) -> TableQueryState {
-        TableQueryState::new(
-            page,
-            sort_column,
-            sort_order,
-            self.selected_columns.get(),
-            self.filter_text.get(),
-        )
-    }
-
-    pub fn query_with_columns(
-        &self,
-        page: usize,
-        sort_column: Option<String>,
-        columns: Vec<String>,
-    ) -> TableQueryState {
-        TableQueryState::new(
-            page,
-            sort_column,
-            self.sort_order.get(),
-            columns,
-            self.filter_text.get(),
-        )
-    }
-
-    pub fn query_with_filter(
-        &self,
-        page: usize,
-        filter: String,
-    ) -> TableQueryState {
-        TableQueryState::new(
-            page,
-            self.sort_column.get(),
-            self.sort_order.get(),
-            self.selected_columns.get(),
-            filter,
-        )
+    pub fn set_query(&self, query: TableQueryState) {
+        self.set_current_page.set(query.page);
+        self.set_sort_column.set(query.sort_col);
+        self.set_sort_order.set(query.sort_order);
+        self.set_selected_columns.set(query.columns);
+        self.set_filter_text.set(query.filter);
     }
 }

@@ -1,6 +1,7 @@
 // Leptos server functions for the application.
 // These functions can be called from the client but execute on the server.
 
+use exo_types::metadata::ColumnMetadata;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
 use leptos::server_fn::ServerFnError;
@@ -19,31 +20,6 @@ pub use details::{
 };
 pub use insights::get_insight;
 pub use tables::{get_exoplanets_page, get_stellarhosts_page};
-
-// NOTE: This is a temporary duplicate of exo_core::metadata::ColumnMetadata
-// to avoid bringing exo-core dependencies into the client WASM bundle.
-// This will be resolved in the future by restructuring exo-core with feature
-// flags or extracting shared types into a separate lightweight crate.
-// TODO: there is exo-types already, need to refactor
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct ColumnMetadata {
-    pub name: String,
-    pub description: Option<String>,
-    pub unit: Option<String>,
-    pub datatype: String,
-}
-
-#[cfg(feature = "ssr")]
-impl From<exo_core::metadata::ColumnMetadata> for ColumnMetadata {
-    fn from(meta: exo_core::metadata::ColumnMetadata) -> Self {
-        ColumnMetadata {
-            name: meta.name,
-            description: meta.description,
-            unit: meta.unit,
-            datatype: meta.datatype,
-        }
-    }
-}
 
 /// Statistics data structure for the overview page.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]

@@ -51,9 +51,7 @@ async fn start_server() {
     use exoplanets_catalog::server::data::{
         insights as server_insights, tables as server_tables,
     };
-    use exoplanets_catalog::server::functions::{
-        ColumnMetadata as UiColumnMetadata, DataStats,
-    };
+    use exoplanets_catalog::server::functions::DataStats;
     use exoplanets_catalog::server::{self, ApiState};
     use leptos::prelude::{get_configuration, provide_context};
     use leptos_axum::{LeptosRoutes, generate_route_list};
@@ -96,16 +94,8 @@ async fn start_server() {
         Err(e) => panic!("Failed to load exoplanets metadata: {}", e),
     };
     let app_metadata = AppMetadata {
-        stellarhosts: stellarhosts_metadata
-            .as_ref()
-            .iter()
-            .map(|(k, v)| (k.clone(), UiColumnMetadata::from(v.clone())))
-            .collect(),
-        exoplanets: exoplanets_metadata
-            .as_ref()
-            .iter()
-            .map(|(k, v)| (k.clone(), UiColumnMetadata::from(v.clone())))
-            .collect(),
+        stellarhosts: stellarhosts_metadata.as_ref().clone(),
+        exoplanets: exoplanets_metadata.as_ref().clone(),
     };
     let metadata_json = leptos::serde_json::to_string(&app_metadata)
         .expect("Failed to serialize metadata for hydration");

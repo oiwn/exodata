@@ -1,4 +1,4 @@
-use crate::server::functions::ColumnMetadata;
+use exo_types::metadata::ColumnMetadata;
 use leptos::prelude::*;
 use std::collections::HashMap;
 

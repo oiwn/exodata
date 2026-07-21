@@ -2,8 +2,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow};
 use clap::ValueEnum;
-use exo_core::metadata::{ColumnMetadata, load_metadata_toml};
+use exo_core::metadata::load_metadata_toml;
 use exo_core::tables::common::load_parquet;
+use exo_types::metadata::ColumnMetadata;
 use polars::prelude::*;
 use polars::sql::SQLContext;
 use serde_json::{Value, json};

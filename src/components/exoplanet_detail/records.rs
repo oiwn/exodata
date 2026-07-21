@@ -5,7 +5,8 @@ use leptos::serde_json::Value;
 
 use super::format::{first_non_empty_string, format_value};
 use crate::metadata_helpers::encode_path_segment;
-use crate::server::functions::{ColumnMetadata, ExoplanetDetail};
+use crate::server::functions::ExoplanetDetail;
+use exo_types::metadata::ColumnMetadata;
 
 const PROVENANCE_COLUMNS: &[&str] = &[
     "disc_year",

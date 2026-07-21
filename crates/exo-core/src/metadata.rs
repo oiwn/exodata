@@ -1,15 +1,8 @@
+use exo_types::metadata::ColumnMetadata;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ColumnMetadata {
-    pub name: String,
-    pub description: Option<String>,
-    pub unit: Option<String>,
-    pub datatype: String,
-}
 
 /// Container for TOML file format
 #[derive(Debug, Serialize, Deserialize)]

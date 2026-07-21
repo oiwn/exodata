@@ -1,11 +1,10 @@
 @import "tailwindcss";
 @import "./components/docs.css";
 @import "./components/exoplanet-detail.css";
-@import "./components/exoplanets-table.css";
+@import "./components/catalog-table.css";
 @import "./components/homepage-manual.css";
 @import "./components/insights.css";
 @import "./components/stellarhost-detail.css";
-@import "./components/stellarhosts-table.css";
 
 @theme {
   /* Enable all Tailwind colors */

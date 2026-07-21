@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add comprehensive column metadata (descriptions, units, data types) to `exo-core` crate based on NASA Exoplanet Archive official documentation.
+Add comprehensive column metadata (descriptions, units, data types) based on NASA Exoplanet Archive official documentation. `exo-types` owns the shared serializable `ColumnMetadata` type; `exo-core` owns metadata parsing, persistence, and presentation helpers.
 
 **Status**: ✅ **COMPLETED** - Full pipeline implemented (VOTable → TOML → Server → API)
 

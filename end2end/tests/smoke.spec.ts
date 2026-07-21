@@ -141,6 +141,43 @@ test("SSR + hydration works on /exoplanets", async ({ page }) => {
   await expectNoClientErrors(page, capture);
 });
 
+test("catalog table interactions preserve query state", async ({ page }) => {
+  for (const route of ["/stellarhosts", "/exoplanets"]) {
+    const capture = captureClientErrors(page);
+    await page.goto(route);
+
+    await expect(page.locator("table thead th").first()).toBeVisible();
+    await page.locator("table thead th").first().click();
+    await expect(page).toHaveURL(new RegExp(`${route}\\?sort=`));
+
+    const filter = page.locator("table thead input").first();
+    await filter.fill("Kepler");
+    await filter.press("Enter");
+    await expect(page).toHaveURL(/filter=Kepler/);
+
+    await page
+      .getByRole("button", { name: /select columns|hide column selector/i })
+      .click();
+    await expect(page.locator('input[type="checkbox"]').first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Next" }).last().click();
+    await expect(page).toHaveURL(/page=2/);
+    await expectNoClientErrors(page, capture);
+  }
+});
+
+test("catalog tables return 404 for invalid and out-of-range pages", async ({
+  page,
+}) => {
+  for (const route of ["/stellarhosts", "/exoplanets"]) {
+    for (const pageParam of ["0", "not-a-page", "999999"]) {
+      const response = await page.goto(`${route}?page=${pageParam}`);
+      expect(response?.status()).toBe(404);
+      await expect(page.getByRole("heading", { name: "Not Found" })).toBeVisible();
+    }
+  }
+});
+
 test("metadata is available after / -> client navigation to /stellarhosts", async ({
   page,
 }) => {

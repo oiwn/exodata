@@ -7,9 +7,8 @@ use serde_json::Value;
 use super::details;
 use crate::metadata_helpers::encode_path_segment;
 use crate::server::cache::HostDetailCache;
-use crate::server::functions::{
-    ColumnMetadata, ExoplanetDetail, StellarHostDetail,
-};
+use crate::server::functions::{ExoplanetDetail, StellarHostDetail};
+use exo_types::metadata::ColumnMetadata;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExportEntity {
@@ -84,7 +83,7 @@ impl ExportFormat {
 pub async fn export_stellarhost(
     df: &DataFrame,
     host_detail_cache: &HostDetailCache,
-    metadata: &HashMap<String, exo_core::metadata::ColumnMetadata>,
+    metadata: &HashMap<String, ColumnMetadata>,
     site_url: &str,
     hostname: &str,
     format: ExportFormat,
@@ -99,7 +98,6 @@ pub async fn export_stellarhost(
             )
             .await?;
 
-            let metadata = convert_metadata(metadata);
             to_pretty_json(&StellarHostDetail { metadata, ..detail })?
         }
         ExportFormat::Csv => {
@@ -120,7 +118,7 @@ pub async fn export_stellarhost(
 
 pub fn export_exoplanet(
     df: &DataFrame,
-    metadata: &HashMap<String, exo_core::metadata::ColumnMetadata>,
+    metadata: &HashMap<String, ColumnMetadata>,
     site_url: &str,
     pl_name: &str,
     format: ExportFormat,
@@ -129,7 +127,6 @@ pub fn export_exoplanet(
         ExportFormat::Json => {
             let (records, metadata) =
                 details::get_exoplanet_by_name(df, metadata, pl_name)?;
-            let metadata = convert_metadata(metadata);
             to_pretty_json(&ExoplanetDetail {
                 pl_name: pl_name.to_string(),
                 records,
@@ -210,15 +207,6 @@ fn dataframe_columns(df: &DataFrame) -> Vec<String> {
     df.get_column_names()
         .into_iter()
         .map(ToString::to_string)
-        .collect()
-}
-
-fn convert_metadata(
-    metadata: HashMap<String, exo_core::metadata::ColumnMetadata>,
-) -> HashMap<String, ColumnMetadata> {
-    metadata
-        .into_iter()
-        .map(|(key, value)| (key, value.into()))
         .collect()
 }
 

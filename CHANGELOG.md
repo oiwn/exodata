@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-07-21
+
+- Consolidated catalog-table query transitions and successful-result rendering
+  while retaining separate stellar-host and exoplanet routes with local data
+  resources.
+- Added transition coverage and documented shared catalog-table behavior.
+- Verified with `cargo clippy --all --workspace`, `cargo test --all --workspace`,
+  and manual checks of interactions, browser history, and 404 handling.
+
+## 2026-07-20
+
+- Centralized `ColumnMetadata` in `exo-types`, removing duplicate web/server types and conversion maps while preserving metadata serialization and TOML handling.
+
+## 2026-07-19
+
+- Modernized all ten `src` Rust module entry files from `mod.rs` to the adjacent `name.rs` layout.
+
 ## 2026-06-28
 
 - Added a rounded homepage manual section sourced from `docs/index.md` and

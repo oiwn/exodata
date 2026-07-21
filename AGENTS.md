@@ -13,6 +13,13 @@ This file defines agent workflow and points to project specifications. Implement
 3. Keep specs purely technical (implementation details, interfaces, expected outputs). Avoid scientific/astrophysics explanations.
 4. When adding a new subsystem or feature, add/update the relevant spec in `specs/`.
 5. Keep AGENTS.md high-level; do not duplicate implementation details from specs.
+6. Use the modern Rust module layout: a parent module is `name.rs` and its
+   children live in `name/`. Do not add `mod.rs`; migrate an existing
+   `mod.rs` when touching that module as part of a scoped refactor.
+7. Choose string ownership from data lifetime: use `&str` for borrowed input
+   and `&'static str` for compile-time constants; retain `String` for owned,
+   deserialized, generated, mutable, or cross-boundary data. Do not introduce
+   artificial lifetimes merely to avoid an allocation.
 
 ## Updating NASA Data Files
 

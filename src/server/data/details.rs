@@ -6,7 +6,7 @@ use super::transform::{
 use crate::server::cache::HostDetailCache;
 use crate::server::functions::StellarHostDetail;
 use crate::server::stellarhost_canonical::build_canonical_host;
-use exo_core::metadata::ColumnMetadata;
+use exo_types::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde_json::Value;
 use std::collections::HashMap;

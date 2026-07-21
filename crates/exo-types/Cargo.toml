@@ -12,3 +12,7 @@ name = "exo_types"
 path = "src/lib.rs"
 
 [dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
