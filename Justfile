@@ -58,7 +58,7 @@ ansible-status:
 
 # View application logs
 ansible-logs:
-  cd {{ansible_dir}} && ansible all {{ansible_args}} -m shell -a "docker logs --tail 100 exoplanets-catalog"
+  cd {{ansible_dir}} && ansible all {{ansible_args}} -m shell -a "docker logs --tail 100 exodata"
 
 # SSH into server
 ansible-ssh:

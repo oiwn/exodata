@@ -1,6 +1,6 @@
-# Exoplanets Catalog
+# Exodata
 
-![Coverage](https://codecov.io/gh/oiwn/exoplanets-catalog/branch/main/graph/badge.svg)
+![Coverage](https://codecov.io/gh/oiwn/exodata/branch/main/graph/badge.svg)
 ![Rust](https://img.shields.io/badge/rust-1.85%2B-orange?logo=rust)
 ![Leptos](https://img.shields.io/badge/leptos-0.8-blue)
 ![WASM](https://img.shields.io/badge/WASM-535KB-purple)
@@ -9,6 +9,8 @@
 A web application for exploring the NASA Exoplanet Archive data. Browse stellar hosts and exoplanets through an interactive UI or query the data programmatically via REST API.
 
 Live site: https://exodata.space/
+
+Source: <https://github.com/oiwn/exodata>
 
 ![Exoplanets Catalog overview](screenshot.png)
 

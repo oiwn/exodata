@@ -116,7 +116,7 @@ pub fn Navbar() -> impl IntoView {
                         </a>
 
                         <a
-                            href="https://github.com/oiwn/exoplanets-catalog"
+                            href="https://github.com/oiwn/exodata"
                             class=icon_link_class
                             target="_blank"
                             rel="noopener noreferrer"
@@ -230,7 +230,7 @@ pub fn Navbar() -> impl IntoView {
                         <LanguageSwitcher/>
 
                         <a
-                            href="https://github.com/oiwn/exoplanets-catalog"
+                            href="https://github.com/oiwn/exodata"
                             class=mobile_link_class
                             target="_blank"
                             rel="noopener noreferrer"

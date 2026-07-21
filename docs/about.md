@@ -74,4 +74,4 @@ Leptos server functions power the interactive website. REST endpoints expose the
 
 The project is open source:
 
-<https://github.com/oiwn/exoplanets-catalog>
+<https://github.com/oiwn/exodata>

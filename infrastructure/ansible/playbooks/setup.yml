@@ -1,6 +1,6 @@
 ---
-- name: Setup Exoplanets Catalog Server
-  hosts: exoplanets
+- name: Setup Exodata Server
+  hosts: exodata
   become: yes
 
   vars_files:

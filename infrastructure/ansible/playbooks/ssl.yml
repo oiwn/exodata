@@ -1,6 +1,6 @@
 ---
 - name: Setup SSL Certificate
-  hosts: exoplanets
+  hosts: exodata
   become: yes
 
   vars_files:

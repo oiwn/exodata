@@ -83,7 +83,7 @@ just ansible-ping
 
 Expected output:
 ```
-exoplanets | SUCCESS => {
+exodata | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
@@ -134,7 +134,7 @@ git push origin main
 Or manually trigger from GitHub Actions UI:
 - Go to Actions → Deploy → Run workflow
 
-Watch the build at: https://github.com/oiwn/exoplanets-catalog/actions
+Watch the build at: https://github.com/oiwn/exodata/actions
 
 ### 2.2 Upload Data Files
 
@@ -225,13 +225,13 @@ just ansible-logs
 
 ```bash
 # Check what address app is listening on
-just ansible-run "docker logs exoplanets-catalog"
+just ansible-run "docker logs exodata"
 
 # Should show: listening on http://0.0.0.0:3000
 # If it shows 127.0.0.1:3000, env vars are not set
 
 # Check env vars
-just ansible-run "docker inspect exoplanets-catalog --format '{{json .Config.Env}}'"
+just ansible-run "docker inspect exodata --format '{{json .Config.Env}}'"
 
 # Should include LEPTOS_SITE_ADDR=0.0.0.0:3000
 # If not, recreate container: just ansible-deploy
@@ -257,7 +257,7 @@ cat infrastructure/ansible/.env
 
 ```bash
 # On the server, check if you can pull manually:
-docker pull ghcr.io/oiwn/exoplanets-catalog:latest
+docker pull ghcr.io/oiwn/exodata:latest
 
 # If private, you need GHCR_TOKEN in .env
 ```
@@ -290,7 +290,7 @@ certbot --nginx -d exodata.space
 │      │                                                          │
 │      ├──→ Build Docker image                                    │
 │      │                                                          │
-│      └──→ Push to ghcr.io/oiwn/exoplanets-catalog              │
+│      └──→ Push to ghcr.io/oiwn/exodata                          │
 │                                                                 │
 │   Developer Machine                                             │
 │      │                                                          │
@@ -361,7 +361,7 @@ The app uses environment variables for production configuration (set automatical
 
 | Variable | Value | Description |
 |----------|-------|-------------|
-| `LEPTOS_OUTPUT_NAME` | `exoplanets-catalog` | JS/WASM bundle name |
+| `LEPTOS_OUTPUT_NAME` | `exodata` | JS/WASM bundle name |
 | `LEPTOS_SITE_ROOT` | `site` | Static files directory |
 | `LEPTOS_SITE_PKG_DIR` | `pkg` | JS/WASM subdirectory |
 | `LEPTOS_SITE_ADDR` | `0.0.0.0:3000` | Listen address (must be 0.0.0.0 for Docker) |
@@ -375,7 +375,7 @@ The Dockerfile builds with `cargo leptos build --release --split`, which produce
 
 | File | Description |
 |------|-------------|
-| `exoplanets-catalog.wasm` | Main bundle (535 KB) |
+| `exodata.wasm` | Main bundle (535 KB) |
 | `split_*.wasm` | Per-route lazy chunks |
 | `chunk_*.wasm` | Shared dependency chunks |
 | `__wasm_split.______________________.js` | Chunk loader |
