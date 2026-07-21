@@ -330,7 +330,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use exo_core::metadata::ColumnMetadata;
+    use exo_types::metadata::ColumnMetadata;
     use polars::prelude::*;
 
     use super::*;

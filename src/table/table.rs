@@ -1,6 +1,7 @@
-use crate::server::functions::{ColumnMetadata, TableData};
+use crate::server::functions::TableData;
 use crate::table::ColumnGroup;
 use crate::table::TableQueryState;
+use exo_types::metadata::ColumnMetadata;
 use leptos::ev::KeyboardEvent;
 use leptos::prelude::*;
 use leptos::serde_json::Value;

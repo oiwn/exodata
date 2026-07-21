@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use leptos::serde_json::Value;
 
-use crate::server::functions::ColumnMetadata;
+use exo_types::metadata::ColumnMetadata;
 
 pub fn format_value(value: &Value, unit: &str) -> String {
     match value {

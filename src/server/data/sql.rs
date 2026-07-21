@@ -3,7 +3,7 @@ use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
 
-use exo_core::metadata::ColumnMetadata;
+use exo_types::metadata::ColumnMetadata;
 use polars::prelude::*;
 use polars::sql::SQLContext;
 use serde::Serialize;

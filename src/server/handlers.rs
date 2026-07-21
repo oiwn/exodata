@@ -13,7 +13,7 @@ use axum::{
     response::{IntoResponse, Json},
     routing::get,
 };
-use exo_core::metadata::ColumnMetadata;
+use exo_types::metadata::ColumnMetadata;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};

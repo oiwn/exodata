@@ -302,6 +302,16 @@ navigate("/overview", Default::default());
 <A href="/overview">"Go to Overview"</A>
 ```
 
+## Catalog Table Routes
+
+`/stellarhosts` and `/exoplanets` remain separate lazy route components with
+their own server-function resources and dataset-specific metadata. Both routes
+share pure `TableQueryState` transitions: sorting, selected-column changes, and
+filter commits reset pagination to page 1; pagination changes only the page.
+Removing the active sort column clears the sort. Successful table results use a
+shared renderer for the table, pagination controls, page links, and out-of-range
+404 state.
+
 ## Server Function Integration
 
 ### Calling Server Functions

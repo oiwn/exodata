@@ -1,16 +1,15 @@
-use super::sections::{
-    ExoplanetsErrorState, ExoplanetsLoadingFallback, ExoplanetsPageHeader,
-    ExoplanetsPageShell, ExoplanetsPaginationControls, ExoplanetsTableMeta,
-    pagination_links_view,
+use crate::components::catalog_table::{
+    CatalogTableErrorState, CatalogTableLoadingFallback, CatalogTableMeta,
+    CatalogTablePageHeader, CatalogTablePageShell, CatalogTableResult,
+    catalog_not_found_view,
 };
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
 use crate::metadata::use_app_metadata_store;
 use crate::server::functions::get_exoplanets_page;
 use crate::table::{
-    Table, TablePaginationState, TableQuerySignals, TableQueryState,
-    build_column_model, is_err_or_lim, navigate_table_query,
-    normalize_table_page,
+    TableQuerySignals, TableQueryState, build_column_model,
+    initialize_table_query, navigate_table_query,
 };
 use leptos::prelude::*;
 use leptos_router::LazyRoute;
@@ -56,59 +55,21 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let query_map = use_query_map();
     let navigate = use_navigate();
 
-    let initial_page_param =
-        query_map.with_untracked(|q| q.get("page").map(|p| p.to_string()));
-    let raw_initial_page = initial_page_param
-        .as_deref()
-        .and_then(|p| p.parse::<usize>().ok())
-        .unwrap_or(1);
-    let initial_page = normalize_table_page(raw_initial_page);
-    let initial_sort_column =
-        query_map.with_untracked(|q| q.get("sort").map(|s| s.to_string()));
-    let initial_sort_order = query_map.with_untracked(|q| {
-        q.get("order")
-            .map(|o| o.to_string())
-            .unwrap_or_else(|| "asc".to_string())
+    let initial = query_map.with_untracked(|q| {
+        initialize_table_query(
+            q.get("page").as_deref(),
+            q.get("sort").as_deref(),
+            q.get("order").as_deref(),
+            q.get("columns").as_deref(),
+            q.get("filter").as_deref(),
+            &DEFAULT_EXOPLANETS_COLUMNS,
+        )
     });
-    let initial_filter = query_map.with_untracked(|q| {
-        q.get("filter").map(|f| f.to_string()).unwrap_or_default()
-    });
-
-    let initial_columns_param =
-        query_map.with_untracked(|q| q.get("columns").map(|s| s.to_string()));
-    let parse_columns = |value: &str| {
-        value
-            .split(',')
-            .map(|col| col.trim().to_string())
-            .filter(|col| !is_err_or_lim(col))
-            .collect::<Vec<_>>()
+    let initial = match initial {
+        Ok(initial) => initial,
+        Err(_) => return catalog_not_found_view(),
     };
-    let initial_columns = initial_columns_param
-        .as_deref()
-        .map(parse_columns)
-        .unwrap_or_else(|| {
-            DEFAULT_EXOPLANETS_COLUMNS
-                .into_iter()
-                .map(str::to_string)
-                .collect()
-        });
-
-    let canonical_query =
-        if matches!(raw_initial_page, 0 | 1) && initial_page_param.is_some() {
-            let canonical_columns = initial_columns_param
-                .as_deref()
-                .map(parse_columns)
-                .unwrap_or_default();
-            Some(TableQueryState::new(
-                initial_page,
-                initial_sort_column.clone(),
-                initial_sort_order.clone(),
-                canonical_columns,
-                initial_filter.clone(),
-            ))
-        } else {
-            None
-        };
+    let canonical_query = initial.canonical_query.clone();
 
     if let Some(canonical_query) = canonical_query.clone() {
         let navigate = navigate.clone();
@@ -126,11 +87,11 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     }
 
     let table_state = TableQuerySignals::new(
-        initial_page,
-        initial_sort_column,
-        initial_sort_order,
-        initial_columns,
-        initial_filter,
+        initial.state.page,
+        initial.state.sort_col,
+        initial.state.sort_order,
+        initial.state.columns,
+        initial.state.filter,
     );
     let (selector_is_open, set_selector_is_open) = signal(false);
     let (is_loading, set_is_loading) = signal(false);
@@ -224,28 +185,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let on_sort = Callback::new({
         let navigate = navigate.clone();
         move |column: String| {
-            let current_sort_column = table_state.sort_column.get();
-            let current_sort_order = table_state.sort_order.get();
-            let (next_sort_column, next_sort_order) =
-                if let Some(current) = current_sort_column {
-                    if current == column {
-                        match current_sort_order.as_str() {
-                            "asc" => (Some(current), "desc".to_string()),
-                            "desc" => (None, "asc".to_string()),
-                            _ => (Some(column), "asc".to_string()),
-                        }
-                    } else {
-                        (Some(column), "asc".to_string())
-                    }
-                } else {
-                    (Some(column), "asc".to_string())
-                };
-
-            table_state.set_sort_column.set(next_sort_column.clone());
-            table_state.set_sort_order.set(next_sort_order.clone());
-            table_state.set_current_page.set(1);
-            let query =
-                table_state.query_with_sort(1, next_sort_column, next_sort_order);
+            let query = table_state.query().with_sort_column(column);
+            table_state.set_query(query.clone());
             navigate_exoplanets(&navigate, &query, Default::default());
         }
     });
@@ -253,19 +194,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let on_columns_change = Callback::new({
         let navigate = navigate.clone();
         move |columns: Vec<String>| {
-            table_state.set_selected_columns.set(columns.clone());
-            table_state.set_current_page.set(1);
-
-            let mut next_sort_column = table_state.sort_column.get();
-            if let Some(ref sort_col) = next_sort_column
-                && !columns.contains(sort_col)
-            {
-                next_sort_column = None;
-                table_state.set_sort_column.set(None);
-            }
-
-            let query =
-                table_state.query_with_columns(1, next_sort_column, columns);
+            let query = table_state.query().with_columns(columns);
+            table_state.set_query(query.clone());
             navigate_exoplanets(
                 &navigate,
                 &query,
@@ -280,9 +210,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let on_filter_commit = Callback::new({
         let navigate = navigate.clone();
         move |value: String| {
-            table_state.set_filter_text.set(value.clone());
-            table_state.set_current_page.set(1);
-            let query = table_state.query_with_filter(1, value);
+            let query = table_state.query().with_filter(value);
+            table_state.set_query(query.clone());
             navigate_exoplanets(
                 &navigate,
                 &query,
@@ -297,8 +226,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let on_page_change = Callback::new({
         let navigate = navigate.clone();
         move |page: usize| {
-            table_state.set_current_page.set(page);
-            let query = table_state.query_with_page(page);
+            let query = table_state.query().with_page(page);
+            table_state.set_query(query.clone());
             navigate_exoplanets(&navigate, &query, Default::default());
         }
     });
@@ -320,9 +249,18 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     });
 
     view! {
-        <ExoplanetsTableMeta/>
-        <ExoplanetsPageShell>
-            <ExoplanetsPageHeader/>
+        <CatalogTableMeta
+            title=crate::metadata_helpers::exoplanets_title()
+            description=crate::metadata_helpers::exoplanets_description()
+            canonical_path=EXOPLANETS_BASE_PATH
+            collection_name="Exoplanets"
+        />
+        <CatalogTablePageShell>
+            <CatalogTablePageHeader
+                icon="🪐"
+                title="Exoplanets Catalog"
+                subtitle="Browse the complete database of confirmed exoplanets"
+            />
 
             <ColumnSelector
                 available_columns=available_columns
@@ -332,78 +270,31 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                 on_toggle=Callback::new(move |state| set_selector_is_open.set(state))
             />
 
-            <div class="exoplanets-page__content">
+            <div class="catalog-table-page__content">
                 <LoadingOverlay loading=show_overlay />
-                <Transition fallback=move || view! { <ExoplanetsLoadingFallback/> }>
+                <Transition fallback=move || view! { <CatalogTableLoadingFallback/> }>
                     {move || {
                         table_resource.get().map(|result| match result {
-                            Ok(data) => {
-                                let total = data.total;
-                                let page = data.page;
-                                let limit = data.limit;
-                                let start = (page - 1) * limit + 1;
-                                let end = std::cmp::min(page * limit, total);
-                                let pagination_state = TablePaginationState::new(
-                                    start,
-                                    end,
-                                    total,
-                                    table_state.current_page.get(),
-                                    total_pages(),
-                                    can_go_prev(),
-                                    can_go_next(),
-                                );
-
-                                let table_metadata = available_columns.get();
-                                let all_columns: Vec<String> =
-                                    table_metadata.keys().cloned().collect();
-                                let model = build_column_model(
-                                    &all_columns,
-                                    &table_state.selected_columns.get(),
-                                );
-
-                                view! {
-                                    <div class="space-y-6">
-                                        <ExoplanetsPaginationControls
-                                            state=pagination_state
-                                            on_prev=on_prev_page
-                                            on_next=on_next_page
-                                        />
-
-                                        <Table
-                                            data=data
-                                            on_sort=on_sort
-                                            current_sort_column=table_state.sort_column.get()
-                                            current_sort_order=table_state.sort_order.get()
-                                            column_metadata=table_metadata
-                                            display_columns=model.display_columns
-                                            column_groups=model.groups
-                                            filter_input=table_state.filter_input
-                                            set_filter_input=table_state.set_filter_input
-                                            on_filter_commit=on_filter_commit
-                                            link_column="pl_name".to_string()
-                                            link_base="/exoplanets/".to_string()
-                                        />
-
-                                        <ExoplanetsPaginationControls
-                                            state=pagination_state
-                                            on_prev=on_prev_page
-                                            on_next=on_next_page
-                                            page_links=pagination_links_view(
-                                                pagination_state.current_page,
-                                                pagination_state.total_pages,
-                                                table_state.sort_column.get(),
-                                                table_state.sort_order.get(),
-                                                table_state.selected_columns.get(),
-                                                table_state.filter_text.get(),
-                                                on_page_change,
-                                            )
-                                        />
-                                    </div>
-                                }
-                                .into_any()
-                            }
+                            Ok(data) => view! {
+                                <CatalogTableResult
+                                    data=data
+                                    table_state=table_state
+                                    available_columns=available_columns.get()
+                                    total_pages=total_pages()
+                                    can_go_prev=can_go_prev()
+                                    can_go_next=can_go_next()
+                                    on_sort=on_sort
+                                    on_filter_commit=on_filter_commit
+                                    on_prev_page=on_prev_page
+                                    on_next_page=on_next_page
+                                    on_page_change=on_page_change
+                                    base_path=EXOPLANETS_BASE_PATH
+                                    link_column="pl_name"
+                                    link_base="/exoplanets/"
+                                />
+                            }.into_any(),
                             Err(err) => view! {
-                                <ExoplanetsErrorState
+                                <CatalogTableErrorState
                                     error_msg=format!("Error loading data: {}", err)
                                 />
                             }
@@ -412,6 +303,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                     }}
                 </Transition>
             </div>
-        </ExoplanetsPageShell>
+        </CatalogTablePageShell>
     }
+    .into_any()
 }

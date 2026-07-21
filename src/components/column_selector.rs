@@ -1,5 +1,5 @@
-use crate::server::functions::ColumnMetadata;
 use crate::table::is_err_or_lim;
+use exo_types::metadata::ColumnMetadata;
 use leptos::ev::Event;
 use leptos::prelude::*;
 use std::collections::HashMap;

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use exo_core::metadata::ColumnMetadata;
+use exo_types::metadata::ColumnMetadata;
 use votable::iter::{TableIter, VOTableIterator};
 use votable::{TableElem, datatype::Datatype, impls::VOTableValue};
 

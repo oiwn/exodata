@@ -1,5 +1,6 @@
 pub mod about;
 // pub mod buy_me_coffee;
+pub mod catalog_table;
 pub mod column_selector;
 pub mod docs;
 pub mod exoplanet_detail;
