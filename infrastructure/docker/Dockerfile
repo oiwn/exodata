@@ -42,10 +42,8 @@ RUN cargo leptos build --release --split
 # Normalize the server binary name for the runtime image. cargo-leptos has used
 # different target names as the package and public command names changed.
 RUN mkdir -p /app/server-bin && \
-    if [ -x /app/target/release/exodata ]; then \
-        cp /app/target/release/exodata /app/server-bin/exodata; \
-    elif [ -x /app/target/release/exoplanets-catalog ]; then \
-        cp /app/target/release/exoplanets-catalog /app/server-bin/exodata; \
+    if [ -x /app/target/release/exodata-web ]; then \
+        cp /app/target/release/exodata-web /app/server-bin/exodata; \
     else \
         echo "Server binary not found" >&2; \
         ls -lah /app/target/release/ >&2; \
@@ -54,7 +52,7 @@ RUN mkdir -p /app/server-bin && \
 
 # Debug: List where files actually are
 RUN echo "=== Listing target/release ===" && \
-    ls -lah /app/target/release/ | grep -E 'exodata|exoplanets' || true && \
+    ls -lah /app/target/release/ | grep -E 'exodata' || true && \
     echo "=== Listing target/server/release ===" && \
     ls -lah /app/target/server/release/ 2>/dev/null || echo "Directory does not exist" && \
     echo "=== Listing target/site ===" && \

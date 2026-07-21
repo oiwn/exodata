@@ -1,6 +1,6 @@
 ---
-- name: Deploy Exoplanets Catalog
-  hosts: exoplanets
+- name: Deploy Exodata
+  hosts: exodata
   become: yes
 
   vars_files:
@@ -8,6 +8,13 @@
     - ../inventory/group_vars/leptos_env.yml
 
   tasks:
+    - name: Log in to GitHub Container Registry
+      community.docker.docker_login:
+        registry: ghcr.io
+        username: "{{ lookup('env', 'GHCR_USER') }}"
+        password: "{{ lookup('env', 'GHCR_TOKEN') }}"
+      when: lookup('env', 'GHCR_TOKEN') | length > 0
+
     - name: Pull latest Docker image
       community.docker.docker_image:
         name: "{{ docker_image }}"
@@ -30,7 +37,7 @@
           - "{{ app_port }}:3000"
         volumes:
           - "{{ data_path }}:/app/data:ro"
-        env: "{{ leptos_env }}"
+        env: "{{ leptos_env | combine({'LEPTOS_OUTPUT_NAME': 'exodata'}) }}"
 
     - name: Wait for application health check
       ansible.builtin.uri:

@@ -49,7 +49,7 @@ jobs:
       - name: List build outputs (debug)
         run: |
           echo "=== Contents of target/release/ ==="
-          ls -lah target/release/ | grep exoplanets || echo "Not found in target/release/"
+          ls -lah target/release/ | grep exodata || echo "Not found in target/release/"
           echo ""
           echo "=== Contents of target/server/release/ ==="
           ls -lah target/server/release/ 2>/dev/null || echo "Directory doesn't exist"
@@ -62,8 +62,8 @@ jobs:
         with:
           name: server-binary
           path: |
-            target/release/exoplanets-catalog
-            target/server/release/exoplanets-catalog
+            target/release/exodata-web
+            target/server/release/exodata-web
           retention-days: 7
           if-no-files-found: error
 
@@ -78,8 +78,8 @@ jobs:
         run: |
           echo "### Build Artifacts Generated ✅" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Server binary**: \`target/server/release/exoplanets-catalog\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server binary**: \`target/server/release/exodata-web\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Site files**: \`target/site/\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Binary size: $(du -h target/server/release/exoplanets-catalog | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "Binary size: $(du -h target/server/release/exodata-web | cut -f1)" >> $GITHUB_STEP_SUMMARY
           echo "Site size: $(du -sh target/site | cut -f1)" >> $GITHUB_STEP_SUMMARY

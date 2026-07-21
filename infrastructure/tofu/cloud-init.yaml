@@ -10,7 +10,7 @@ packages:
   - curl
 
 write_files:
-  - path: /etc/nginx/sites-available/exoplanets
+  - path: /etc/nginx/sites-available/exodata
     content: |
       server {
           listen 80;
@@ -31,7 +31,7 @@ write_files:
 
 runcmd:
   # Setup Nginx
-  - ln -sf /etc/nginx/sites-available/exoplanets /etc/nginx/sites-enabled/
+  - ln -sf /etc/nginx/sites-available/exodata /etc/nginx/sites-enabled/
   - rm -f /etc/nginx/sites-enabled/default
   - systemctl restart nginx
 

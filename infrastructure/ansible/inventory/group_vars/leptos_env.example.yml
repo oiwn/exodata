@@ -1,5 +1,5 @@
 leptos_env:
-  LEPTOS_OUTPUT_NAME: "exoplanets-catalog"
+  LEPTOS_OUTPUT_NAME: "exodata"
   LEPTOS_SITE_ROOT: "site"
   LEPTOS_SITE_PKG_DIR: "pkg"
   LEPTOS_SITE_ADDR: "0.0.0.0:3000"

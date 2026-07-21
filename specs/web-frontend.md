@@ -48,7 +48,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/exoplanets-catalog.css"/>
+        <Stylesheet id="leptos" href="/pkg/exodata.css"/>
         <Title text="Welcome to Leptos"/>
 
         <Router>
@@ -465,8 +465,8 @@ Automatically injected by `HydrationScripts`:
 ```
 
 This loads:
-- WASM module (`/pkg/exoplanets-catalog_bg.wasm`)
-- JS glue code (`/pkg/exoplanets-catalog.js`)
+- WASM module (`/pkg/exodata_bg.wasm`)
+- JS glue code (`/pkg/exodata.js`)
 - Hydration data (serialized state)
 
 ## Build Process
@@ -490,7 +490,7 @@ cargo leptos build --release
 ```
 
 Outputs:
-- `target/server/release/exoplanets-catalog` (server binary)
+- `target/server/release/exodata-web` (server binary)
 - `target/site/pkg/` (optimized WASM and JS)
 - `target/site/` (static assets)
 

@@ -18,7 +18,7 @@ variable "ssh_key_fingerprint" {
 
 variable "domain" {
   type    = string
-  default = "exoplanets.yourdomain.com"
+  default = "exodata.yourdomain.com"
 }
 
 variable "cloudflare_email" {
@@ -31,7 +31,7 @@ provider "digitalocean" {
 
 # Create droplet
 resource "digitalocean_droplet" "app" {
-  name   = "exoplanets-catalog"
+  name   = "exodata"
   region = "nyc3"
   size   = "s-1vcpu-2gb" # $12/month
   image  = "ubuntu-24-04-x64"
@@ -46,7 +46,7 @@ resource "digitalocean_droplet" "app" {
 
 # Firewall
 resource "digitalocean_firewall" "web" {
-  name        = "exoplanets-web"
+  name        = "exodata-web"
   droplet_ids = [digitalocean_droplet.app.id]
 
   inbound_rule {

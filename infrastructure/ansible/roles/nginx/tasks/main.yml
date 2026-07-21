@@ -11,8 +11,8 @@
 
 - name: Deploy Nginx site configuration
   ansible.builtin.template:
-    src: exoplanets.conf.j2
-    dest: /etc/nginx/sites-available/exoplanets
+    src: exodata.conf.j2
+    dest: /etc/nginx/sites-available/exodata
     mode: '0644'
   vars:
     ssl_enabled: "{{ ssl_cert.stat.exists }}"
@@ -20,9 +20,18 @@
 
 - name: Enable site
   ansible.builtin.file:
-    src: /etc/nginx/sites-available/exoplanets
-    dest: /etc/nginx/sites-enabled/exoplanets
+    src: /etc/nginx/sites-available/exodata
+    dest: /etc/nginx/sites-enabled/exodata
     state: link
+  notify: Reload Nginx
+
+- name: Remove legacy Nginx site
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/nginx/sites-enabled/exoplanets
+    - /etc/nginx/sites-available/exoplanets
   notify: Reload Nginx
 
 - name: Remove default site

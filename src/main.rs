@@ -46,13 +46,13 @@ async fn start_server() {
     use exo_core::metadata;
     use exo_core::tables::common as data_common;
     use exo_core::tables::overview as aggregation;
-    use exoplanets_catalog::app::{App, shell};
-    use exoplanets_catalog::metadata::AppMetadata;
-    use exoplanets_catalog::server::data::{
+    use exodata_web::app::{App, shell};
+    use exodata_web::metadata::AppMetadata;
+    use exodata_web::server::data::{
         insights as server_insights, tables as server_tables,
     };
-    use exoplanets_catalog::server::functions::DataStats;
-    use exoplanets_catalog::server::{self, ApiState};
+    use exodata_web::server::functions::DataStats;
+    use exodata_web::server::{self, ApiState};
     use leptos::prelude::{get_configuration, provide_context};
     use leptos_axum::{LeptosRoutes, generate_route_list};
     use std::path::Path;

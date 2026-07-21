@@ -21,4 +21,4 @@
       - "{{ app_port }}:3000"
     volumes:
       - "{{ data_path }}:/app/data:ro"
-    env: "{{ leptos_env }}"
+    env: "{{ leptos_env | combine({'LEPTOS_OUTPUT_NAME': 'exodata'}) }}"

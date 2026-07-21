@@ -88,7 +88,7 @@ Claude Code:
 claude mcp add --transport http exodata https://exodata.space/mcp
 ```
 
-See [the MCP docs](https://github.com/oiwn/exoplanets-catalog/blob/main/docs/mcp.md#connecting-an-agent)
+See [the MCP docs](https://github.com/oiwn/exodata/blob/main/docs/mcp.md#connecting-an-agent)
 for Crush, OpenCode, and Codex CLI snippets.
 
 If you prefer the CLI as an agent surface, install the bundled skill so coding
@@ -103,16 +103,16 @@ exodata skill install global   # writes ~/.agents/skills/exodata/SKILL.md
 
 Maintenance and data-preparation commands (raw-file conversion, sample views,
 local SQL against `data/`, etc.) are grouped under `exodata dev`. These are
-not aimed at end users; see the [CLI spec](https://github.com/oiwn/exoplanets-catalog/blob/main/specs/cli.md#development-commands)
+not aimed at end users; see the [CLI spec](https://github.com/oiwn/exodata/blob/main/specs/cli.md#development-commands)
 for the full list.
 
 ## More
 
 - Web UI: <https://exodata.space>
 - REST API: <https://exodata.space/swagger-ui>
-- Source: <https://github.com/oiwn/exoplanets-catalog>
+- Source: <https://github.com/oiwn/exodata>
 - Full CLI docs:
-  <https://github.com/oiwn/exoplanets-catalog/blob/main/docs/cli.md>
+  <https://github.com/oiwn/exodata/blob/main/docs/cli.md>
 
 ## License
 

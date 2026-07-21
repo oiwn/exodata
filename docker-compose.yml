@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  exoplanets-catalog:
+  exodata:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile
-    container_name: exoplanets-catalog
+    container_name: exodata
     restart: unless-stopped
     ports:
       - "3000:3000"

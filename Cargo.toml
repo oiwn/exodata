@@ -1,6 +1,6 @@
 [package]
-name = "exoplanets-catalog"
-version = "0.3.12"
+name = "exodata-web"
+version = "0.3.14"
 edition = "2024"
 
 [workspace]
@@ -101,7 +101,7 @@ panic = "abort"
 
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
-output-name = "exoplanets-catalog"
+output-name = "exodata"
 
 # The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
 site-root = "target/site"

@@ -3,11 +3,11 @@ domain: exodata.space
 admin_email: alex@imscraping.ninja
 
 # Docker image
-docker_image: ghcr.io/oiwn/exoplanets-catalog
+docker_image: ghcr.io/oiwn/exodata
 docker_tag: latest
 
 # Application settings
-app_name: exoplanets-catalog
+app_name: exodata
 app_port: 3000
 data_path: /app/data
 
