@@ -9,9 +9,53 @@ struct PlanetAggregate {
     discovery_methods: HashMap<String, usize>,
     detection_sources: HashMap<String, usize>,
     radii: Vec<f64>,
+    best_masses: Vec<f64>,
     equilibrium_temperatures: Vec<f64>,
     orbital_periods: Vec<f64>,
     discovery_years: Vec<i32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum PlanetMassBand {
+    SubEarth,
+    EarthToNeptune,
+    NeptuneToSaturn,
+    SaturnToJupiter,
+    SuperJupiter,
+}
+
+impl PlanetMassBand {
+    const LIGHT_TO_HEAVY: [Self; 5] = [
+        Self::SubEarth,
+        Self::EarthToNeptune,
+        Self::NeptuneToSaturn,
+        Self::SaturnToJupiter,
+        Self::SuperJupiter,
+    ];
+
+    fn from_earth_masses(mass: f64) -> Self {
+        if mass < 1.0 {
+            Self::SubEarth
+        } else if mass < 10.0 {
+            Self::EarthToNeptune
+        } else if mass < 100.0 {
+            Self::NeptuneToSaturn
+        } else if mass < 1000.0 {
+            Self::SaturnToJupiter
+        } else {
+            Self::SuperJupiter
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::SubEarth => "< 1 M⊕",
+            Self::EarthToNeptune => "1-10 M⊕",
+            Self::NeptuneToSaturn => "10-100 M⊕",
+            Self::SaturnToJupiter => "100-1000 M⊕",
+            Self::SuperJupiter => "≥ 1000 M⊕",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -404,6 +448,78 @@ pub fn get_planet_size_categories(df: &DataFrame) -> Vec<(String, usize)> {
     categories_vec
 }
 
+/// Group distinct planets by canonical best-mass bucket in Earth masses
+pub fn get_planet_mass_bands(df: &DataFrame) -> Vec<(String, usize)> {
+    let planets = build_planet_aggregates(df);
+    let mut bands = HashMap::new();
+
+    for aggregate in planets.values() {
+        if let Some(mass) = median_f64(&aggregate.best_masses) {
+            let band = PlanetMassBand::from_earth_masses(mass);
+            *bands.entry(band).or_insert(0) += 1;
+        }
+    }
+
+    PlanetMassBand::LIGHT_TO_HEAVY
+        .into_iter()
+        .filter_map(|band| {
+            bands
+                .get(&band)
+                .map(|count| (band.label().to_string(), *count))
+        })
+        .collect()
+}
+
+/// Group distinct stellar hosts by canonical leading spectral class
+pub fn get_stellar_classes(df: &DataFrame, limit: usize) -> Vec<(String, usize)> {
+    let Ok(hostname_col) = df.column("hostname") else {
+        return Vec::new();
+    };
+    let Ok(spectral_type_col) = df.column("st_spectype") else {
+        return Vec::new();
+    };
+
+    let mut host_classes: HashMap<String, HashMap<String, usize>> =
+        HashMap::new();
+
+    for row_idx in 0..df.height() {
+        let Some(hostname) = string_value_at(hostname_col, row_idx) else {
+            continue;
+        };
+        let Some(spectral_type) = string_value_at(spectral_type_col, row_idx)
+        else {
+            continue;
+        };
+        let Some(class) = spectral_type
+            .trim()
+            .chars()
+            .next()
+            .filter(char::is_ascii_alphabetic)
+            .map(|value| value.to_ascii_uppercase().to_string())
+        else {
+            continue;
+        };
+
+        *host_classes
+            .entry(hostname)
+            .or_default()
+            .entry(class)
+            .or_insert(0) += 1;
+    }
+
+    let mut classes = HashMap::new();
+    for host_values in host_classes.values() {
+        if let Some(class) = canonical_string(host_values) {
+            *classes.entry(class).or_insert(0) += 1;
+        }
+    }
+
+    let mut classes_vec: Vec<_> = classes.into_iter().collect();
+    classes_vec.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    classes_vec.truncate(limit);
+    classes_vec
+}
+
 /// Group distinct planets by canonical equilibrium temperature bucket
 pub fn get_planet_temperature_bands(df: &DataFrame) -> Vec<(String, usize)> {
     let planets = build_planet_aggregates(df);
@@ -501,6 +617,7 @@ fn build_planet_aggregates(df: &DataFrame) -> HashMap<String, PlanetAggregate> {
     let discovery_method_col = df.column("discoverymethod").ok();
     let discovery_facility_col = df.column("disc_facility").ok();
     let radius_col = df.column("pl_rade").ok();
+    let best_mass_col = df.column("pl_bmasse").ok();
     let equilibrium_temperature_col = df.column("pl_eqt").ok();
     let orbital_period_col = df.column("pl_orbper").ok();
     let discovery_year_col = df.column("disc_year").ok();
@@ -529,6 +646,14 @@ fn build_planet_aggregates(df: &DataFrame) -> HashMap<String, PlanetAggregate> {
             && radius.is_finite()
         {
             aggregate.radii.push(radius);
+        }
+
+        if let Some(col) = best_mass_col.as_ref()
+            && let Some(mass) = float_value_at(col, row_idx)
+            && mass.is_finite()
+            && mass >= 0.0
+        {
+            aggregate.best_masses.push(mass);
         }
 
         if let Some(col) = equilibrium_temperature_col.as_ref()
@@ -642,8 +767,9 @@ fn median_f64(values: &[f64]) -> Option<f64> {
 mod tests {
     use super::{
         get_detection_sources, get_discovery_methods, get_discovery_year_counts,
-        get_orbital_period_buckets, get_planet_size_categories,
-        get_planet_temperature_bands, get_total_counts,
+        get_orbital_period_buckets, get_planet_mass_bands,
+        get_planet_size_categories, get_planet_temperature_bands,
+        get_stellar_classes, get_total_counts,
     };
     use polars::df;
 
@@ -717,6 +843,101 @@ mod tests {
                 ("Neptune-like (2.5-4 R⊕)".to_string(), 1),
             ]
         );
+    }
+
+    #[test]
+    fn planet_mass_bands_use_one_canonical_best_mass_per_planet() {
+        let exoplanets_df = df!(
+            "pl_name" => &[
+                "Planet A",
+                "Planet A",
+                "Planet B",
+                "Planet C",
+                "Planet D",
+                "Planet E",
+                "Planet F",
+                "Planet G",
+                "Planet H",
+                "Planet I",
+            ],
+            "pl_bmasse" => &[
+                Some(0.5),
+                Some(1.5),
+                Some(1.0),
+                Some(10.0),
+                Some(100.0),
+                Some(1000.0),
+                Some(f64::NAN),
+                None,
+                Some(0.5),
+                Some(-1.0),
+            ]
+        )
+        .unwrap();
+
+        let bands = get_planet_mass_bands(&exoplanets_df);
+
+        assert_eq!(
+            bands,
+            vec![
+                ("< 1 M⊕".to_string(), 1),
+                ("1-10 M⊕".to_string(), 2),
+                ("10-100 M⊕".to_string(), 1),
+                ("100-1000 M⊕".to_string(), 1),
+                ("≥ 1000 M⊕".to_string(), 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn stellar_classes_normalize_and_deduplicate_hosts() {
+        let stellarhosts_df = df!(
+            "hostname" => &[
+                Some("Host A"),
+                Some("Host A"),
+                Some("Host A"),
+                Some("Host B"),
+                Some("Host C"),
+                Some("Host D"),
+                Some("Host E"),
+                None,
+            ],
+            "st_spectype" => &[
+                Some(" G5 V"),
+                Some("K0 III"),
+                Some("G2"),
+                Some("m3 V"),
+                Some("K0"),
+                Some(""),
+                None,
+                Some("F8"),
+            ]
+        )
+        .unwrap();
+
+        let classes = get_stellar_classes(&stellarhosts_df, 5);
+
+        assert_eq!(
+            classes,
+            vec![
+                ("G".to_string(), 1),
+                ("K".to_string(), 1),
+                ("M".to_string(), 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn stellar_classes_apply_limit_after_deterministic_sorting() {
+        let stellarhosts_df = df!(
+            "hostname" => &["Host G", "Host K", "Host M"],
+            "st_spectype" => &["G5", "K0", "M3"]
+        )
+        .unwrap();
+
+        let classes = get_stellar_classes(&stellarhosts_df, 2);
+
+        assert_eq!(classes, vec![("G".to_string(), 1), ("K".to_string(), 1)]);
     }
 
     #[test]
