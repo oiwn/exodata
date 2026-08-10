@@ -1,17 +1,21 @@
-# Current Task Context: Rename repository identity and deploy
+# Current Task Context: Add overview mass and stellar-class blocks
 
-State: in progress
+State: in progress (implementation complete; awaiting manual UI verification)
 
 ## Plan
 
-- [x] Rename repository, package metadata, operational identifiers, and public links to Exodata.
-- [x] Keep CI as build-and-push only; deployment stays manual via Ansible from local.
-- [ ] Bump version, merge to `main`, and let CI build & push the `ghcr.io/oiwn/exodata` image.
-- [ ] Deploy with `just ansible-deploy` locally and verify production.
+- [x] Add and test distinct-planet mass and distinct-host stellar-class aggregations.
+- [x] Expose and render both datasets in the second detailed-statistics row with translations.
+- [x] Update the homepage specification and verify the affected code.
+
+## Context
+
+Issue #120 adds planet best-mass bands and leading spectral classes immediately
+after Planet Classifications and Orbital Periods. The stellar-class block is
+limited to the five most common classes so it ends at class A in the current
+dataset.
 
 ## Next
 
-Bump the version in `Cargo.toml`, open a PR and merge to `main`. CI builds the
-image (website + wasm) and pushes it to GHCR as `exodata:<version>` + `latest`.
-Then run `just ansible-deploy` locally (pulls `latest`) and verify the deployed
-health endpoint at https://exodata.space.
+Run `cargo leptos watch`, open `/`, and confirm the new second row at desktop
+and narrow viewport widths.

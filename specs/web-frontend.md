@@ -232,31 +232,19 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
 }
 ```
 
-**DetailedStats** - Discovery methods and size categories:
-```rust
-#[component]
-fn DetailedStats(stats: DataStats) -> impl IntoView {
-    view! {
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            // Discovery methods chart
-            <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6">
-                <h3>"🔭 Discovery Methods"</h3>
-                <div class="space-y-3">
-                    {stats.discovery_methods.iter().map(|(method, count)| {
-                        // Bar chart visualization
-                    }).collect::<Vec<_>>()}
-                </div>
-            </div>
+**DetailedStats** - Distribution blocks rendered in paired responsive rows:
 
-            // Planet size categories
-            <div class="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6">
-                <h3>"📊 Planet Size Distribution"</h3>
-                // Similar bar chart for sizes
-            </div>
-        </div>
-    }
-}
-```
+1. Planet classifications / orbital periods
+2. Planet mass distribution / stellar classes
+3. Discovery methods / discovery years
+4. Planet temperature bands / detection sources
+
+Planet distributions count distinct planets using a canonical value per planet.
+The mass block uses median `pl_bmasse` values and fixed Earth-mass bands. The
+stellar-class block counts distinct hosts by the normalized leading letter of a
+canonical `st_spectype` value and displays the five most common classes. All
+blocks use `StatSection`, which renders each category's count and percentage of
+the displayed distribution.
 
 #### StatCard Component
 

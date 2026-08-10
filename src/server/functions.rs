@@ -30,6 +30,8 @@ pub struct DataStats {
     pub avg_stellar_distance: f64,
     pub discovery_methods: Vec<(String, usize)>,
     pub planet_size_categories: Vec<(String, usize)>,
+    pub planet_mass_bands: Vec<(String, usize)>,
+    pub stellar_classes: Vec<(String, usize)>,
     pub planet_temperature_bands: Vec<(String, usize)>,
     pub detection_sources: Vec<(String, usize)>,
     pub discovery_years: Vec<(String, usize)>,

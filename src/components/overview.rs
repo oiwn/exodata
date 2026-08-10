@@ -172,6 +172,20 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <StatSection
+                    title=t_string!(i18n, home.planet_mass_distribution)
+                    subtitle=t_string!(i18n, home.planet_mass_distribution_subtitle)
+                    icon="⚖️"
+                    items=stats.planet_mass_bands
+                />
+                <StatSection
+                    title=t_string!(i18n, home.stellar_classes)
+                    subtitle=t_string!(i18n, home.stellar_classes_subtitle)
+                    icon="✨"
+                    items=stats.stellar_classes
+                />
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <StatSection
                     title=t_string!(i18n, home.discovery_methods)
                     subtitle=t_string!(i18n, home.discovery_methods_subtitle)
                     icon="🔭"

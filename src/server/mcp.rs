@@ -393,6 +393,8 @@ mod tests {
                 avg_stellar_distance: 0.0,
                 discovery_methods: Vec::new(),
                 planet_size_categories: Vec::new(),
+                planet_mass_bands: Vec::new(),
+                stellar_classes: Vec::new(),
                 planet_temperature_bands: Vec::new(),
                 detection_sources: Vec::new(),
                 discovery_years: Vec::new(),

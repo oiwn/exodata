@@ -111,6 +111,8 @@ async fn start_server() {
         aggregation::get_discovery_methods(&exoplanets_df, 10);
     let planet_size_categories =
         aggregation::get_planet_size_categories(&exoplanets_df);
+    let planet_mass_bands = aggregation::get_planet_mass_bands(&exoplanets_df);
+    let stellar_classes = aggregation::get_stellar_classes(&stellarhosts_df, 5);
     let planet_temperature_bands =
         aggregation::get_planet_temperature_bands(&exoplanets_df);
     let detection_sources = aggregation::get_detection_sources(&exoplanets_df, 7);
@@ -125,6 +127,8 @@ async fn start_server() {
         avg_stellar_distance,
         discovery_methods,
         planet_size_categories,
+        planet_mass_bands,
+        stellar_classes,
         planet_temperature_bands,
         detection_sources,
         discovery_years,
