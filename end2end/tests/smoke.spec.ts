@@ -155,6 +155,10 @@ test("catalog table interactions preserve query state", async ({ page }) => {
     await filter.press("Enter");
     await expect(page).toHaveURL(/filter=Kepler/);
 
+    await filter.fill("");
+    await filter.press("Enter");
+    await expect(page).not.toHaveURL(/filter=/);
+
     await page
       .getByRole("button", { name: /select columns|hide column selector/i })
       .click();

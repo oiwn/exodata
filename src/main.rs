@@ -66,30 +66,41 @@ async fn start_server() {
         )
         .init();
 
-    // Load dataframes at startup
-    let stellarhosts_df =
-        match data_common::load_parquet("data/stellarhosts.parquet", None) {
-            Ok(df) => Arc::new(df),
-            Err(e) => panic!("Failed to load stellarhosts data: {}", e),
-        };
+    let data_dir = std::env::var("EXO_DATA_DIR")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "data".to_string());
+    let data_dir = Path::new(&data_dir);
 
+    // Load dataframes at startup
+    let stellarhosts_path = data_dir.join("stellarhosts.parquet");
+    let stellarhosts_df = match data_common::load_parquet(
+        &stellarhosts_path.to_string_lossy(),
+        None,
+    ) {
+        Ok(df) => Arc::new(df),
+        Err(e) => panic!("Failed to load stellarhosts data: {}", e),
+    };
+
+    let exoplanets_path = data_dir.join("exoplanets.parquet");
     let exoplanets_df =
-        match data_common::load_parquet("data/exoplanets.parquet", None) {
+        match data_common::load_parquet(&exoplanets_path.to_string_lossy(), None)
+        {
             Ok(df) => Arc::new(df),
             Err(e) => panic!("Failed to load exoplanets data: {}", e),
         };
 
     // Load metadata from TOML files
-    let stellarhosts_metadata = match metadata::load_metadata_toml(Path::new(
-        "data/stellarhosts-metadata.toml",
-    )) {
+    let stellarhosts_metadata = match metadata::load_metadata_toml(
+        &data_dir.join("stellarhosts-metadata.toml"),
+    ) {
         Ok(meta) => Arc::new(meta),
         Err(e) => panic!("Failed to load stellarhosts metadata: {}", e),
     };
 
-    let exoplanets_metadata = match metadata::load_metadata_toml(Path::new(
-        "data/exoplanets-metadata.toml",
-    )) {
+    let exoplanets_metadata = match metadata::load_metadata_toml(
+        &data_dir.join("exoplanets-metadata.toml"),
+    ) {
         Ok(meta) => Arc::new(meta),
         Err(e) => panic!("Failed to load exoplanets metadata: {}", e),
     };

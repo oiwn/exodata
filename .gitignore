@@ -12,6 +12,7 @@ tmp/
 end2end/playwright-report
 end2end/test-results
 end2end/node_modules/
+end2end/runtime-data/
 
 # Infrastructure - Tofu/Terraform
 .terraform.lock.hcl
