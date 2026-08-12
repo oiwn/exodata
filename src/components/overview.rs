@@ -44,7 +44,7 @@ pub fn OverviewPage() -> impl IntoView {
         <Link rel="alternate" hreflang="ja" href=format!("{SITE_URL}/ja")/>
         <Link rel="alternate" hreflang="x-default" href=format!("{SITE_URL}/")/>
         <StructuredData value=website_schema()/>
-        <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <main class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
             // Header with cosmic background
             <div class="relative overflow-hidden">
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20"></div>
@@ -110,7 +110,7 @@ pub fn OverviewPage() -> impl IntoView {
                     }}
                 </Suspense>
             </div>
-        </div>
+        </main>
     }
 }
 
@@ -154,6 +154,18 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
 #[component]
 fn DetailedStats(stats: DataStats) -> impl IntoView {
     let i18n = use_i18n();
+    let locale = i18n.get_locale_untracked();
+    let planet_size_categories =
+        localized_overview_labels(stats.planet_size_categories, locale);
+    let orbital_period_buckets =
+        localized_overview_labels(stats.orbital_period_buckets, locale);
+    let stellar_classes = stellar_class_labels(stats.stellar_classes, locale);
+    let discovery_methods =
+        localized_overview_labels(stats.discovery_methods, locale);
+    let planet_temperature_bands =
+        localized_overview_labels(stats.planet_temperature_bands, locale);
+    let detection_sources =
+        localized_overview_labels(stats.detection_sources, locale);
     view! {
         <div class="space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -161,13 +173,13 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
                     title=t_string!(i18n, home.planet_classifications)
                     subtitle=t_string!(i18n, home.planet_classifications_subtitle)
                     icon="🌍"
-                    items=stats.planet_size_categories
+                    items=planet_size_categories
                 />
                 <StatSection
                     title=t_string!(i18n, home.orbital_periods)
                     subtitle=t_string!(i18n, home.orbital_periods_subtitle)
                     icon="🌀"
-                    items=stats.orbital_period_buckets
+                    items=orbital_period_buckets
                 />
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -181,7 +193,7 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
                     title=t_string!(i18n, home.stellar_classes)
                     subtitle=t_string!(i18n, home.stellar_classes_subtitle)
                     icon="✨"
-                    items=stats.stellar_classes
+                    items=stellar_classes
                 />
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -189,7 +201,7 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
                     title=t_string!(i18n, home.discovery_methods)
                     subtitle=t_string!(i18n, home.discovery_methods_subtitle)
                     icon="🔭"
-                    items=stats.discovery_methods
+                    items=discovery_methods
                 />
                 <StatSection
                     title=t_string!(i18n, home.discovery_years)
@@ -203,17 +215,151 @@ fn DetailedStats(stats: DataStats) -> impl IntoView {
                     title=t_string!(i18n, home.temperature_bands)
                     subtitle=t_string!(i18n, home.temperature_bands_subtitle)
                     icon="🌡️"
-                    items=stats.planet_temperature_bands
+                    items=planet_temperature_bands
                 />
                 <StatSection
                     title=t_string!(i18n, home.detection_sources)
                     subtitle=t_string!(i18n, home.detection_sources_subtitle)
                     icon="🛰️"
-                    items=stats.detection_sources
+                    items=detection_sources
                 />
             </div>
         </div>
     }
+}
+
+fn localized_overview_labels(
+    items: Vec<(String, usize)>,
+    locale: Locale,
+) -> Vec<(String, usize)> {
+    items
+        .into_iter()
+        .map(|(label, count)| {
+            let localized = match label.as_str() {
+                "Sub-Earth (< 1 R⊕)" => {
+                    Some(td_string!(locale, home.planet_size_sub_earth))
+                }
+                "Earth-like (1-1.5 R⊕)" => {
+                    Some(td_string!(locale, home.planet_size_earth_like))
+                }
+                "Super-Earth (1.5-2.5 R⊕)" => {
+                    Some(td_string!(locale, home.planet_size_super_earth))
+                }
+                "Neptune-like (2.5-4 R⊕)" => {
+                    Some(td_string!(locale, home.planet_size_neptune_like))
+                }
+                "Jupiter-like (> 4 R⊕)" => {
+                    Some(td_string!(locale, home.planet_size_jupiter_like))
+                }
+                "< 1 day" => {
+                    Some(td_string!(locale, home.orbital_period_under_one_day))
+                }
+                "1-10 days" => {
+                    Some(td_string!(locale, home.orbital_period_one_to_ten_days))
+                }
+                "10-100 days" => Some(td_string!(
+                    locale,
+                    home.orbital_period_ten_to_hundred_days
+                )),
+                "100-1000 days" => Some(td_string!(
+                    locale,
+                    home.orbital_period_hundred_to_thousand_days
+                )),
+                "> 1000 days" => Some(td_string!(
+                    locale,
+                    home.orbital_period_over_thousand_days
+                )),
+                "Ultra-hot (> 1500 K)" => {
+                    Some(td_string!(locale, home.temperature_ultra_hot))
+                }
+                "Very hot (1000-1500 K)" => {
+                    Some(td_string!(locale, home.temperature_very_hot))
+                }
+                "Hot (700-1000 K)" => {
+                    Some(td_string!(locale, home.temperature_hot))
+                }
+                "Warm (500-700 K)" => {
+                    Some(td_string!(locale, home.temperature_warm))
+                }
+                "Mild (350-500 K)" => {
+                    Some(td_string!(locale, home.temperature_mild))
+                }
+                "Temperate (200-350 K)" => {
+                    Some(td_string!(locale, home.temperature_temperate))
+                }
+                "Cold (< 200 K)" => {
+                    Some(td_string!(locale, home.temperature_cold))
+                }
+                "Astrometry" => {
+                    Some(td_string!(locale, home.discovery_method_astrometry))
+                }
+                "Disk Kinematics" => Some(td_string!(
+                    locale,
+                    home.discovery_method_disk_kinematics
+                )),
+                "Eclipse Timing Variations" => {
+                    Some(td_string!(locale, home.discovery_method_eclipse_timing))
+                }
+                "Imaging" => {
+                    Some(td_string!(locale, home.discovery_method_imaging))
+                }
+                "Microlensing" => {
+                    Some(td_string!(locale, home.discovery_method_microlensing))
+                }
+                "Orbital Brightness Modulation" => Some(td_string!(
+                    locale,
+                    home.discovery_method_orbital_brightness
+                )),
+                "Pulsar Timing" => {
+                    Some(td_string!(locale, home.discovery_method_pulsar_timing))
+                }
+                "Pulsation Timing Variations" => Some(td_string!(
+                    locale,
+                    home.discovery_method_pulsation_timing
+                )),
+                "Radial Velocity" => Some(td_string!(
+                    locale,
+                    home.discovery_method_radial_velocity
+                )),
+                "Transit" => {
+                    Some(td_string!(locale, home.discovery_method_transit))
+                }
+                "Transit Timing Variations" => {
+                    Some(td_string!(locale, home.discovery_method_transit_timing))
+                }
+                "Other" => Some(td_string!(locale, home.other)),
+                _ => None,
+            };
+
+            (localized.map(str::to_string).unwrap_or(label), count)
+        })
+        .collect()
+}
+
+fn stellar_class_labels(
+    classes: Vec<(String, usize)>,
+    locale: Locale,
+) -> Vec<(String, usize)> {
+    classes
+        .into_iter()
+        .map(|(class, count)| {
+            let description = match class.as_str() {
+                "O" => Some(td_string!(locale, home.stellar_class_o)),
+                "B" => Some(td_string!(locale, home.stellar_class_b)),
+                "A" => Some(td_string!(locale, home.stellar_class_a)),
+                "F" => Some(td_string!(locale, home.stellar_class_f)),
+                "G" => Some(td_string!(locale, home.stellar_class_g)),
+                "K" => Some(td_string!(locale, home.stellar_class_k)),
+                "M" => Some(td_string!(locale, home.stellar_class_m)),
+                _ => None,
+            };
+            let label = description
+                .map(|description| format!("{class} — {description}"))
+                .unwrap_or(class);
+
+            (label, count)
+        })
+        .collect()
 }
 
 #[component]
@@ -317,5 +463,81 @@ fn StatSection(
                 }).collect::<Vec<_>>()}
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{localized_overview_labels, stellar_class_labels};
+    use crate::i18n::Locale;
+
+    #[test]
+    fn stellar_class_labels_localize_standard_classes_and_preserve_counts() {
+        let classes = vec![("G".to_string(), 3), ("M".to_string(), 2)];
+
+        assert_eq!(
+            stellar_class_labels(classes.clone(), Locale::en),
+            vec![
+                ("G — yellow dwarf (Sun-like)".to_string(), 3),
+                ("M — red dwarf".to_string(), 2),
+            ]
+        );
+        assert_eq!(
+            stellar_class_labels(classes.clone(), Locale::zh_CN),
+            vec![
+                ("G — 黄矮星（类似太阳）".to_string(), 3),
+                ("M — 红矮星".to_string(), 2),
+            ]
+        );
+        assert_eq!(
+            stellar_class_labels(classes, Locale::ja),
+            vec![
+                ("G — 黄色矮星（太陽型）".to_string(), 3),
+                ("M — 赤色矮星".to_string(), 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn stellar_class_labels_preserve_unknown_classes() {
+        assert_eq!(
+            stellar_class_labels(vec![("W".to_string(), 1)], Locale::en),
+            vec![("W".to_string(), 1)]
+        );
+    }
+
+    #[test]
+    fn overview_labels_localize_categories_and_preserve_unknown_values() {
+        let labels = vec![
+            ("Super-Earth (1.5-2.5 R⊕)".to_string(), 6),
+            ("1-10 days".to_string(), 5),
+            ("Transit".to_string(), 4),
+            ("Radial Velocity".to_string(), 3),
+            ("Ultra-hot (> 1500 K)".to_string(), 2),
+            ("Kepler".to_string(), 1),
+        ];
+
+        assert_eq!(
+            localized_overview_labels(labels.clone(), Locale::zh_CN),
+            vec![
+                ("超级地球（1.5-2.5 R⊕）".to_string(), 6),
+                ("1-10 天".to_string(), 5),
+                ("凌日法".to_string(), 4),
+                ("径向速度法".to_string(), 3),
+                ("超高温（> 1500 K）".to_string(), 2),
+                ("Kepler".to_string(), 1),
+            ]
+        );
+        assert_eq!(
+            localized_overview_labels(labels, Locale::ja),
+            vec![
+                ("スーパーアース（1.5-2.5 R⊕）".to_string(), 6),
+                ("1-10日".to_string(), 5),
+                ("トランジット法".to_string(), 4),
+                ("視線速度法".to_string(), 3),
+                ("超高温（> 1500 K）".to_string(), 2),
+                ("Kepler".to_string(), 1),
+            ]
+        );
     }
 }

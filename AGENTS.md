@@ -20,6 +20,9 @@ This file defines agent workflow and points to project specifications. Implement
    and `&'static str` for compile-time constants; retain `String` for owned,
    deserialized, generated, mutable, or cross-boundary data. Do not introduce
    artificial lifetimes merely to avoid an allocation.
+8. When Rust formatting is needed, run `cargo fmt --all`; do not hand-edit code
+   to imitate rustfmt output. Use `cargo fmt --all -- --check` only to verify an
+   already formatted tree.
 
 ## Updating NASA Data Files
 

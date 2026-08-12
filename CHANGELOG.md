@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-08-12
+
+- Added localized explanatory names for stellar spectral classes on the
+  overview, including conventional yellow-, orange-, and red-dwarf names.
+- Localized planet-size categories, orbital-period units, temperature bands,
+  and known discovery methods in English, Simplified Chinese, and Japanese,
+  while preserving scientific units, proper names, and unknown source labels.
+- Verified the overview localization with focused tests, Rust formatting, and
+  manual checks of all supported locales.
+- Implemented #126 as a separate pull-request and manually dispatched GitHub
+  Actions workflow for the existing Chromium smoke suite.
+- Upgraded Playwright to 1.62.1, TypeScript to 7.0.2, and Node typings to the
+  Node 24 line, resolving the previous high-severity npm audit findings.
+- Added deterministic fixture staging and an `EXO_DATA_DIR` server override so
+  E2E runs use small repository fixtures instead of downloading live data.
+- Documented the local and CI workflows, including the `fsevents` install-script
+  decision and required lazy-route WASM splitting.
+- Added the standalone Tailwind CLI required by Cargo Leptos to the E2E runner.
+- Verified all six Playwright smoke tests locally, plus TypeScript checking,
+  npm audit, Rust formatting, and workflow YAML parsing.
+- Completed #115: added a semantic `<main>` landmark to the homepage without
+  changing page layout or creating nested landmarks on documentation pages.
+- Verified with `cargo check --features ssr` and a manual homepage check.
+
 ## 2026-07-21
 
 - Consolidated catalog-table query transitions and successful-result rendering
@@ -25,8 +49,8 @@
   API docs, MCP docs, CLI docs, and Swagger UI.
 - Added hosted MCP setup command boxes with copy buttons for Codex, Claude Code,
   OpenCode, and MCP Inspector, plus a compact CLI/MCP interaction card.
-- Moved the manual below the detailed homepage statistics and linked the hero
-  subtitle to it as an in-page anchor.
+- Completed #119: moved the manual below the detailed homepage statistics and
+  linked the hero subtitle to its in-page anchor.
 - Removed the local MCP URL from the public MCP connection summary.
 - Verified with `cargo clippy --all --workspace`, `cargo test --workspace`, and
   manual browser checks of layout and copy behavior.
@@ -46,6 +70,14 @@
 - Captured the implementation plan and TOON deferral in `specs/ctx.md`.
 - Verified with manual browser checks, `cargo clippy --all --workspace`, and
   `cargo test --all --workspace`.
+
+## 2026-06-15
+
+- Completed #120: added distinct-planet best-mass distribution bands and the
+  five most common stellar spectral classes to the second detailed-statistics
+  row on the homepage.
+- Added coverage for the canonical aggregation data and homepage statistics
+  display.
 
 ## 2026-05-25
 
