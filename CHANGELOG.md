@@ -2,6 +2,13 @@
 
 ## 2026-08-12
 
+- Added localized explanatory names for stellar spectral classes on the
+  overview, including conventional yellow-, orange-, and red-dwarf names.
+- Localized planet-size categories, orbital-period units, temperature bands,
+  and known discovery methods in English, Simplified Chinese, and Japanese,
+  while preserving scientific units, proper names, and unknown source labels.
+- Verified the overview localization with focused tests, Rust formatting, and
+  manual checks of all supported locales.
 - Implemented #126 as a separate pull-request and manually dispatched GitHub
   Actions workflow for the existing Chromium smoke suite.
 - Upgraded Playwright to 1.62.1, TypeScript to 7.0.2, and Node typings to the

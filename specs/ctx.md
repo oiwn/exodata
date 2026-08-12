@@ -4,12 +4,13 @@ State: in progress
 
 ## Plan
 
-- [ ] Add a concise explanation of stellar spectral-class letters to the overview’s Stellar Classes card, matching the guidance style of Planet Classifications.
 - [ ] Provide a manual closure verification list for #57, #75, #83, #95, #107, #36, and #27; do not close the issues automatically.
 
 ## Findings
 
-- **Stellar Classes follow-up:** the distribution is visually clear, but readers need a short in-card explanation of what classes such as G, K, and M represent; match the existing Planet Classifications treatment.
+- **Closure candidates:** #57 is represented by clickable planet names in stellar-host detail cards; #83 by the animated homepage Exoplanets heading; #107 by the radius-based planet classifications on the overview.
+- **Do not close yet:** #75 still has no Facts/Insights link on the 404 page; #95 still lacks the requested recently detected exoplanets and largest/smallest stellar-host rankings; #27 still prewarms `selected_columns: None` while SSR table requests use explicit display plus uncertainty/limit columns, producing different cache keys.
+- **Needs production verification:** #36 is addressed in deployment configuration by sending `Cache-Control: no-cache` for `/pkg/`, but verify the live JS/WASM response headers after deployment before closing.
 - **Partially covered / still requires scoped work:** #58 (reference links and exports have backend support, but no column presets or share control); #87 (gzip/WASM support and cache headers were addressed, but GA remains render-path work); #99 (detail canonicalization exists, but the reported record-selection case needs a reproducible rule); #59 (API/export links exist in the manual, not clearly on table/detail pages); #69 (route fallback has a branded 404, but detail lookup errors still surface as loading errors).
 - **Research or product decisions, not next-session implementation:** #10, #11, #43, #72, #77, #90, #100, #104, #108, #116. #97 needs production browser/network evidence because no `signature-agent` injection is in this tree. #111 is ambiguous: the product intentionally documents a hosted MCP server, so define whether removal is limited to the CLI package/docs before changing copy. #45 strict search needs a filter-semantics decision.
 
@@ -19,4 +20,4 @@ Verify the implemented issue candidates against their original acceptance criter
 
 ## Next
 
-Implement the Stellar Classes explanation.
+Prepare the manual closure verification list for the implemented issue candidates.

@@ -242,9 +242,16 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
 Planet distributions count distinct planets using a canonical value per planet.
 The mass block uses median `pl_bmasse` values and fixed Earth-mass bands. The
 stellar-class block counts distinct hosts by the normalized leading letter of a
-canonical `st_spectype` value and displays the five most common classes. All
-blocks use `StatSection`, which renders each category's count and percentage of
-the displayed distribution.
+canonical `st_spectype` value and displays the five most common classes. Its
+standard O/B/A/F/G/K/M row labels use localized conventional names such as
+yellow dwarf, orange dwarf, and red dwarf. These are class-level shorthand:
+because aggregation ignores the luminosity-class suffix, a row can also include
+giants of the same spectral class. An unrecognized leading letter remains
+unchanged. Planet-size categories, orbital-period units, temperature bands, and
+known discovery methods are also localized in the presentation layer; numeric
+mass/year labels and proper facility names remain language-neutral. Unknown
+data-provided labels remain unchanged. All blocks use `StatSection`, which
+renders each category's count and percentage of the displayed distribution.
 
 #### StatCard Component
 
