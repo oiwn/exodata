@@ -10,6 +10,7 @@
   E2E runs use small repository fixtures instead of downloading live data.
 - Documented the local and CI workflows, including the `fsevents` install-script
   decision and required lazy-route WASM splitting.
+- Added the standalone Tailwind CLI required by Cargo Leptos to the E2E runner.
 - Verified all six Playwright smoke tests locally, plus TypeScript checking,
   npm audit, Rust formatting, and workflow YAML parsing.
 - Completed #115: added a semantic `<main>` landmark to the homepage without
