@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "exodata": {
+      "type": "http",
+      "url": "https://exodata.space/mcp"
+    }
+  }
+}
