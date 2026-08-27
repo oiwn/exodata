@@ -5,6 +5,7 @@ State: in progress
 ## Plan
 
 - [ ] Provide a manual closure verification list for #57, #75, #83, #95, #107, #36, and #27; do not close the issues automatically.
+- [ ] Verify tmux italic fix (new pane + reattach), then optionally confirm matrix theme renders dim green slanted thinking text.
 
 ## Findings
 

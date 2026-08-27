@@ -49,6 +49,22 @@ struct DescribeCatalogRequest {
     columns: Option<Vec<String>>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+enum DownloadDetailFormat {
+    Json,
+    Csv,
+}
+
+impl From<DownloadDetailFormat> for exports::ExportFormat {
+    fn from(format: DownloadDetailFormat) -> Self {
+        match format {
+            DownloadDetailFormat::Json => Self::Json,
+            DownloadDetailFormat::Csv => Self::Csv,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 struct DownloadDetailRequest {
     /// Entity type: "stellarhost" or "exoplanet".
@@ -56,7 +72,7 @@ struct DownloadDetailRequest {
     /// Detail page entity name, such as a hostname or planet name.
     name: String,
     /// Export format: "json" or "csv".
-    format: String,
+    format: DownloadDetailFormat,
 }
 
 pub fn mcp_routes(
@@ -206,8 +222,7 @@ impl ExodataMcp {
     ) -> Result<CallToolResult, McpError> {
         let entity = exports::ExportEntity::parse(&request.entity)
             .map_err(export_param_error)?;
-        let format = exports::ExportFormat::parse(&request.format)
-            .map_err(export_param_error)?;
+        let format = request.format.into();
 
         let export = match entity {
             exports::ExportEntity::StellarHost => {
@@ -291,9 +306,7 @@ fn export_data_error(error: String) -> McpError {
 fn allowed_hosts(state: &ApiState) -> Vec<String> {
     let mut hosts = vec![
         "localhost".to_string(),
-        "localhost:3000".to_string(),
         "127.0.0.1".to_string(),
-        "127.0.0.1:3000".to_string(),
         "::1".to_string(),
     ];
 
@@ -417,6 +430,14 @@ mod tests {
             Some("localhost:3000".to_string())
         );
         assert_eq!(site_url_host(""), None);
+    }
+
+    #[test]
+    fn allowed_hosts_include_loopback_and_configured_site() {
+        assert_eq!(
+            allowed_hosts(&create_test_state()),
+            vec!["127.0.0.1", "::1", "example.com", "localhost"]
+        );
     }
 
     #[test]
@@ -573,7 +594,7 @@ mod tests {
             .download_detail(Parameters(DownloadDetailRequest {
                 entity: "exoplanet".to_string(),
                 name: "Kepler-22 b".to_string(),
-                format: "json".to_string(),
+                format: DownloadDetailFormat::Json,
             }))
             .await
             .unwrap();
@@ -588,19 +609,15 @@ mod tests {
         assert!(content["content"].as_str().unwrap().contains("Kepler-22 b"));
     }
 
-    #[tokio::test]
-    async fn download_detail_rejects_invalid_format() {
-        let mcp = ExodataMcp::new(create_test_state());
+    #[test]
+    fn download_detail_rejects_invalid_format() {
+        let error = serde_json::from_value::<DownloadDetailRequest>(json!({
+            "entity": "exoplanet",
+            "name": "Kepler-22 b",
+            "format": "toon",
+        }))
+        .unwrap_err();
 
-        let error = mcp
-            .download_detail(Parameters(DownloadDetailRequest {
-                entity: "exoplanet".to_string(),
-                name: "Kepler-22 b".to_string(),
-                format: "toon".to_string(),
-            }))
-            .await
-            .unwrap_err();
-
-        assert!(error.message.contains("format must be 'json' or 'csv'"));
+        assert!(error.to_string().contains("unknown variant `toon`"));
     }
 }
