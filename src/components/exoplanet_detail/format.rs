@@ -1,8 +1,4 @@
-use std::collections::HashMap;
-
 use leptos::serde_json::Value;
-
-use exo_types::metadata::ColumnMetadata;
 
 pub fn format_value(value: &Value, unit: &str) -> String {
     match value {
@@ -46,21 +42,6 @@ pub fn format_number(value: f64) -> String {
     } else {
         format!("{value:.2}")
     }
-}
-
-pub fn property_display(
-    record: &Value,
-    metadata: &HashMap<String, ColumnMetadata>,
-    key: &str,
-    fallback_unit: &str,
-) -> String {
-    let value = record.get(key).unwrap_or(&Value::Null);
-    let unit = metadata
-        .get(key)
-        .and_then(|meta| meta.unit.as_deref())
-        .unwrap_or(fallback_unit);
-
-    format_value(value, unit)
 }
 
 pub fn first_non_empty_string(records: &[Value], key: &str) -> Option<String> {

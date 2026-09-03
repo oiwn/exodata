@@ -252,32 +252,12 @@
   @apply translate-x-1 text-cyan-100;
 }
 
-.planet-summary-card--blue {
-  @apply border-cyan-500/20;
+.planet-summary-card__body {
+  @apply mt-3 text-sm text-slate-300;
 }
 
-.planet-summary-card--indigo {
-  @apply border-indigo-500/20;
-}
-
-.planet-summary-card--rose {
-  @apply border-rose-500/20;
-}
-
-.planet-summary-card--amber {
-  @apply border-amber-500/20;
-}
-
-.planet-summary-card--emerald {
-  @apply border-emerald-500/20;
-}
-
-.planet-summary-card--orange {
-  @apply border-orange-500/20;
-}
-
-.planet-summary-card--slate {
-  @apply border-slate-600;
+.planet-summary-card__meta {
+  @apply mt-1 text-sm text-slate-500;
 }
 
 .planet-comparison {

@@ -82,8 +82,23 @@ pub struct HostPlanets {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct ExoplanetDetail {
     pub pl_name: String,
+    pub canonical: ExoplanetCanonicalSummary,
     pub records: Vec<Value>,
     pub metadata: HashMap<String, ColumnMetadata>,
+}
+
+/// Canonical adopted planet values computed from all detail records.
+#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
+pub struct ExoplanetCanonicalSummary {
+    pub hostname: Option<StableValueSummary>,
+    pub discovery_method: Option<CategoricalFieldSummary>,
+    pub discovery_year: Option<StableValueSummary>,
+    pub orbital_period: Option<NumericFieldSummary>,
+    pub semi_major_axis: Option<NumericFieldSummary>,
+    pub radius: Option<NumericFieldSummary>,
+    pub mass: Option<NumericFieldSummary>,
+    pub density: Option<NumericFieldSummary>,
+    pub equilibrium_temperature: Option<NumericFieldSummary>,
 }
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]

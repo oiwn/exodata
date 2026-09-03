@@ -270,7 +270,7 @@ fn summarize_categorical_provenance<'a>(
     .filter(move |_| total > 0)
 }
 
-fn summarize_numeric_field(
+pub(crate) fn summarize_numeric_field(
     records: &[Value],
     key: &str,
     metadata: &HashMap<String, ColumnMetadata>,
@@ -298,7 +298,7 @@ fn summarize_numeric_field(
     })
 }
 
-fn summarize_stable_field(
+pub(crate) fn summarize_stable_field(
     records: &[Value],
     key: &str,
     metadata: &HashMap<String, ColumnMetadata>,
@@ -321,7 +321,7 @@ fn summarize_stable_field(
     })
 }
 
-fn summarize_categorical_field(
+pub(crate) fn summarize_categorical_field(
     records: &[Value],
     key: &str,
     _metadata: &HashMap<String, ColumnMetadata>,
@@ -444,6 +444,16 @@ fn humanize_key(key: &str) -> String {
         "sy_pnum" => "Planets".to_string(),
         "sy_snum" => "Stars".to_string(),
         "sy_mnum" => "Moons".to_string(),
+        "hostname" => "Host Star".to_string(),
+        "pl_rade" => "Radius".to_string(),
+        "pl_bmasse" => "Mass".to_string(),
+        "pl_masse" => "Mass".to_string(),
+        "pl_dens" => "Density".to_string(),
+        "pl_orbper" => "Orbital Period".to_string(),
+        "pl_orbsmax" => "Semi-Major Axis".to_string(),
+        "pl_eqt" => "Equilibrium Temperature".to_string(),
+        "discoverymethod" => "Discovery Method".to_string(),
+        "disc_year" => "Discovery Year".to_string(),
         _ => key.to_string(),
     }
 }

@@ -224,6 +224,7 @@ mod tests {
     fn exoplanet_detail_description_uses_first_record() {
         let detail = ExoplanetDetail {
             pl_name: "Kepler-10 b".to_string(),
+            canonical: Default::default(),
             records: vec![json!({
                 "hostname": "Kepler-10",
                 "discoverymethod": "Transit",

@@ -18,6 +18,9 @@ pub mod mcp;
 #[cfg(feature = "ssr")]
 pub mod stellarhost_canonical;
 
+#[cfg(feature = "ssr")]
+pub mod exoplanet_canonical;
+
 #[cfg(test)]
 mod tests;
 
