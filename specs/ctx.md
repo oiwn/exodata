@@ -15,9 +15,10 @@ State: in progress
 - [x] Ensure the `code-todo` label exists with color `5319E7` and description
   `Created from actionable source comments`.
 - [x] Give the automatic job least privilege: `contents: read`,
-  `pull-requests: read`, `issues: write`, the built-in `GITHUB_TOKEN`,
+  `pull-requests: write`, `issues: write`, the built-in `GITHUB_TOKEN`,
   `use_github_token: true`, `share: false`, disabled edit tools, and no content
-  or pull-request write access.
+  write access. Pull-request write access is required for OpenCode's built-in
+  reaction and summary comment.
 - [x] Add a constrained prompt that reads repository instructions and scans only
   added or modified `TODO`/`FIXME`/`NOTE`/`HACK` comment blocks in the PR diff,
   excluding unchanged, generated, vendor, data, dependency, lockfile, and
@@ -72,6 +73,9 @@ State: in progress
   version pinning only after the workflow is proven.
 - The completed workflow passes `actionlint` 1.7.12 and `git diff --check`. The
   `code-todo` label also exists on `oiwn/exodata` with the specified metadata.
+- The first run on PR #136 proved that `issues: write` is sufficient for label
+  management but not for OpenCode's mandatory reaction and comment on a pull
+  request; the automatic job therefore requires `pull-requests: write`.
 
 ## Context
 
@@ -91,11 +95,12 @@ Keep both behaviors in the generated `.github/workflows/opencode.yml`:
    `actions/checkout@v6` checkout, and per-PR concurrency with
    `cancel-in-progress: true`.
 
-The automatic job must set `contents: read`, `pull-requests: read`, and
+The automatic job must set `contents: read`, `pull-requests: write`, and
 `issues: write`; pass `GITHUB_TOKEN` and `ZHIPU_API_KEY`; and set
 `use_github_token: true`, `share: false`, and an `OPENCODE_PERMISSION` rule that
-denies file editing. Omit `id-token: write`, `contents: write`, and
-`pull-requests: write` from this job. Create/update the managed `code-todo` label
+denies file editing. Omit `id-token: write` and `contents: write` from this job.
+The pull-request write grant exists only because the stock action always reacts
+and comments on the triggering PR. Create/update the managed `code-todo` label
 deterministically before invoking OpenCode.
 
 The prompt examines only marker lines added or modified by the PR, then opens
@@ -123,6 +128,6 @@ Primary references:
 
 ## Next
 
-After the workflow reaches `main`, manually open a genuine PR from
-`todos/bla-bla` and verify its initial run. Later, push a new natural task to the
-same PR and verify the idempotent synchronize run before updating issue #133.
+Merge the pull-request permission correction to `main`, then close and reopen PR
+#136 to trigger a fresh initial scan. Later, push a new natural task to the same
+PR and verify the idempotent synchronize run before updating issue #133.
