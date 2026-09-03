@@ -33,6 +33,7 @@ pub fn PlanetSummarySection(detail: ExoplanetDetail) -> impl IntoView {
                     <p class="planet-detail-section__eyebrow planet-detail-section__eyebrow--summary">"Quick Summary"</p>
                     <h2 class="planet-detail-section__title">"Fast scan of the current planet profile"</h2>
                 </div>
+                // TODO: need to do canonical adopted summaries, look at "main/src/components/stellarhost_detail/summary.rs"
                 <p class="planet-detail-section__description">
                     "This first pass still reads from the currently available detail payload. Canonical adopted summaries will replace first-row values in the next backend pass."
                 </p>
