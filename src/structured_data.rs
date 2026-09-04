@@ -196,6 +196,7 @@ mod tests {
     fn exoplanet_dataset_schema_adds_host_and_method_keywords() {
         let detail = ExoplanetDetail {
             pl_name: "Kepler-10 b".to_string(),
+            canonical: Default::default(),
             records: vec![json!({
                 "hostname": "Kepler-10",
                 "discoverymethod": "Transit"

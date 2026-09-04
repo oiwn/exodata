@@ -127,8 +127,13 @@ pub fn export_exoplanet(
         ExportFormat::Json => {
             let (records, metadata) =
                 details::get_exoplanet_by_name(df, metadata, pl_name)?;
+            let canonical =
+                crate::server::exoplanet_canonical::build_canonical_exoplanet(
+                    &records, &metadata,
+                );
             to_pretty_json(&ExoplanetDetail {
                 pl_name: pl_name.to_string(),
+                canonical,
                 records,
                 metadata,
             })?

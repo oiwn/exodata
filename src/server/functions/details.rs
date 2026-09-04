@@ -6,6 +6,8 @@ use super::{ExoplanetDetail, HostPlanets, StellarHostDetail};
 #[cfg(feature = "ssr")]
 use crate::server::data::details;
 #[cfg(feature = "ssr")]
+use crate::server::exoplanet_canonical;
+#[cfg(feature = "ssr")]
 use crate::server::handlers::ApiState;
 
 /// Server function to fetch a single stellar host's details.
@@ -75,8 +77,12 @@ pub async fn get_exoplanet_detail(
         ServerFnError::ServerError(e)
     })?;
 
+    let canonical =
+        exoplanet_canonical::build_canonical_exoplanet(&records, &metadata);
+
     Ok(ExoplanetDetail {
         pl_name,
+        canonical,
         records,
         metadata,
     })

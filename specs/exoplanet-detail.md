@@ -8,16 +8,17 @@ This spec exists so the exoplanet detail refactor is driven by an explicit page 
 
 ## Status
 
-- Current implementation: `src/components/exoplanet_detail.rs` is a single-file component.
-- Current backend payload: `ExoplanetDetail { pl_name, records, metadata }`
-- This spec defines the target state for the next refactor phases.
+- Current implementation: `src/components/exoplanet_detail/` feature module.
+- Current backend payload: `ExoplanetDetail { pl_name, canonical, records, metadata }`
+- `canonical` is an `ExoplanetCanonicalSummary` computed server-side from all
+  records (see "Summary Computation Rules"); the summary section renders it.
+- The `identity`, `visual`, and `provenance` payload parts from the target
+  contract below are still future work.
 
 ## **TODO ASAP**
 
-- Replace the thin exoplanet detail payload with a richer canonical summary/provenance contract.
-- Move exoplanet summary cards from first-row/client-derived values to backend-produced adopted values and disagreement stats.
 - Decide whether the exoplanet provenance section should gain working export actions or remain absent until a real export path exists.
-- Treat this backend/data-contract follow-up as the highest-priority remaining gap in the exoplanet detail work.
+- Add the remaining `identity`/`visual`/`provenance` payload parts when their sections need backend data.
 
 ## Design Intent
 
@@ -275,11 +276,25 @@ pub struct ExoplanetProvenanceSummary {
 Notes:
 - `visual` is a convenience layer for deterministic rendering inputs
 - reuse existing summary types where possible instead of inventing parallel formatting models
-- if `pl_bmasse` and `pl_masse` differ in semantics in the source data, the backend spec must choose one preferred canonical mass field and document the fallback rule
+- Canonical mass field: `pl_bmasse` is preferred; if no `pl_bmasse` measurement exists, the backend falls back to `pl_masse`
+- `hostname` currently lives in `ExoplanetCanonicalSummary` as a stable summary; move it to `ExoplanetIdentity` when that payload part is added
 
 ## Summary Computation Rules
 
-The exoplanet canonical summary should follow the same broad philosophy already used for stellar hosts.
+The exoplanet canonical summary follows the same broad philosophy already used
+for stellar hosts and is implemented in `src/server/exoplanet_canonical.rs`,
+reusing the stellarhost record-summarization helpers.
+
+Field mapping:
+- `hostname` - stable summary
+- `discoverymethod` - categorical summary (most common value wins)
+- `disc_year` - stable summary
+- `pl_orbper` - numeric summary
+- `pl_orbsmax` - numeric summary
+- `pl_rade` - numeric summary
+- `pl_bmasse` - numeric summary, `pl_masse` fallback
+- `pl_dens` - numeric summary
+- `pl_eqt` - numeric summary
 
 Numeric fields:
 - ignore null values
@@ -293,8 +308,6 @@ Stable fields:
 Categorical fields:
 - choose the most common value as the adopted display value
 - keep counts for displayed disagreement context
-
-The backend implementation spec should document exact field mapping and fallback behavior before code changes start.
 
 ## Styling
 
@@ -327,9 +340,9 @@ Preferred naming pattern:
 - preserve current route and behavior as much as possible
 - add semantic CSS and remove large inline class piles
 
-### Phase 3
+### Phase 3 (done)
 
-- upgrade backend payload from raw-row-only shape to canonical summary shape
+- upgrade backend payload from raw-row-only shape to include the canonical summary
 - replace first-row summary logic with canonical summary rendering
 
 ### Phase 4
