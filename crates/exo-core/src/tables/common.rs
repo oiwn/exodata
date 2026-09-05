@@ -98,7 +98,7 @@ pub fn create_histogram(
         }
 
         // Count values in each bin
-        for val in f64_series.into_iter().flatten() {
+        for val in f64_series.iter().flatten() {
             if (min_val..=max_val).contains(&val) {
                 let bin_index = ((val - min_val) / bin_width) as usize;
                 if bin_index < bins {

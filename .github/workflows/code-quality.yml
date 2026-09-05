@@ -35,7 +35,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Clippy check
-        run: cargo clippy --all-features --workspace -- -D warnings
+        run: cargo clippy --locked --all-features --workspace -- -D warnings
 
   typos:
     name: Typos

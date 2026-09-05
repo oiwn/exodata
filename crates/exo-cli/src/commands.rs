@@ -1,7 +1,9 @@
 use std::path::Path;
 
 use anyhow::{Error, anyhow};
-use comfy_table::{Table, presets::ASCII_MARKDOWN};
+use comfy_table::{
+    ContentLineStyle, LineStyle, Table, TableStyle, presets::ASCII_MARKDOWN,
+};
 use exo_core::insights::{self, InsightInput};
 use exo_core::tables::common::{
     create_histogram, get_numeric_stats, load_data_with_limit, load_parquet,
@@ -9,6 +11,13 @@ use exo_core::tables::common::{
 };
 use polars::prelude::*;
 use polars::sql::SQLContext;
+
+const TERMINAL_TABLE: TableStyle = TableStyle::new()
+    .top_border(LineStyle::new('+', '-', '+', '+'))
+    .header_lines(ContentLineStyle::new('|', '|', '|'))
+    .header_separator(LineStyle::new('+', '-', '+', '+'))
+    .content_lines(ContentLineStyle::new('|', '|', '|'))
+    .bottom_border(LineStyle::new('+', '-', '+', '+'));
 
 /// Display sample data from stellarhosts table
 pub fn view_stellarhosts_samples(
@@ -101,7 +110,7 @@ pub fn view_stellarhosts_samples(
 
     // Create and configure table
     let mut table = Table::new();
-    table.load_preset("||--+-++|  "); // Use a preset that works well in terminals
+    table.load_style(TERMINAL_TABLE);
 
     // Add header row
     let headers: Vec<String> = available_cols
@@ -317,7 +326,7 @@ pub fn view_exoplanets_samples(
 
     // Create and configure table
     let mut table = Table::new();
-    table.load_preset("||--+-++|  "); // Use a preset that works well in terminals
+    table.load_style(TERMINAL_TABLE);
 
     // Add header row with formatted names
     let headers: Vec<String> = available_cols
@@ -442,7 +451,7 @@ fn display_basic_stats(
     key_columns: &[(&str, &str)],
 ) -> Result<(), Error> {
     let mut table = Table::new();
-    table.load_preset("||--+-++|  ");
+    table.load_style(TERMINAL_TABLE);
     table.set_header(vec![
         "Column", "Count", "Mean", "Median", "Std Dev", "Min", "Max",
     ]);
@@ -654,7 +663,7 @@ fn is_link_helper_column(column: &str) -> bool {
 
 fn minimal_table() -> Table {
     let mut table = Table::new();
-    table.load_preset(ASCII_MARKDOWN);
+    table.load_style(ASCII_MARKDOWN);
     table
 }
 

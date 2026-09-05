@@ -80,7 +80,7 @@ pub fn get_table_data(
                 .str()
                 .map_err(|e| format!("Failed to read string column: {}", e))?;
             let mask: BooleanChunked = utf8
-                .into_iter()
+                .iter()
                 .map(|opt| opt.map(|s| s.to_lowercase().contains(&needle)))
                 .collect();
             df = df

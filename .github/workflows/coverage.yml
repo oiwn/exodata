@@ -30,7 +30,7 @@ jobs:
 
       - name: Generate code coverage
         run: |
-          cargo llvm-cov --workspace --lcov --output-path lcov.info \
+          cargo llvm-cov --locked --workspace --lcov --output-path lcov.info \
             --ignore-filename-regex "src/bin/.*|src/components/.*|src/app.rs|src/metadata.rs|src/error_template.rs"
 
       - name: Upload coverage to Codecov

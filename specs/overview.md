@@ -184,8 +184,26 @@ cargo run -p exodata -- --help
 Run tests:
 
 ```bash
-cargo test --workspace
+cargo test --locked --workspace
 ```
+
+### Dependency Policy
+
+Canonical dependency requirements include major, minor, and patch components
+and use Cargo's normal caret semantics. `Cargo.lock` is committed, and local,
+CI, coverage, Docker, and cargo-leptos builds use locked resolution so manifest
+changes require a matching lockfile update.
+
+Cargo Audit configuration lives in `.cargo/audit.toml`. Yanked-crate checks
+remain enabled, while unmaintained, unsound, and notice advisories are reported
+without failing CI. `RUSTSEC-2026-0194` is accepted because VOTable conversion
+reads trusted offline NASA files, and `RUSTSEC-2026-0195` is accepted because
+the affected Polars cloud XML paths are not enabled or used. Other advisories
+remain unsuppressed.
+
+Serde is temporarily pinned to `1.0.228` because VOTable `0.7.0` imports that
+release's private module; return it to a three-part caret requirement when the
+VOTable dependency supports newer Serde releases.
 
 ## Deployment
 

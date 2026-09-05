@@ -1,0 +1,11 @@
+[advisories]
+# VOTable conversion only reads trusted, offline NASA files.
+ignore = [
+    "RUSTSEC-2026-0194",
+    # Polars' vulnerable cloud XML paths are not enabled or used by this project.
+    "RUSTSEC-2026-0195",
+]
+informational_warnings = ["unmaintained", "unsound", "notice"]
+
+[yanked]
+enabled = true

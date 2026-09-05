@@ -68,6 +68,7 @@ then restart/deploy because the application loads them at startup. See
 2. **Confidence Threshold:** If below ~70% confidence about a request or outcome, stop and ask for clarification.
 3. **Response Style Preference:** Prefer single-view answers; if possible, keep responses short enough to fit on one page.
 4. **Fixtures Are Not Source of Truth:** Treat test fixtures as stable sample material for testing only. Do not infer or enforce behavior from exact fixture numbers when those numbers only reflect a sampled snapshot of the live dataset.
+5. **User-Managed Commits:** Do not stage or commit changes. The user handles Git staging and commits unless they explicitly ask the agent to perform a specific Git action.
 
 ## Behavioral Guidelines
 

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use clap::ValueEnum;
 use exo_core::metadata::load_metadata_toml;
 use exo_core::tables::common::load_parquet;
@@ -353,16 +353,18 @@ impl LocalBackend {
     }
 
     fn load_dataset(&self, dataset: &DatasetKind) -> Result<DataFrame> {
-        load_parquet(
-            path_string(self.manifest.parquet_path(dataset)).as_str(),
-            None,
+        anyhow::Context::with_context(
+            load_parquet(
+                path_string(self.manifest.parquet_path(dataset)).as_str(),
+                None,
+            ),
+            || {
+                format!(
+                    "failed to load {}",
+                    self.manifest.parquet_path(dataset).display()
+                )
+            },
         )
-        .with_context(|| {
-            format!(
-                "failed to load {}",
-                self.manifest.parquet_path(dataset).display()
-            )
-        })
     }
 
     fn load_metadata(
@@ -399,7 +401,7 @@ impl CatalogBackend for LocalBackend {
                 };
                 let utf8 = series.str()?;
                 let mask: BooleanChunked = utf8
-                    .into_iter()
+                    .iter()
                     .map(|value| {
                         value.map(|s| s.to_lowercase().contains(&needle))
                     })

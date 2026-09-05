@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-09-04
+
+- Added the OpenCode GitHub Actions integration, preserving explicit `/oc` and
+  `/opencode` commands on issues, pull requests, and inline review comments.
+- Added an automatic scanner for same-repository `todos/**` pull requests that
+  converts new actionable `TODO`/`FIXME`/`NOTE`/`HACK` comments into labeled
+  GitHub issues with stable source fingerprints and semantic deduplication.
+- Constrained automatic scans to issue creation with read-only repository
+  access, restricted OpenCode tools, per-PR concurrency, and private sessions;
+  granted pull-request write access only for the action's required reaction and
+  summary comment.
+- Verified the workflow end to end: qualifying PRs create appropriate issues
+  and PR summaries, repeat scans remain idempotent, and explicit issue commands
+  can produce separately reviewable implementation PRs.
+- Recorded the successful rollout on GitHub issue #133 and closed it.
+- Added a Cargo dependency-audit workflow that runs weekly, supports manual
+  dispatch, and checks Rust manifest or lockfile changes on pull requests and
+  pushes to `main`; the initial audit surfaced five existing lockfile
+  vulnerabilities for follow-up.
+- Added server-computed canonical summaries to exoplanet details, deriving
+  adopted numeric values from all records with disagreement ranges, counts,
+  and provenance while preserving categorical and stable-field evidence.
+- Updated the exoplanet summary cards and detail JSON export to use the
+  canonical payload, documented the mass fallback and field mappings, removed
+  the first-row summary fallback, and verified the change with focused tests,
+  formatting, Clippy, and the workspace test suite.
+
 ## 2026-08-12
 
 - Added localized explanatory names for stellar spectral classes on the

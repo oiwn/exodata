@@ -80,7 +80,7 @@ pub fn mcp_routes(
 ) -> StreamableHttpService<ExodataMcp, LocalSessionManager> {
     let config = StreamableHttpServerConfig::default()
         .with_allowed_hosts(allowed_hosts(&state))
-        .with_stateful_mode(false)
+        .with_legacy_session_mode(false)
         .with_json_response(true);
     let session_manager = Arc::new(LocalSessionManager::default());
 
