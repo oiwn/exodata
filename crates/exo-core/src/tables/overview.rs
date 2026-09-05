@@ -166,7 +166,7 @@ pub fn temperature_distribution(df: &DataFrame) -> Vec<TemperatureBin> {
         let mut bin_counts = [0; 7]; // 7 bins from 3000-10000K
 
         // Count values in each bin
-        for temp in st_teff_data.into_iter().flatten() {
+        for temp in st_teff_data.iter().flatten() {
             if (3000.0..=10000.0).contains(&temp) {
                 let bin_index = ((temp - 3000.0) / 1000.0) as usize;
                 if bin_index < 7 {
@@ -212,7 +212,7 @@ pub fn discovery_timeline(df: &DataFrame) -> Vec<DecadeData> {
         let mut decade_map: HashMap<i32, (u32, Vec<f64>)> = HashMap::new();
 
         // Group by decade and collect temperatures
-        for (i, opt_year) in disc_year_data.into_iter().enumerate() {
+        for (i, opt_year) in disc_year_data.iter().enumerate() {
             if let Some(year) = opt_year {
                 let decade = (year as i32 / 10) * 10;
 

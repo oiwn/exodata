@@ -49,7 +49,7 @@ pub fn render_dataframe(frame: &DataFrame, format: OutputFormat) -> Result<()> {
 
 fn render_json_table(rows: &[Value], columns: &[String]) -> Result<()> {
     let mut table = Table::new();
-    table.load_preset(ASCII_MARKDOWN);
+    table.load_style(ASCII_MARKDOWN);
     table.set_header(columns.to_vec());
 
     for row in rows {

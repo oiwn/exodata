@@ -80,12 +80,12 @@ pub fn convert_raw_files(data_dir: &Path) -> Result<(), Error> {
         let file = File::create(&output_path).with_context(|| {
             format!("Failed to create {}", output_path.display())
         })?;
-        ParquetWriter::new(file)
-            .with_compression(ParquetCompression::Zstd(None))
-            .finish(&mut df)
-            .with_context(|| {
-                format!("Failed to write {}", output_path.display())
-            })?;
+        anyhow::Context::with_context(
+            ParquetWriter::new(file)
+                .with_compression(ParquetCompression::Zstd(None))
+                .finish(&mut df),
+            || format!("Failed to write {}", output_path.display()),
+        )?;
 
         row_pb.set_message("Extracting metadata");
         let vot_metadata =

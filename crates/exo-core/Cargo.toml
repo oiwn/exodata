@@ -16,5 +16,5 @@ exo-types = { package = "exodata-types", version = "0.1.0", path = "../exo-types
 polars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-thiserror = "2"
+thiserror = "2.0.20"
 toml = { workspace = true }

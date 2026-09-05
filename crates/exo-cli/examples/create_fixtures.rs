@@ -1,6 +1,6 @@
 use polars::prelude::*;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::fs;
 use std::path::Path;
 
