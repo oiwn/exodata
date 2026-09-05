@@ -40,7 +40,7 @@ pub fn AboutRedirect() -> impl IntoView {
         <Title text=title_with_site("Documentation")/>
         <Meta name="description" content="Documentation has moved to /docs."/>
         <Link rel="canonical" href=canonical_url("/docs")/>
-        <main class="docs-page">
+        <div class="docs-page">
             <div class="docs-page__container">
                 <section class="docs-content">
                     <h1>"Documentation moved"</h1>
@@ -49,7 +49,7 @@ pub fn AboutRedirect() -> impl IntoView {
                     </p>
                 </section>
             </div>
-        </main>
+        </div>
     }
 }
 
