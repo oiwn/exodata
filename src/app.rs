@@ -74,7 +74,8 @@ pub fn App() -> impl IntoView {
                 // Navigation bar (must be inside Router to use location)
                 <Navbar/>
 
-                <Routes fallback=|| {
+                <main role="main">
+                    <Routes fallback=|| {
                     let mut outside_errors = Errors::default();
                     outside_errors.insert_with_default_key(AppError::NotFound);
                     view! {
@@ -120,7 +121,8 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/ja/docs") view={Lazy::<DocsLazy>::new()} ssr=SsrMode::Async/>
                     <Route path=path!("/ja/docs/:slug") view={Lazy::<DocsLazy>::new()} ssr=SsrMode::Async/>
                     <Route path=path!("/ja/about") view={Lazy::<AboutLazy>::new()} ssr=SsrMode::Async/>
-                </Routes>
+                    </Routes>
+                </main>
 
                 <VersionFooter/>
             </Router>

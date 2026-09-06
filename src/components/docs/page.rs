@@ -50,11 +50,11 @@ fn DocContent(page: &'static registry::DocPage) -> impl IntoView {
         <Meta name="keywords" content=keywords/>
         <Link rel="canonical" href=canonical_url(&path)/>
 
-        <main class="docs-page">
+        <div class="docs-page">
             <div class="docs-page__container">
                 <article class="docs-content" inner_html=html></article>
             </div>
-        </main>
+        </div>
     }
 }
 
@@ -71,7 +71,7 @@ fn DocNotFound(slug: String) -> impl IntoView {
         <Meta name="description" content="Documentation page not found."/>
         <Link rel="canonical" href=canonical_url(&path)/>
 
-        <main class="docs-page">
+        <div class="docs-page">
             <div class="docs-page__container">
                 <section class="docs-content">
                     <h1>"Documentation not found"</h1>
@@ -80,6 +80,6 @@ fn DocNotFound(slug: String) -> impl IntoView {
                     </p>
                 </section>
             </div>
-        </main>
+        </div>
     }
 }
