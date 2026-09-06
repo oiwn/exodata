@@ -4,6 +4,14 @@ State: in progress
 
 ## Plan
 
+- [ ] Refactor localized route declarations in `src/app.rs`: define the shared
+  page routes once instead of repeating all ten routes for English, Simplified
+  Chinese, and Japanese. Preserve existing unprefixed, `/zh-CN`, and `/ja`
+  URLs, route parameters, query state, locale synchronization, lazy loading,
+  SSR modes, 404 behavior, and the single app-wide `<main>` landmark. Update
+  `specs/web-frontend.md` with the chosen structure and verify direct loads
+  and client navigation across all supported locales. Adding a locale should
+  not require copying the full route list.
 - [ ] Review all 33 open issues with the user one at a time; decide whether to close, clarify, implement, investigate, or defer each issue. Do not mutate GitHub without explicit approval.
 - [ ] Start with closure candidates #10, #36, #57, #61, #83, and #107, recording the evidence/comment needed before any closure.
 - [ ] Verify tmux italic fix (new pane + reattach), then optionally confirm matrix theme renders dim green slanted thinking text.

@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-09-06
+
+- Merged PR #142: added a single app-wide `<main>` landmark around routed
+  content, including error pages, and replaced page-level landmarks in the
+  overview, about, and docs components to avoid duplicates. PR CI passed
+  formatting, Clippy, tests, coverage, typos, and Playwright smoke checks.
+- Archived the completed Rust dependency upgrade and hardening task: updated
+  canonical dependency requirements and the lockfile, adapted source code to
+  upgraded APIs, and enforced locked resolution across build and CI entry points.
+- Added Cargo Audit policy with scoped exceptions for `RUSTSEC-2026-0194`
+  (trusted offline VOTable input) and `RUSTSEC-2026-0195` (unused Polars cloud
+  XML paths), while keeping informational advisories visible.
+- Retained Serde at exactly `1.0.228` for VOTable `0.7.0` compatibility;
+  documented the constraint in the technical overview. Updated `h2` to
+  `0.4.19` and `chacha20` to `0.10.2`.
+- Dependency-task verification recorded before archival: locked compile,
+  CI-scope Clippy, 175 workspace tests, release cargo-leptos build, coverage,
+  six Playwright smoke tests, formatting, and workflow validation passed.
+  Cargo Audit passed with accepted Bincode, Paste, and proc-macro-error2
+  informational warnings.
+
 ## 2026-09-04
 
 - Added the OpenCode GitHub Actions integration, preserving explicit `/oc` and
