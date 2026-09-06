@@ -6,7 +6,7 @@ clippy:
 download-data:
   mkdir -p data
   curl --fail --location --remove-on-error --max-time 3000 --output data/stellarhosts.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts&format=votable"
-  curl --fail --location --remove-on-error --max-time 3000 --output data/exoplanets.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+pscomppars&format=votable"
+  curl --fail --location --remove-on-error --max-time 3000 --output data/exoplanets.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+ps&format=votable"
 
 # Convert VOTables to Parquet and generate matching metadata TOML files.
 convert-raw-files:
