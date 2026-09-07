@@ -3,6 +3,7 @@ pub mod backend;
 pub mod commands;
 pub mod config;
 pub mod conversion;
+pub mod descriptions;
 pub mod download;
 pub mod output;
 pub mod skill;

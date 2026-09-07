@@ -8,7 +8,7 @@ use exo_cli::{
         CatalogBackend, DatasetKind, RowsQuery, compiled_insight_meta,
         insight_meta_rows, resolve_backend, schema_rows,
     },
-    commands, config, conversion, download,
+    commands, config, conversion, descriptions, download,
     output::{self, OutputFormat},
     skill, votable_helpers,
 };
@@ -92,6 +92,11 @@ enum Commands {
 
 #[derive(Parser, Debug)]
 enum DevCommands {
+    /// Inspect generated descriptions using local source dates
+    Descriptions {
+        #[clap(subcommand)]
+        command: DescriptionCommands,
+    },
     /// View fields from a VOTable file
     ViewFields { path: String },
     /// View samples from stellarhosts parquet file
@@ -158,6 +163,17 @@ enum DevCommands {
     Insights {
         #[clap(subcommand)]
         command: DevInsightCommands,
+    },
+}
+
+#[derive(Parser, Debug)]
+enum DescriptionCommands {
+    /// Report systems needing descriptions or regeneration
+    Scan {
+        #[arg(long)]
+        all: bool,
+        #[arg(long, default_value = "content/systems")]
+        content_dir: String,
     },
 }
 
@@ -234,6 +250,16 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Dev { command } => match command {
+            DevCommands::Descriptions { command } => match command {
+                DescriptionCommands::Scan { all, content_dir } => {
+                    let rows = descriptions::scan(
+                        Path::new(cli.data_dir.as_deref().unwrap_or("data")),
+                        Path::new(&content_dir),
+                        all,
+                    )?;
+                    output::render_rows(&rows, &descriptions::columns(), format)?;
+                }
+            },
             DevCommands::ViewFields { path } => {
                 votable_helpers::print_votable_headers(&path);
             }

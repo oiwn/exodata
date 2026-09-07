@@ -1,6 +1,6 @@
 # Current Task Context: Specify Generated System Descriptions (#116)
 
-State: specification in progress.
+State: Phase 1 implemented and verified; generation specification remains active.
 
 ## Goal
 
@@ -8,7 +8,8 @@ Generate a brief natural-language description for each stellar host and its know
 
 ## Plan
 
-- [ ] Finalize Phase 1 metadata storage and scan-report defaults for date-based regeneration selection.
+- [x] Finalize Phase 1 metadata storage and scan-report defaults for date-based regeneration selection.
+- [x] Implement and verify the read-only Phase 1 scanner.
 - [ ] Define generation inputs from current host/planet records and any precalculated values.
 - [ ] Define the narrative guide, generation stages, validation, and editorial workflow.
 - [ ] Specify CLI operations, resumable batch execution, article storage, and serving behavior.
@@ -103,27 +104,31 @@ must not advance the recorded source date.
 
 | Status | Meaning |
 | --- | --- |
-| `missing` | No generated description or corresponding metadata exists. |
+| `missing` | Description or metadata is absent, or description is empty/whitespace-only. |
 | `outdated` | Current system source date is later than the recorded source date. |
 | `current` | Current and recorded source dates match. |
-| `unknown` | Required dates are unavailable, or the current source date is earlier than the recorded date. |
+| `unknown` | Dates are unavailable or malformed, metadata is invalid/ambiguous, artifacts cannot be read, or the current source date is earlier. |
 
-`missing` takes precedence when generation artifacts are absent. When an
+Invalid input takes precedence, then `missing` when artifacts are absent. When an
 individual record lacks `rowupdate`, its available `releasedate` still
 participates in the system maximum.
 
 ### Command and Report
 
-Proposed command surface:
+Agreed command surface:
 
 ```bash
 exodata dev descriptions scan
+exodata dev descriptions scan --all
 exodata dev descriptions scan --output json
+exodata dev descriptions scan --data-dir data --content-dir content/systems
 ```
 
-Report hostname, status, recorded source date, and current source date. Reuse
-the CLI's output conventions. Decide whether the default report includes all
-systems or only `missing`, `outdated`, and `unknown` systems.
+Report hostname, status, recorded/current source dates, metadata path, and reason
+through shared table/JSON/CSV output. Default to systems needing attention;
+`--all` includes current systems. Match exact metadata hostnames, never directory
+names. See [cli.md](cli.md#description-regeneration-scan) for the full contract,
+including malformed metadata diagnostics, failure behavior, and ordering.
 
 This is date-based selection, not a dataset diff. Same-date corrections,
 removed records, and independent `stellarhosts` updates are not automatically
@@ -132,18 +137,25 @@ data values, or download versioning are required.
 
 ### Verification and Remaining Decisions
 
+- Source columns accept validated `YYYY-MM-DD HH:MM:SS` timestamps as well as
+  dates, comparing only the calendar date. Metadata dates remain strict.
+  The corrected local scan reports 4,735 missing systems and no unknown rows.
+- Local Parquet scan completed successfully. Six synthetic-data integration
+  tests pass, including CLI formats/defaults and read-only checks. Ran
+  `cargo fmt --all`; Clippy with warnings denied passes for the library, binary,
+  and scanner tests. The all-targets Clippy check encounters existing warnings
+  in `examples/create_fixtures.rs`.
 - Verify grouping across multiple planets and reference rows; either date
   field may supply the system maximum.
 - Verify each status, missing update dates with available release dates,
   systems without usable dates, and dates moving backwards.
 - Verify the scan is read-only and text/JSON reports describe the same results.
-- Finalize metadata fields, system identifier encoding/collision handling,
-  default report filtering, and handling of malformed dates or invalid metadata
-  before implementation.
+- Parse hostname and optional source_date, tolerating other metadata fields.
+  Directory identifier encoding/collision handling belongs to generation.
 
 ## Open Decisions
 
-- Phase 1: metadata fields, system identifier encoding/collision handling, default report filtering, and invalid-input handling.
+- Generation: system identifier encoding/collision handling and detailed metadata/request schemas.
 - Input field selection, reference/default-row policy, optional precalculations, and final target length for brief descriptions.
 - Generation stage count, prompt/output contracts, validation criteria, repair limits, and pilot acceptance criteria.
 - Request TOML schema and multistep artifact layout, review/publish states, handling of removed systems, and behavior when published articles become stale.
@@ -153,4 +165,4 @@ data values, or download versioning are required.
 
 ## Next
 
-Finalize the remaining Phase 1 choices, then define the brief-description input and generation contract. Operate on current files; download versioning and diffs are excluded. Keep remaining proposals distinct from agreed decisions.
+Define the brief-description input and generation contract. Operate on current files; download versioning and diffs are excluded. Keep remaining proposals distinct from agreed decisions.

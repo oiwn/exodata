@@ -179,6 +179,7 @@ exodata dev
 ├── view-exoplanets-stats
 ├── convert-raw-files
 ├── sql
+├── descriptions scan
 └── insights run-all
 ```
 
@@ -194,6 +195,74 @@ exodata dev insights run-all --data-dir data
 
 The old top-level development command paths are intentionally removed. Existing
 local scripts should migrate to `exodata dev ...`.
+
+### Description Regeneration Scan
+
+```bash
+exodata dev descriptions scan
+exodata dev descriptions scan --all
+exodata dev descriptions scan --output json
+exodata dev descriptions scan --data-dir data --content-dir content/systems
+```
+
+This synchronous, read-only command always operates locally. Paths default to
+`data` and `content/systems`, relative to the working directory, as with other
+development commands. Backend selection and configured client data paths do not
+affect the scan. Only `hostname`, `rowupdate`, and `releasedate` are loaded from
+`exoplanets.parquet`; all three must be string columns.
+
+Group all planetary reference rows by exact hostname, without a default-row
+filter. The current source date is the maximum across both date columns and
+all rows. Null and blank dates are ignored; nonblank dates must be valid calendar
+dates in exact `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS` format. Validate the
+complete source timestamp and use its calendar date for comparison; metadata
+`source_date` remains strictly `YYYY-MM-DD`.
+
+Read immediate system directories containing `metadata.toml` and
+`description.md`. Match only the exact string `hostname` in metadata, never the
+directory name. Parse optional string `source_date`; tolerate other fields.
+`generated_at`, model settings, and `request.toml` do not affect classification.
+
+```toml
+hostname = "HD 189733"
+source_date = "2026-07-09"
+generated_at = "2026-09-07T10:00:00Z"
+model = "deepseek-v4-flash"
+```
+
+Classification precedence:
+
+1. `unknown`: invalid dates, invalid metadata, duplicate metadata hostnames, or
+   unreadable artifacts. Duplicate paths are listed in the reason, with no
+   single metadata path or recorded date selected.
+2. `missing`: description or metadata is absent, or description is empty or
+   whitespace-only, even when dates are unavailable.
+3. `outdated`: current source date is later than recorded source date.
+4. `current`: both dates exist and match.
+5. `unknown`: either date is unavailable, or the current date is earlier.
+
+Report columns are `hostname`, `status`, `recorded_source_date`,
+`current_source_date`, `metadata_path`, and `reason`. Unavailable values are JSON
+nulls (empty cells in table/CSV). A valid maximum of available dates remains
+visible even when another date is malformed. Default output hides `current`;
+`--all` includes it. Global output selection uses the shared table/JSON/CSV
+renderer. Stdout contains only the report.
+
+Rows sort by hostname. Unassignable metadata errors appear first with null
+hostname, ordered by metadata path. Missing metadata cannot be matched by
+directory name; the corresponding dataset host remains `missing`. Valid metadata
+for hosts absent from current data is ignored. A nonexistent content root is
+treated as no generated content and is never created.
+
+Unreadable Parquet, incompatible columns, invalid dataset hostnames (null or
+blank), and unreadable content-root listings fail the command. Per-system
+errors produce `unknown` rows; completed reports return success regardless of
+statuses. The scanner writes no artifacts and makes no network requests.
+
+Generation must save the source date actually used only after successfully
+saving the corresponding description. Directory identifier generation and
+request schema belong to generation. This scan does not detect removed records,
+same-date corrections, or independent stellar-host updates.
 
 ## REST And Agent Integration
 
