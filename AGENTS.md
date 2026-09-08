@@ -30,6 +30,8 @@ This file defines agent workflow and points to project specifications. Implement
   Rust, API, build, browser, or documentation verification.
 - [exodata-data](.agents/skills/exodata-data/SKILL.md) — inspect local data and
   perform authorized NASA conversion/refresh workflows using Justfile recipes.
+- [prose-generation](.agents/skills/prose-generation/SKILL.md) — prepare stellar-host
+  prose inputs and conduct bounded, evidence-based generation experiments.
 
 Read the relevant skill when performing these tasks. Technical contracts stay
 in `specs/`; deployment details stay in `DEPLOY.md`. Add future project skills

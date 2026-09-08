@@ -9,6 +9,11 @@ commands, and selection of focused checks live in the
 - Core tests exercise fixture loading and table aggregations.
 - CLI tests cover command help/grouping, configuration precedence, output
   conversion, skill installation, and read-only description scanning.
+  Description preparation tests cover selection failures, qualifiers and mass
+  provenance, conversions/comparison suppression, deterministic artifacts,
+  identifier collisions, and replacement behavior preserving articles/metadata.
+  Paired-write tests inject installation failures to verify restoration of
+  previous files or absences and preservation of pending recovery backups.
   API/local backend and download changes need focused verification; the presence
   of those modules does not establish automated coverage.
 - Web tests cover data queries, summaries, exports, REST/MCP, sitemaps, locale

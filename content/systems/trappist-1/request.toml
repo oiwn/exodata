@@ -1,0 +1,328 @@
+schema_version = 1
+publishable_comparisons = [
+    "The star's reported mass estimate is smaller than the Sun's.",
+    "The star's reported radius estimate is smaller than the Sun's.",
+    "TRAPPIST-1 b's reported radius estimate is larger than Earth's.",
+    "TRAPPIST-1 b's year is shorter than Earth's roughly 365-day year.",
+    "TRAPPIST-1 c's reported radius estimate is larger than Earth's.",
+    "TRAPPIST-1 c's year is shorter than Earth's roughly 365-day year.",
+    "TRAPPIST-1 d's reported radius estimate is smaller than Earth's.",
+    "TRAPPIST-1 d's year is shorter than Earth's roughly 365-day year.",
+    "TRAPPIST-1 e's reported radius estimate is smaller than Earth's.",
+    "TRAPPIST-1 e's year is shorter than Earth's roughly 365-day year.",
+    "TRAPPIST-1 f's reported radius estimate is larger than Earth's.",
+    "TRAPPIST-1 f's year is shorter than Earth's roughly 365-day year.",
+    "TRAPPIST-1 g's reported radius estimate is larger than Earth's.",
+    "TRAPPIST-1 g's year is shorter than Earth's roughly 365-day year.",
+    "TRAPPIST-1 h's reported radius estimate is smaller than Earth's.",
+    "TRAPPIST-1 h's year is shorter than Earth's roughly 365-day year.",
+    "Among the listed planets, TRAPPIST-1 b has the shortest year by reported estimates (about 1.51 days).",
+    "Among the listed planets, TRAPPIST-1 h has the longest year by reported estimates (about 18.8 days).",
+    "Among the listed planets, TRAPPIST-1 h has the smallest radius by reported estimates (about 0.755 Earth radii).",
+]
+silent_constraints = [
+    "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.",
+    "These constraints and diagnostics are silent instructions, never reader-facing prose.",
+    "Missing measurements are unknown. Do not infer composition, density, habitability, spectral classifications, orbital spacing, orbital speed, or observing feasibility.",
+    "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.",
+    "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.",
+    "TRAPPIST-1: sy_dist missing or unusable",
+]
+
+[request]
+coverage = "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."
+format = "A factual Markdown title and connected paragraphs; no tables or bullet lists"
+target_words = "300–600; shorter when needed to avoid repetition or unsupported claims"
+task = "Describe this stellar host and its associated planets for curious general readers."
+
+[guide]
+limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+mass_provenance = "A minimum-mass quantity is not a measurement of the true mass."
+transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A light-year is a unit of distance."
+year = "An orbital period is the time a planet takes to complete one orbit: its year."
+
+[source]
+evidence_file = "evidence.json"
+distance_conversion = "parsecs * 3.26156 = light-years"
+selection = "Fullest stellar-host summary row and unique default planet rows; no cross-row filling"
+
+[source.files]
+stellarhosts = "data/stellarhosts.parquet"
+exoplanets = "data/exoplanets.parquet"
+
+[system]
+hostname = "TRAPPIST-1"
+matching_host_planet_count = 7
+catalog_system_planet_count = 7
+catalog_system_star_count = 1
+
+[star]
+spectral_type = "M8.0 V"
+
+[star.measurements.age]
+source_field = "st_age"
+value = 7.6
+unit = "billion years"
+qualifier = "estimate"
+display = "about 7.6 billion years"
+error_plus = 2.2
+error_minus = -2.2
+
+[star.measurements.mass]
+source_field = "st_mass"
+value = 0.0898
+unit = "solar masses"
+qualifier = "estimate"
+display = "about 0.0898 solar masses"
+error_plus = 0.0023
+error_minus = -0.0023
+
+[star.measurements.radius]
+source_field = "st_rad"
+value = 0.1192
+unit = "solar radii"
+qualifier = "estimate"
+display = "about 0.119 solar radii"
+error_plus = 0.0013
+error_minus = -0.0013
+
+[star.measurements.temperature]
+source_field = "st_teff"
+value = 2566.0
+unit = "K"
+qualifier = "estimate"
+display = "about 2570 K"
+error_plus = 26.0
+error_minus = -26.0
+
+[[planets]]
+name = "TRAPPIST-1 b"
+discovery_method = "Transit"
+discovery_year = 2016
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 1.374
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 1.37 Earth masses"
+error_plus = 0.069
+error_minus = -0.069
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 1.510826
+unit = "days"
+qualifier = "estimate"
+display = "about 1.51 days"
+error_plus = 0.000006
+error_minus = -0.000006
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 1.116
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 1.12 Earth radii"
+error_plus = 0.014
+error_minus = -0.012
+
+[[planets]]
+name = "TRAPPIST-1 c"
+discovery_method = "Transit"
+discovery_year = 2016
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 1.308
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 1.31 Earth masses"
+error_plus = 0.056
+error_minus = -0.056
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 2.421937
+unit = "days"
+qualifier = "estimate"
+display = "about 2.42 days"
+error_plus = 0.000018
+error_minus = -0.000018
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 1.097
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 1.1 Earth radii"
+error_plus = 0.014
+error_minus = -0.012
+
+[[planets]]
+name = "TRAPPIST-1 d"
+discovery_method = "Transit"
+discovery_year = 2016
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 0.388
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 0.388 Earth masses"
+error_plus = 0.012
+error_minus = -0.012
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 4.049219
+unit = "days"
+qualifier = "estimate"
+display = "about 4.05 days"
+error_plus = 0.000026
+error_minus = -0.000026
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 0.788
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 0.788 Earth radii"
+error_plus = 0.011
+error_minus = -0.01
+
+[[planets]]
+name = "TRAPPIST-1 e"
+discovery_method = "Transit"
+discovery_year = 2017
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 0.692
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 0.692 Earth masses"
+error_plus = 0.022
+error_minus = -0.022
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 6.101013
+unit = "days"
+qualifier = "estimate"
+display = "about 6.1 days"
+error_plus = 0.000035
+error_minus = -0.000035
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 0.92
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 0.92 Earth radii"
+error_plus = 0.013
+error_minus = -0.012
+
+[[planets]]
+name = "TRAPPIST-1 f"
+discovery_method = "Transit"
+discovery_year = 2017
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 1.039
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 1.04 Earth masses"
+error_plus = 0.031
+error_minus = -0.031
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 9.20754
+unit = "days"
+qualifier = "estimate"
+display = "about 9.21 days"
+error_plus = 0.000032
+error_minus = -0.000032
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 1.045
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 1.05 Earth radii"
+error_plus = 0.013
+error_minus = -0.012
+
+[[planets]]
+name = "TRAPPIST-1 g"
+discovery_method = "Transit"
+discovery_year = 2017
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 1.321
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 1.32 Earth masses"
+error_plus = 0.038
+error_minus = -0.038
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 12.352446
+unit = "days"
+qualifier = "estimate"
+display = "about 12.4 days"
+error_plus = 0.000054
+error_minus = -0.000054
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 1.129
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 1.13 Earth radii"
+error_plus = 0.015
+error_minus = -0.013
+
+[[planets]]
+name = "TRAPPIST-1 h"
+discovery_method = "Transit"
+discovery_year = 2017
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 0.326
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 0.326 Earth masses"
+error_plus = 0.02
+error_minus = -0.02
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 18.772866
+unit = "days"
+qualifier = "estimate"
+display = "about 18.8 days"
+error_plus = 0.000214
+error_minus = -0.000214
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 0.755
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 0.755 Earth radii"
+error_plus = 0.014
+error_minus = -0.014

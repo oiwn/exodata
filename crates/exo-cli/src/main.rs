@@ -168,6 +168,17 @@ enum DevCommands {
 
 #[derive(Parser, Debug)]
 enum DescriptionCommands {
+    /// Prepare offline stellar-host evidence and a writing request
+    Prepare {
+        /// Exact NASA hostname
+        #[arg(long)]
+        hostname: String,
+        #[arg(long, default_value = "content/systems")]
+        output_dir: std::path::PathBuf,
+        /// Replace preparation files, preserving articles and generation metadata
+        #[arg(long)]
+        force: bool,
+    },
     /// Probe DeepSeek with one request capped at 32 output tokens
     Probe,
     /// Generate text from an arbitrary UTF-8 input file using DeepSeek
@@ -265,6 +276,23 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Dev { command } => match command {
             DevCommands::Descriptions { command } => match command {
+                DescriptionCommands::Prepare {
+                    hostname,
+                    output_dir,
+                    force,
+                } => {
+                    let row = descriptions::prepare::run(
+                        Path::new(cli.data_dir.as_deref().unwrap_or("data")),
+                        &output_dir,
+                        &hostname,
+                        force,
+                    )?;
+                    output::render_rows(
+                        &[row],
+                        &descriptions::prepare::columns(),
+                        format,
+                    )?;
+                }
                 DescriptionCommands::Probe => {
                     let row = descriptions::probe::run()?;
                     output::render_rows(

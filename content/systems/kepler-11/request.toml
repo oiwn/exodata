@@ -1,0 +1,295 @@
+schema_version = 1
+publishable_comparisons = [
+    "Kepler-11 b's reported radius estimate is larger than Earth's.",
+    "Kepler-11 b's year is shorter than Earth's roughly 365-day year.",
+    "Kepler-11 c's reported radius estimate is larger than Earth's.",
+    "Kepler-11 c's year is shorter than Earth's roughly 365-day year.",
+    "Kepler-11 d's reported radius estimate is larger than Earth's.",
+    "Kepler-11 d's year is shorter than Earth's roughly 365-day year.",
+    "Kepler-11 e's reported radius estimate is larger than Earth's.",
+    "Kepler-11 e's year is shorter than Earth's roughly 365-day year.",
+    "Kepler-11 f's reported radius estimate is larger than Earth's.",
+    "Kepler-11 f's year is shorter than Earth's roughly 365-day year.",
+    "Kepler-11 g's reported radius estimate is larger than Earth's.",
+    "Kepler-11 g's year is shorter than Earth's roughly 365-day year.",
+    "Among the listed planets, Kepler-11 b has the shortest year by reported estimates (about 10.3 days).",
+    "Among the listed planets, Kepler-11 g has the longest year by reported estimates (about 118 days).",
+    "Among the listed planets, Kepler-11 b has the smallest radius by reported estimates (about 1.8 Earth radii).",
+    "Among the listed planets, Kepler-11 e has the largest radius by reported estimates (about 4.19 Earth radii).",
+]
+silent_constraints = [
+    "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.",
+    "These constraints and diagnostics are silent instructions, never reader-facing prose.",
+    "Missing measurements are unknown. Do not infer composition, density, habitability, spectral classifications, orbital spacing, orbital speed, or observing feasibility.",
+    "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.",
+    "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.",
+]
+
+[request]
+coverage = "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."
+format = "A factual Markdown title and connected paragraphs; no tables or bullet lists"
+target_words = "300–600; shorter when needed to avoid repetition or unsupported claims"
+task = "Describe this stellar host and its associated planets for curious general readers."
+
+[guide]
+limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+mass_provenance = "A minimum-mass quantity is not a measurement of the true mass."
+transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A light-year is a unit of distance."
+year = "An orbital period is the time a planet takes to complete one orbit: its year."
+
+[source]
+evidence_file = "evidence.json"
+distance_conversion = "parsecs * 3.26156 = light-years"
+selection = "Fullest stellar-host summary row and unique default planet rows; no cross-row filling"
+
+[source.files]
+stellarhosts = "data/stellarhosts.parquet"
+exoplanets = "data/exoplanets.parquet"
+
+[system]
+hostname = "Kepler-11"
+matching_host_planet_count = 6
+catalog_system_planet_count = 6
+catalog_system_star_count = 1
+
+[system.distance]
+source_field = "sy_dist"
+value = 2108.09625976
+unit = "light-years"
+qualifier = "estimate"
+display = "about 2110 light-years"
+error_plus = 20.792444999999997
+error_minus = -20.792444999999997
+
+[star.measurements.age]
+source_field = "st_age"
+value = 8.0
+unit = "billion years"
+qualifier = "estimate"
+display = "about 8 billion years"
+error_plus = 2.0
+error_minus = -2.0
+
+[star.measurements.mass]
+source_field = "st_mass"
+value = 0.95
+unit = "solar masses"
+qualifier = "estimate"
+display = "about 0.95 solar masses"
+error_plus = 0.1
+error_minus = -0.1
+
+[star.measurements.radius]
+source_field = "st_rad"
+value = 1.1
+unit = "solar radii"
+qualifier = "estimate"
+display = "about 1.1 solar radii"
+error_plus = 0.1
+error_minus = -0.1
+
+[star.measurements.temperature]
+source_field = "st_teff"
+value = 5680.0
+unit = "K"
+qualifier = "estimate"
+display = "about 5680 K"
+error_plus = 100.0
+error_minus = -100.0
+
+[[planets]]
+name = "Kepler-11 b"
+discovery_method = "Transit"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 1.9
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 1.9 Earth masses"
+error_plus = 1.4
+error_minus = -1.0
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 10.3039
+unit = "days"
+qualifier = "estimate"
+display = "about 10.3 days"
+error_plus = 0.0006
+error_minus = -0.001
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 1.8
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 1.8 Earth radii"
+error_plus = 0.03
+error_minus = -0.05
+
+[[planets]]
+name = "Kepler-11 c"
+discovery_method = "Transit"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 2.9
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 2.9 Earth masses"
+error_plus = 2.9
+error_minus = -1.6
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 13.0241
+unit = "days"
+qualifier = "estimate"
+display = "about 13 days"
+error_plus = 0.0013
+error_minus = -0.0008
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 2.87
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 2.87 Earth radii"
+error_plus = 0.05
+error_minus = -0.06
+
+[[planets]]
+name = "Kepler-11 d"
+discovery_method = "Transit"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 7.3
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 7.3 Earth masses"
+error_plus = 0.8
+error_minus = -1.5
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 22.6845
+unit = "days"
+qualifier = "estimate"
+display = "about 22.7 days"
+error_plus = 0.0009
+error_minus = -0.0009
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 3.12
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 3.12 Earth radii"
+error_plus = 0.06
+error_minus = -0.07
+
+[[planets]]
+name = "Kepler-11 e"
+discovery_method = "Transit"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 8.0
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 8 Earth masses"
+error_plus = 1.5
+error_minus = -2.1
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 31.9996
+unit = "days"
+qualifier = "estimate"
+display = "about 32 days"
+error_plus = 0.0008
+error_minus = -0.0012
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 4.19
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 4.19 Earth radii"
+error_plus = 0.07
+error_minus = -0.09
+
+[[planets]]
+name = "Kepler-11 f"
+discovery_method = "Transit"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 2.0
+unit = "Earth masses"
+qualifier = "estimate"
+display = "mass: about 2 Earth masses"
+error_plus = 0.8
+error_minus = -0.9
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 46.6888
+unit = "days"
+qualifier = "estimate"
+display = "about 46.7 days"
+error_plus = 0.0027
+error_minus = -0.0032
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 2.49
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 2.49 Earth radii"
+error_plus = 0.04
+error_minus = -0.07
+
+[[planets]]
+name = "Kepler-11 g"
+discovery_method = "Transit"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 25.0
+unit = "Earth masses"
+qualifier = "upper_limit"
+display = "mass: a reported upper limit of 25 Earth masses"
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 118.3807
+unit = "days"
+qualifier = "estimate"
+display = "about 118 days"
+error_plus = 0.001
+error_minus = -0.0006
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 3.33
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 3.33 Earth radii"
+error_plus = 0.06
+error_minus = -0.08

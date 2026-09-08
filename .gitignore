@@ -5,6 +5,7 @@
 /data/*.vot
 /data/*.toml
 /data/*.parquet
+/content/systems/*/evidence.json
 .crush/
 
 tmp/

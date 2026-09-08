@@ -1,12 +1,20 @@
 # Current Task Context: Specify Generated System Descriptions (#116)
 
-State: Phase 1 implemented and verified; generation specification remains active.
+State: Phase 1 and offline input preparation implemented and verified; generation evaluation remains active.
 
 ## Goal
 
-Generate a brief natural-language description for each stellar host and its known planets, for curious general readers, using current NASA data. The earlier 300–600-word target is provisional given the request for short/brief descriptions; settle the length before implementation.
+Generate a brief natural-language description for each stellar host and its known planets, for curious general readers, using current NASA data. Current baseline trials retain a 300–600-word target, allowing shorter supported prose; reassess length after reviewing results.
 
 ## Plan
+
+- [x] Ignore regenerable evidence and replace preparation files together with
+  rollback on ordinary installation failure; verify pair preservation.
+
+- [x] Implement offline `descriptions prepare`, shared prompt/guide, and the
+  `prose-generation` skill for the five fixed baseline systems.
+- [x] Verify preparation with synthetic tests and inspect all five current-data
+  outputs; no model calls or server required.
 
 - [ ] Implement shared source-row selection: fullest stellar-host summary row
   and unique planetary default row; preserve source values and missing fields.
@@ -186,6 +194,39 @@ data values, or download versioning are required.
 
 ### Baseline and Preparation Handoff (2026-09-08)
 
+- Evidence files are now Git-ignored local artifacts; requests and prompts
+  remain versionable. `prepare` stages and installs evidence/request together,
+  restoring the previous pair on ordinary installation failure. Failed recovery
+  retains backups and blocks another run; crash safety is not provided.
+- Paired-write verification: eight preparation unit tests (including injected
+  failures and absent-file restoration), three CLI integration tests, and a
+  manual LHS 1140 `--force` refresh passed. Formatting and diff checks passed;
+  the user validated the updated skill. No evidence files were already tracked,
+  and the Git index was not changed.
+- Preparation is implemented. All five baselines now have `evidence.json` and
+  `request.toml` under `content/systems/`; no articles or generation metadata
+  were created. The shared prompt and `prose-generation` skill are in place.
+- Verification: `cargo fmt --all`; 27 CLI library tests and nine description
+  integration tests pass. All five requests parse; 73 prepared measurements,
+  their available uncertainties, and their limit qualifiers match saved source
+  evidence (including the explicit distance conversion). The user ran the
+  skill validator successfully. No model calls or server were used.
+- Baseline inspection: LHS 1140 retains its age lower limit; Kepler-11 g retains
+  its mass upper limit. HD 41004 A retains an age upper limit, its planet's
+  minimum-mass provenance, and distinct matching-host/system planet counts.
+  Selected planet radii are missing for 51 Peg and HD 41004 A; TRAPPIST-1's
+  selected host row lacks distance. These gaps remain unfilled.
+- Next: review prepared inputs and conduct bounded prose comparisons when
+  requested; automatic generation/evaluation artifact capture remains outside
+  the completed preparation step.
+- Approved implementation: preparation plus skill only; `--force` is required
+  to replace preparation files. Keep the 300–600-word target with permission
+  to be shorter. Use structured measurements and display text, a small fixed
+  comparison set, and fail on missing/ambiguous source-row selection.
+- One shared system prompt lives at `content/stellarhost_prompt.txt`; per-system
+  instructions belong in `request.toml`. Raw selected rows live in
+  `evidence.json` to preserve nulls. See [cli.md](cli.md#stellar-host-input-preparation)
+  for the implementation contract.
 - Keep these five systems fixed while improving generation quality: LHS 1140,
   Kepler-11, TRAPPIST-1, 51 Peg, and HD 41004 A. Inspect their current selected
   rows when implementing automatic input preparation; retain the existing

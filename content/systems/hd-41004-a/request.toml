@@ -1,0 +1,109 @@
+schema_version = 1
+publishable_comparisons = [
+    "The star's reported radius estimate is smaller than the Sun's.",
+    "HD 41004 A b's year is longer than Earth's roughly 365-day year.",
+]
+silent_constraints = [
+    "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.",
+    "These constraints and diagnostics are silent instructions, never reader-facing prose.",
+    "Missing measurements are unknown. Do not infer composition, density, habitability, spectral classifications, orbital spacing, orbital speed, or observing feasibility.",
+    "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.",
+    "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.",
+    "HD 41004 A b: pl_rade missing or unusable",
+    "Catalog system planet count differs from exact-host matching planet count; do not assign additional planets to this host",
+]
+
+[request]
+coverage = "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."
+format = "A factual Markdown title and connected paragraphs; no tables or bullet lists"
+target_words = "300–600; shorter when needed to avoid repetition or unsupported claims"
+task = "Describe this stellar host and its associated planets for curious general readers."
+
+[guide]
+limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+mass_provenance = "A minimum-mass quantity is not a measurement of the true mass."
+transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A light-year is a unit of distance."
+year = "An orbital period is the time a planet takes to complete one orbit: its year."
+
+[source]
+evidence_file = "evidence.json"
+distance_conversion = "parsecs * 3.26156 = light-years"
+selection = "Fullest stellar-host summary row and unique default planet rows; no cross-row filling"
+
+[source.files]
+stellarhosts = "data/stellarhosts.parquet"
+exoplanets = "data/exoplanets.parquet"
+
+[system]
+hostname = "HD 41004 A"
+matching_host_planet_count = 1
+catalog_system_planet_count = 2
+catalog_system_star_count = 2
+
+[system.distance]
+source_field = "sy_dist"
+value = 119.6704524252
+unit = "light-years"
+qualifier = "estimate"
+display = "about 120 light-years"
+
+[star.measurements.age]
+source_field = "st_age"
+value = 1.0
+unit = "billion years"
+qualifier = "upper_limit"
+display = "a reported upper limit of 1 billion years"
+error_plus = 6.0
+error_minus = -1.0
+
+[star.measurements.mass]
+source_field = "st_mass"
+value = 0.95
+unit = "solar masses"
+qualifier = "estimate"
+display = "about 0.95 solar masses"
+error_plus = 0.1
+error_minus = -0.1
+
+[star.measurements.radius]
+source_field = "st_rad"
+value = 0.85
+unit = "solar radii"
+qualifier = "estimate"
+display = "about 0.85 solar radii"
+error_plus = 0.07
+error_minus = -0.07
+
+[star.measurements.temperature]
+source_field = "st_teff"
+value = 5310.0
+unit = "K"
+qualifier = "estimate"
+display = "about 5310 K"
+error_plus = 65.0
+error_minus = -65.0
+
+[[planets]]
+name = "HD 41004 A b"
+discovery_method = "Radial Velocity"
+discovery_year = 2004
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 807.25
+unit = "Earth masses"
+qualifier = "estimate"
+display = "minimum-mass quantity (M sin i): about 807 Earth masses"
+error_plus = 235.18
+error_minus = -235.18
+provenance = "Msini"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 963.0
+unit = "days"
+qualifier = "estimate"
+display = "about 963 days"
+error_plus = 38.0
+error_minus = -38.0

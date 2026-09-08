@@ -1,0 +1,5 @@
+transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
+year = "An orbital period is the time a planet takes to complete one orbit: its year."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A light-year is a unit of distance."
+limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+mass_provenance = "A minimum-mass quantity is not a measurement of the true mass."

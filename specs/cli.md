@@ -235,6 +235,68 @@ Truncation (`finish_reason = "length"`) fails without retrying; the user may
 explicitly rerun with a larger limit. No content artifacts are written.
 This command supports manual prompt experiments; it is not batch generation.
 
+### Stellar-Host Input Preparation
+
+```bash
+exodata dev descriptions prepare --hostname "LHS 1140"
+exodata dev descriptions prepare --hostname "LHS 1140" --data-dir data --output-dir content/systems --force
+```
+
+Offline preparation reads the two local Parquet files (`--data-dir`, default
+`data`) and writes `evidence.json` and `request.toml` under
+`<output-dir>/<system-id>/`. Output defaults to `content/systems`. One exact
+NASA hostname is required. No API, download, or generation metadata writes occur.
+
+Identifiers lowercase ASCII letters, replace whitespace with dashes, remove
+characters other than ASCII letters/digits/dashes, collapse dashes, and trim
+edge dashes. Empty identifiers and distinct catalog hostnames with the same
+identifier fail. Existing preparation files require `--force`; stored hostname
+mismatches fail even with force. Articles and `metadata.toml` remain untouched.
+Inputs are validated and serialized before output files are written.
+Evidence is generated local data ignored by Git; requests and shared prompts
+remain tracked. Always refresh both files through `prepare`, not independently.
+`--force` replaces request edits as well as evidence. Both new files and backups
+are staged in a temporary `.prepare` directory before installation. Installation
+failure restores the previous pair, including previously absent files. If
+rollback fails, retain backups there and report the recovery location. An
+existing `.prepare` directory blocks another preparation; inspect it before
+manual recovery/removal. This is ordinary-error rollback, not crash-safe storage.
+
+The shared core selector chooses the fullest host summary row and a unique
+default row per matching planet. Missing selection fails; missing measurements
+within selected rows remain missing. Selected rows, including nulls, flags,
+errors, references, source filenames, and selection counts are stored in JSON.
+Planet order is exact-name order. The matching-host planet count is distinct
+from the selected row's catalog system count.
+
+The TOML request separates assignment, explanatory guide, publishable facts,
+approved comparisons, audit context, and silent constraints. Measurements carry
+source field, value, unit, qualifier, display text, and available errors.
+Publishable fields cover identity/distance/counts, stellar spectral type,
+temperature/mass/radius/age, and planetary discovery method/year, period,
+radius/mass. Same-row `pl_masse` is the only fallback for missing `pl_bmasse`.
+Bounds and mass provenance remain explicit. Estimates use three significant
+digits; bounds are not rounded. Parsecs convert with factor 3.26156.
+The source distance field has uncertainty companions but no limit flag, so it
+is treated as an estimate. Other missing/unrecognized limit flags are marked
+unspecified and suppress comparisons. Nonpositive or nonfinite measurements
+are omitted from publishable fields and reported in diagnostics; their selected
+source rows remain in evidence.
+
+Comparisons cover stellar mass/radius against solar units, planetary radius
+against Earth, periods against 365 days, and extrema of reported period/radius
+estimates. Bounds, unknown qualifiers, overlapping supplied uncertainty
+intervals, and rounded ties suppress comparisons. No mass ranking or new
+interplanetary ratios are generated. Unknown mass provenance remains explicit.
+
+The writing target stays 300–600 words, permitting shorter supported text.
+`content/stellarhost_prompt.txt` is the single editable system prompt passed
+to the existing generator with `--system-prompt`; preparation never copies it.
+The reusable guide in `content/prompts/stellarhost_guide.toml` is compiled into
+preparation and included in requests. Exact prompt capture belongs to generation
+trial artifacts. CLI reports hostname, paths, and diagnostics through existing
+table/JSON/CSV formats. Technical tests use synthetic data, not live counts.
+
 ### Description Regeneration Scan
 
 ```bash
