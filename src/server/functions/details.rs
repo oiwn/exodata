@@ -81,6 +81,9 @@ pub async fn get_exoplanet_detail(
         exoplanet_canonical::build_canonical_exoplanet(&records, &metadata);
 
     Ok(ExoplanetDetail {
+        selected_record_index: exo_core::selection::exoplanet_record_index(
+            &records,
+        ),
         pl_name,
         canonical,
         records,

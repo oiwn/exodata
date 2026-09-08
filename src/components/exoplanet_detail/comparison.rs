@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-use super::format::{comparison_scale, format_number, median_numeric_value};
+use super::format::{comparison_scale, format_number};
 use crate::server::functions::ExoplanetDetail;
 
 const EARTH_RADIUS_REARTH: f64 = 1.0;
@@ -9,7 +9,11 @@ const MAX_BODY_DIAMETER_REM: f64 = 10.5;
 
 #[component]
 pub fn ScaleComparisonSection(detail: ExoplanetDetail) -> impl IntoView {
-    let radius = median_numeric_value(&detail.records, "pl_rade");
+    let radius = detail
+        .canonical
+        .radius
+        .as_ref()
+        .map(|summary| summary.value);
 
     if let Some(radius_rearth) = radius {
         let max_radius = EARTH_RADIUS_REARTH

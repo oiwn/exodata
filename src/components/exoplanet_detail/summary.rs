@@ -3,6 +3,7 @@ use leptos::serde_json::Value;
 use leptos_router::components::A;
 
 use super::format::{format_number, format_value};
+use super::records::ProvenanceCell;
 use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::{
     CategoricalFieldSummary, ExoplanetDetail, NumericFieldSummary,
@@ -11,6 +12,10 @@ use crate::server::functions::{
 
 #[component]
 pub fn PlanetSummarySection(detail: ExoplanetDetail) -> impl IntoView {
+    let selected = detail
+        .selected_record_index
+        .and_then(|index| detail.records.get(index))
+        .cloned();
     let canonical = detail.canonical;
     let hostname = canonical.hostname;
     let discovery_method = canonical.discovery_method;
@@ -32,12 +37,19 @@ pub fn PlanetSummarySection(detail: ExoplanetDetail) -> impl IntoView {
             <div class="planet-detail-section__header">
                 <div>
                     <p class="planet-detail-section__eyebrow planet-detail-section__eyebrow--summary">"Canonical Summary"</p>
-                    <h2 class="planet-detail-section__title">"Adopted planet values from all rows"</h2>
+                    <h2 class="planet-detail-section__title">"Adopted planet values from the default parameter set"</h2>
                 </div>
                 <p class="planet-detail-section__description">
-                    "Numeric fields use the median of non-null measurements. Disagreement stays visible through ranges, counts, and provenance."
+                    "Values come from the archive's default parameter set. Missing values stay missing. Ranges and counts describe all source rows."
                 </p>
             </div>
+
+            {match selected {
+                Some(row) => view! {
+                    <p>"Selected source: "<ProvenanceCell column="pl_refname".to_string() value=row["pl_refname"].clone() unit=String::new()/></p>
+                }.into_any(),
+                None => view! { <p>"No unique default parameter set is available. Source records remain below."</p> }.into_any(),
+            }}
 
             <div class="planet-summary-grid">
                 {hostname.map(|summary| view! {
@@ -55,6 +67,7 @@ pub fn PlanetSummarySection(detail: ExoplanetDetail) -> impl IntoView {
             </div>
         </section>
     }
+    .into_any()
 }
 
 #[component]

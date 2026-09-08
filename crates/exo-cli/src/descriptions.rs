@@ -1,3 +1,5 @@
+pub mod probe;
+
 use std::{
     collections::BTreeMap,
     fs::{self, File},

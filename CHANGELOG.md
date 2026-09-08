@@ -319,7 +319,7 @@
   - CSS blocks interaction and shows dark overlay + spinner via `body::before` / `body::after` while class is present (`style/tailwind.css`)
   - WASM removes the class after `hydrate_body()` completes (`src/lib.rs`)
   - Added `web-sys` dependency scoped to `hydrate` feature only (`Cargo.toml`)
-- **Fixed SSR streaming deadlock on 1-vCPU servers** (see `specs/ssr-streaming-issue.md`):
+- **Fixed SSR streaming deadlock on 1-vCPU servers**:
   - Root cause: Tokio defaulted to 1 worker thread on 1-vCPU droplet; Leptos SSR + `spawn_blocking` caused worker thread starvation
   - Fix: forced `worker_threads = 4` in `#[tokio::main]` (`src/main.rs`) so OS scheduler can interleave threads
   - Also changed `SsrMode::Async` → `SsrMode::OutOfOrder` for table routes (`src/app.rs`) to stream HTML shell immediately

@@ -59,6 +59,8 @@ pub struct TableData {
 /// Stellar host detail data structure.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct StellarHostDetail {
+    #[serde(default)]
+    pub selected_record_index: Option<usize>,
     pub hostname: String,
     pub identity: HostIdentity,
     pub system: HostSystemSummary,
@@ -81,13 +83,15 @@ pub struct HostPlanets {
 /// Exoplanet detail data structure.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct ExoplanetDetail {
+    #[serde(default)]
+    pub selected_record_index: Option<usize>,
     pub pl_name: String,
     pub canonical: ExoplanetCanonicalSummary,
     pub records: Vec<Value>,
     pub metadata: HashMap<String, ColumnMetadata>,
 }
 
-/// Canonical adopted planet values computed from all detail records.
+/// Adopted planet values from the unique default row, with all-record diagnostics.
 #[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct ExoplanetCanonicalSummary {
     pub hostname: Option<StableValueSummary>,

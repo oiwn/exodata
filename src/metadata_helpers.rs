@@ -139,6 +139,7 @@ mod tests {
 
     fn host_detail() -> StellarHostDetail {
         StellarHostDetail {
+            selected_record_index: None,
             hostname: "TRAPPIST-1".to_string(),
             identity: HostIdentity {
                 hostname: "TRAPPIST-1".to_string(),
@@ -223,6 +224,7 @@ mod tests {
     #[test]
     fn exoplanet_detail_description_uses_first_record() {
         let detail = ExoplanetDetail {
+            selected_record_index: None,
             pl_name: "Kepler-10 b".to_string(),
             canonical: Default::default(),
             records: vec![json!({

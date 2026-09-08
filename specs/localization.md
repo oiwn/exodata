@@ -31,8 +31,6 @@ Traditional Chinese is out of scope unless explicitly requested.
   are intentionally not advertised yet.
 - Added tests for locale parsing, localized URL generation, URL-state
   preservation, utility/export exclusions, and localized sitemap entries.
-- Verified formatting, Clippy, workspace tests, and the combined SSR/WASM
-  `cargo leptos build`.
 
 ## Stable Rules
 
@@ -72,3 +70,8 @@ localized metadata.
 4. Add localized docs summaries, then full translated docs only when reviewed.
 5. Expand canonical, `hreflang`, and sitemap coverage alongside each completed
    surface.
+
+Verification coverage lives in [testing.md](testing.md); use the
+[checks skill](../.agents/skills/exodata-checks/SKILL.md) for split-build and
+browser execution. Past build results do not establish that a new translation
+or route change works.

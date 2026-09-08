@@ -168,6 +168,20 @@ enum DevCommands {
 
 #[derive(Parser, Debug)]
 enum DescriptionCommands {
+    /// Probe DeepSeek with one request capped at 32 output tokens
+    Probe,
+    /// Generate text from an arbitrary UTF-8 input file using DeepSeek
+    Generate {
+        /// File sent verbatim as the user message (TOML or plain text)
+        #[arg(long)]
+        input: std::path::PathBuf,
+        /// Optional UTF-8 file sent as a separate system message
+        #[arg(long)]
+        system_prompt: Option<std::path::PathBuf>,
+        /// Maximum output tokens for this single request
+        #[arg(long, default_value_t = 256, value_parser = clap::value_parser!(u32).range(1..))]
+        max_tokens: u32,
+    },
     /// Report systems needing descriptions or regeneration
     Scan {
         #[arg(long)]
@@ -251,6 +265,48 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Dev { command } => match command {
             DevCommands::Descriptions { command } => match command {
+                DescriptionCommands::Probe => {
+                    let row = descriptions::probe::run()?;
+                    output::render_rows(
+                        &[row],
+                        &descriptions::probe::columns(),
+                        format,
+                    )?;
+                }
+                DescriptionCommands::Generate {
+                    input,
+                    system_prompt,
+                    max_tokens,
+                } => {
+                    let text =
+                        std::fs::read_to_string(&input).map_err(|error| {
+                            anyhow::anyhow!(
+                                "Cannot read input file {}: {error}",
+                                input.display()
+                            )
+                        })?;
+                    let system_text = system_prompt
+                        .as_ref()
+                        .map(|path| {
+                            std::fs::read_to_string(path).map_err(|error| {
+                                anyhow::anyhow!(
+                                    "Cannot read system prompt {}: {error}",
+                                    path.display()
+                                )
+                            })
+                        })
+                        .transpose()?;
+                    let row = descriptions::probe::generate_with_system(
+                        &text,
+                        system_text.as_deref(),
+                        max_tokens,
+                    )?;
+                    output::render_rows(
+                        &[row],
+                        &descriptions::probe::columns(),
+                        format,
+                    )?;
+                }
                 DescriptionCommands::Scan { all, content_dir } => {
                     let rows = descriptions::scan(
                         Path::new(cli.data_dir.as_deref().unwrap_or("data")),

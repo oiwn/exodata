@@ -150,6 +150,7 @@ mod tests {
     #[test]
     fn stellarhost_dataset_schema_adds_spectral_keyword_and_encoded_url() {
         let host = StellarHostDetail {
+            selected_record_index: None,
             hostname: "Alpha Centauri A".to_string(),
             identity: HostIdentity {
                 hostname: "Alpha Centauri A".to_string(),
@@ -195,6 +196,7 @@ mod tests {
     #[test]
     fn exoplanet_dataset_schema_adds_host_and_method_keywords() {
         let detail = ExoplanetDetail {
+            selected_record_index: None,
             pl_name: "Kepler-10 b".to_string(),
             canonical: Default::default(),
             records: vec![json!({

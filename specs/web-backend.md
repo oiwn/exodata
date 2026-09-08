@@ -1,493 +1,182 @@
-# Web Backend Specification: Axum Server
-
-This document describes the Axum web server and server-side functionality of the exoplanets catalog web application.
-
-## Overview
-
-The web backend provides:
-- **Axum HTTP server** for serving the application
-- **REST API endpoints** for data access
-- **Leptos server functions** for client-server communication
-- **In-memory data loading** at startup for fast access
-- **State management** for sharing data across requests
-
-## Architecture
-
-```
-src/
-├── main.rs           # Server startup and configuration
-├── server/
-│   ├── mod.rs        # Module declarations
-│   ├── handlers.rs   # REST API handlers and ApiState
-│   └── functions.rs  # Leptos server functions
-└── tables/           # Data processing (uses local copy)
-```
-
-## Server Startup (main.rs)
-
-### Entry Point
-
-```rust
-#[cfg(feature = "ssr")]
-#[tokio::main]
-async fn main() {
-    start_server().await;
-}
-```
-
-### Server Initialization
-
-The `start_server()` function:
-
-1. **Load data at startup**
-```rust
-let stellarhosts_df = match common::load_parquet("data/stellarhosts.parquet", None) {
-    Ok(df) => Arc::new(df),
-    Err(e) => panic!("Failed to load stellarhosts data: {}", e),
-};
-
-let exoplanets_df = match common::load_parquet("data/exoplanets.parquet", None) {
-    Ok(df) => Arc::new(df),
-    Err(e) => panic!("Failed to load exoplanets data: {}", e),
-};
-```
-
-2. **Create shared state**
-```rust
-let api_state = ApiState {
-    stellarhosts_df,
-    exoplanets_df,
-};
-```
-
-3. **Build router**
-```rust
-let app = Router::new()
-    .leptos_routes(&leptos_options, routes, {
-        let api_state = api_state.clone();
-        move || {
-            provide_context(api_state.clone());
-            shell(leptos_options.clone())
-        }
-    })
-    .nest_service("/api", server::api_routes(api_state))
-    .fallback(leptos_axum::file_and_error_handler(shell))
-    .with_state(leptos_options);
-```
-
-4. **Start server**
-```rust
-let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-println!("listening on http://{}", &addr);
-axum::serve(listener, app.into_make_service())
-    .await
-    .unwrap();
-```
-
-### Key Design Decisions
-
-- **Data loaded once**: Files read at startup, not per-request
-- **Arc<DataFrame>**: Shared ownership, no cloning data
-- **Dual state sharing**: ApiState provided to both Axum (`.with_state()`) and Leptos (`provide_context()`)
-- **Panic on load failure**: Missing data files prevent server start (fail-fast)
-
-## API State (server/handlers.rs)
-
-### ApiState Structure
-
-```rust
-#[derive(Debug, Clone)]
-pub struct ApiState {
-    pub stellarhosts_df: Arc<DataFrame>,
-    pub exoplanets_df: Arc<DataFrame>,
-}
-```
-
-**Thread Safety:**
-- `Arc<DataFrame>` allows sharing across async tasks
-- `Clone` creates new Arc pointers (cheap, no data copy)
-- DataFrames are immutable (read-only access)
-
-### Query Parameters
-
-```rust
-#[derive(Debug, Deserialize, Serialize)]
-pub struct QueryParams {
-    // Pagination
-    pub page: Option<usize>,
-    pub limit: Option<usize>,
-
-    // Sorting
-    pub sort_by: Option<String>,
-    pub order: Option<String>, // "asc" or "desc"
-
-    // Text filters
-    pub hostname: Option<String>,
-    pub pl_name: Option<String>,
-
-    // Numeric range filters
-    pub sy_dist_min: Option<f64>,
-    pub sy_dist_max: Option<f64>,
-    pub st_teff_min: Option<f64>,
-    pub st_teff_max: Option<f64>,
-    pub pl_orbper_min: Option<f64>,
-    pub pl_orbper_max: Option<f64>,
-    pub pl_rade_min: Option<f64>,
-    pub pl_rade_max: Option<f64>,
-    pub pl_masse_min: Option<f64>,
-    pub pl_masse_max: Option<f64>,
-}
-```
-
-### API Response Structure
-
-```rust
-#[derive(Debug, Serialize)]
-pub struct ApiResponse<T> {
-    pub data: Vec<T>,
-    pub total: usize,
-    pub page: usize,
-    pub limit: usize,
-    pub filters: QueryParams,
-}
-```
-
-## REST API Endpoints
-
-### Route Setup
-
-```rust
-pub fn api_routes(state: ApiState) -> Router {
-    Router::new()
-        .route("/stellarhosts", get(get_stellarhosts))
-        .route("/exoplanets", get(get_exoplanets))
-        .route("/stellarhosts/schema", get(get_stellarhosts_schema))
-        .route("/exoplanets/schema", get(get_exoplanets_schema))
-        .with_state(state)
-}
-```
-
-### 1. GET /api/stellarhosts
-
-Get stellar hosts data with filtering, sorting, and pagination.
-
-**Handler:**
-```rust
-pub async fn get_stellarhosts(
-    State(state): State<ApiState>,
-    Query(params): Query<QueryParams>,
-) -> Result<Json<ApiResponse<Value>>, StatusCode>
-```
-
-**Query Parameters:**
-- `page` - Page number (default: 1)
-- `limit` - Items per page (default: 50)
-- `sort_by` - Column name to sort by
-- `order` - Sort direction ("asc" or "desc")
-- `hostname` - Filter by hostname (partial match)
-- `st_teff_min`, `st_teff_max` - Temperature range
-- `sy_dist_min`, `sy_dist_max` - Distance range
-
-**Example Request:**
-```
-GET /api/stellarhosts?page=1&limit=20&st_teff_min=5000&st_teff_max=6000&sort_by=st_teff&order=desc
-```
-
-**Response:**
-```json
-{
-  "data": [
-    {
-      "hostname": "Kepler-452",
-      "st_teff": 5757.0,
-      "st_mass": 1.04,
-      "st_rad": 1.11,
-      ...
-    },
-    ...
-  ],
-  "total": 1523,
-  "page": 1,
-  "limit": 20,
-  "filters": {
-    "st_teff_min": 5000.0,
-    "st_teff_max": 6000.0,
-    ...
-  }
-}
-```
-
-**Processing Steps:**
-1. Clone DataFrame from state
-2. Apply filters (`apply_stellarhosts_filters`)
-3. Count total results
-4. Apply sorting (`apply_sorting`)
-5. Apply pagination (`apply_pagination`)
-6. Convert to JSON (`dataframe_to_json`)
-7. Return response
-
-### 2. GET /api/exoplanets
-
-Get exoplanets data with filtering, sorting, and pagination.
-
-**Handler:**
-```rust
-pub async fn get_exoplanets(
-    State(state): State<ApiState>,
-    Query(params): Query<QueryParams>,
-) -> Result<Json<ApiResponse<Value>>, StatusCode>
-```
-
-**Query Parameters:**
-- Same pagination/sorting as `/stellarhosts`
-- `pl_name` - Filter by planet name
-- `pl_orbper_min`, `pl_orbper_max` - Orbital period range
-- `pl_rade_min`, `pl_rade_max` - Planet radius range
-- `pl_masse_min`, `pl_masse_max` - Planet mass range
-
-**Example Request:**
-```
-GET /api/exoplanets?pl_rade_min=0.8&pl_rade_max=1.2&sort_by=disc_year&order=desc
-```
-
-**Response:**
-Similar structure to `/stellarhosts` response.
-
-### 3. GET /api/stellarhosts/schema
-
-Get column names and types for stellarhosts dataset.
-
-**Response:**
-```json
-{
-  "columns": [
-    {"name": "hostname", "type": "String"},
-    {"name": "st_teff", "type": "Float64"},
-    {"name": "st_mass", "type": "Float64"},
-    ...
-  ]
-}
-```
-
-### 4. GET /api/exoplanets/schema
-
-Get column names and types for exoplanets dataset.
-
-**Response:**
-Similar to `/stellarhosts/schema`.
-
-## Helper Functions
-
-### Filtering
-
-```rust
-fn apply_stellarhosts_filters(
-    df: DataFrame,
-    params: &QueryParams,
-) -> Result<DataFrame, StatusCode>
-```
-
-Applies filters based on query parameters:
-- Text matching (hostname, etc.)
-- Numeric ranges (temperature, distance, etc.)
-- Null handling
-
-### Sorting
-
-```rust
-fn apply_sorting(
-    df: DataFrame,
-    sort_by: &str,
-    order: Option<&str>,
-) -> Result<DataFrame, StatusCode>
-```
-
-Sorts DataFrame by specified column in ascending or descending order.
-
-### Pagination
-
-```rust
-fn apply_pagination(
-    df: DataFrame,
-    page: Option<usize>,
-    limit: Option<usize>,
-) -> Result<DataFrame, StatusCode>
-```
-
-Slices DataFrame to return requested page:
-- Default limit: 50 rows
-- Default page: 1
-- Calculates offset: `(page - 1) * limit`
-
-### JSON Conversion
-
-```rust
-fn dataframe_to_json(df: &DataFrame) -> Result<Vec<Value>, StatusCode>
-```
-
-Converts DataFrame rows to JSON objects:
-- Each row becomes a JSON object
-- Column names become keys
-- Handles null values appropriately
-
-## Leptos Server Functions (server/functions.rs)
-
-### What Are Server Functions?
-
-Leptos server functions allow calling server-side code from the client:
-- Decorated with `#[server]` macro
-- Called like async functions from client
-- Automatically serialize/deserialize data
-- Type-safe across client-server boundary
-
-### get_stats Server Function
-
-```rust
-#[server(GetStats, "/api")]
-pub async fn get_stats() -> Result<DataStats, ServerFnError>
-```
-
-**Purpose:**
-Calculate overview statistics for the homepage.
-
-**Implementation:**
-```rust
-// 1. Get ApiState from context
-let state = expect_context::<ApiState>();
-
-// 2. Calculate statistics using exo-core aggregations
-let (stellarhosts_total, exoplanets_total) =
-    aggregation::get_total_counts(&state.stellarhosts_df, &state.exoplanets_df);
-
-let avg_stellar_temp =
-    aggregation::get_avg_temperature(&state.stellarhosts_df).unwrap_or(0.0);
-
-let avg_stellar_distance =
-    aggregation::get_avg_distance(&state.stellarhosts_df).unwrap_or(0.0);
-
-let discovery_methods =
-    aggregation::get_discovery_methods(&state.exoplanets_df, 10);
-
-let planet_size_categories =
-    aggregation::get_planet_size_categories(&state.exoplanets_df);
-
-// 3. Return aggregated data
-Ok(DataStats {
-    stellarhosts_total,
-    exoplanets_total,
-    avg_stellar_temp,
-    avg_stellar_distance,
-    discovery_methods,
-    planet_size_categories,
-})
-```
-
-**Data Structure:**
-```rust
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
-pub struct DataStats {
-    pub stellarhosts_total: usize,
-    pub exoplanets_total: usize,
-    pub avg_stellar_temp: f64,
-    pub avg_stellar_distance: f64,
-    pub discovery_methods: Vec<(String, usize)>,
-    pub planet_size_categories: Vec<(String, usize)>,
-}
-```
-
-**Client Usage:**
-```rust
-// In Leptos component
-let stats_resource = Resource::new(
-    move || (),
-    move |_| async move { get_stats().await },
-);
-```
-
-### Why Server Functions?
-
-**Advantages over REST:**
-- No HTTP self-requests from server
-- Direct data access via context
-- Type-safe API contract
-- Automatic serialization
-- Integrated with Leptos reactivity
-
-## Error Handling
-
-### REST API Errors
-
-Return appropriate HTTP status codes:
-```rust
-Result<Json<ApiResponse<T>>, StatusCode>
-```
-
-Common errors:
-- `400 Bad Request` - Invalid query parameters
-- `404 Not Found` - Resource not found
-- `500 Internal Server Error` - Server-side errors
-
-### Server Function Errors
-
-Return `ServerFnError`:
-```rust
-Result<DataStats, ServerFnError>
-```
-
-Errors automatically propagated to client.
-
-## Configuration
-
-### Server Address
-
-Configured in `Cargo.toml`:
-```toml
-[package.metadata.leptos]
-site-addr = "127.0.0.1:3000"
-```
-
-### Data File Paths
-
-Hardcoded in `main.rs`:
-```rust
-common::load_parquet("data/stellarhosts.parquet", None)
-common::load_parquet("data/exoplanets.parquet", None)
-```
-
-**Future:** Make configurable via environment variables.
-
-## Performance Considerations
-
-1. **In-Memory Data**: Fast access, but uses memory
-2. **Arc<DataFrame>**: Cheap cloning via reference counting
-3. **No Disk I/O**: Per-request (loaded once at startup)
-4. **Polars Operations**: Highly optimized DataFrame operations
-5. **Async Handlers**: Non-blocking I/O with Tokio
-
-## Development vs Production
-
-**Development:**
-```bash
-cargo leptos watch
-# Hot reload enabled
-# Debug logging
-```
-
-**Production:**
-```bash
-cargo leptos build --release
-# Optimized binary
-# WASM optimized
-```
-
-## Future Enhancements
-
-- Environment-based configuration
-- Database backend option (PostgreSQL, etc.)
-- Caching layer (Redis)
-- GraphQL API alternative
-- WebSocket support for real-time updates
-- Authentication and authorization
-- Rate limiting
-- Compression middleware
-- CORS configuration
+# Web Backend
+
+The SSR application uses Axum, Leptos server functions, Polars, and in-memory
+caches. Public request examples and wire formats live in
+[API documentation](../docs/api.md) and [MCP documentation](../docs/mcp.md).
+
+## Startup and State
+
+[src/main.rs](../src/main.rs) starts a multithreaded Tokio runtime with four
+worker threads. It loads both Parquet datasets and their metadata TOML files
+from `EXO_DATA_DIR`, defaulting to `data`; missing or invalid files fail startup.
+See [data-management.md](data-management.md) for artifact contracts.
+
+Startup computes overview statistics, creates caches and sitemap XML, and
+prewarms default table queries and registered insights before accepting requests.
+The HTML shell embeds serialized metadata for hydration.
+
+`ApiState` in [handlers.rs](../src/server/handlers.rs) owns shared references to
+the datasets, metadata, overview statistics, site URL, sitemap XML, and caches.
+It is supplied to Axum handlers and Leptos server-function context.
+`SITE_URL` defaults to `https://exodata.space`. Leptos configuration comes
+from `Cargo.toml` locally or `LEPTOS_*` environment variables in deployment;
+`LEPTOS_GA_ID` optionally enables analytics.
+
+## Modules and Interfaces
+
+- [server.rs](../src/server.rs) exposes server functions to both compilation
+  targets and gates data, handlers, MCP, caches, and canonical calculations
+  behind the `ssr` feature.
+- [functions.rs](../src/server/functions.rs) owns serializable UI payloads;
+  its `tables`, `details`, and `insights` children implement server functions.
+- [data.rs](../src/server/data.rs) groups table queries, detail lookups, row
+  conversion, summary transformations, insights, SQL, and exports.
+- [handlers.rs](../src/server/handlers.rs) adapts shared data operations to
+  REST, OpenAPI, sitemap routes, and detail export middleware.
+- [mcp.rs](../src/server/mcp.rs) adapts the same server state and data operations
+  to Streamable HTTP tools at `/mcp`.
+
+REST lives under `/rest`; Leptos server-function transport is a separate
+interface. Swagger UI is at `/swagger-ui`, with OpenAPI at
+`/rest/openapi.json`. Website routes come from `src/app.rs`.
+
+## Tables and Schema
+
+Both REST table endpoints accept `page`, `limit`, `sort_by`, `order`,
+`columns`, and `filter`. REST defaults to page 1 and 50 rows and caps
+`limit` at 1,000. The shared backend normalizes page 0 to 1; website query
+validation rejects invalid pages before fetching.
+
+[Table processing](../src/server/data/tables.rs) selects valid requested
+columns, or dataset-specific defaults. An empty valid selection is an error.
+Filtering trims and lowercases the search text and performs substring matching
+on the first selected column, casting it to strings when needed. Sorting
+applies only to a selected column and removes rows with null sort values.
+`desc` selects descending order; other values use ascending order.
+
+`total_all` counts source rows before filtering/sorting; `total` counts the
+remaining rows before pagination. Out-of-range backend requests return empty
+rows; the website applies its own branded 404 behavior.
+
+REST returns `{ data, columns, total, total_all, page, limit }`.
+Leptos `TableData` uses `rows` instead of `data` and carries no metadata.
+Schema endpoints return `columns` and `total_rows`, with each column's name,
+Polars data type, and available description, unit, and source datatype.
+See [column-metadata.md](column-metadata.md) for metadata ownership and UI flow.
+
+## Caches and Overview Statistics
+
+[cache.rs](../src/server/cache.rs) uses Moka caches for tables, stellar-host
+details, and insights. Table keys include dataset, page, limit, sorting,
+selected columns, and filter. Missing cached table queries run Polars work in
+`spawn_blocking`; this is not a claim that all server data work is offloaded.
+
+Startup capacities are set in `main.rs`. Host-detail entries are keyed by
+hostname; insight entries by slug. Dataset files are loaded once, so replacing
+runtime data requires restart. `get_stats` returns precomputed `DataStats`;
+it does not recompute homepage aggregations per request.
+
+## Detail Contracts
+
+All payload types below are defined in
+[functions.rs](../src/server/functions.rs). Lookups use exact catalog names
+and retain matching source records; missing entities produce errors.
+
+`StellarHostDetail` contains:
+
+| Field | Content |
+| --- | --- |
+| `hostname`, `identity` | Exact hostname and identifier aliases |
+| `system` | Planet/star/moon counts, distance, and parallax summaries |
+| `star` | Spectral type, temperature, mass, radius, age, luminosity, metallicity, and gravity summaries |
+| `provenance` | Record count, stellar/system references, and per-field measurement/distinct counts |
+| `records`, `provenance_columns` | Source rows and selected provenance column names |
+| `metadata` | Column metadata attached to the returned payload |
+
+Host canonical values come from one source row selected by shared `exo-core`
+logic. Score populated `st_spectype`, `st_teff`, `st_mass`, `st_rad`, `st_age`,
+`st_lum`, `st_met`, `st_logg`, `sy_dist`, and `sy_plx`; numeric values must be
+finite and spectral type nonblank. Zero counts as populated. Ties use lexical
+stellar reference, system reference, then canonical row serialization. A zero
+maximum score yields no selection. `selected_record_index` identifies the row
+in the detail payload's `records`, retaining its references and qualifiers.
+Primary numeric, categorical, and system-count values come only from that row;
+missing fields stay missing. Counts, alternatives, and min/max ranges remain
+all-record diagnostics, separate from adopted values. Aliases use all records.
+`disputed` indicates distinct values, not a significance or anomaly test.
+
+The host cache stores the detail without its metadata map; server functions and
+JSON exports attach metadata when returning it. Related planets are fetched
+separately as `HostPlanets { hostname, planets, columns, metadata }`.
+This query groups by `pl_name` and uses each planet's unique `default_flag = 1`
+row. Without a unique default, only its name is returned and measurements remain
+unavailable. Planet detail payloads likewise expose `selected_record_index`.
+
+`ExoplanetDetail { selected_record_index, pl_name, canonical, records, metadata }` is built from
+matching planet records. See [exoplanet-detail.md](exoplanet-detail.md) for
+summary fields and the current page's consumption of them.
+
+## SQL, Insights, MCP, and Exports
+
+`GET /rest/query` uses shared SELECT-only validation and Polars execution
+against `stellarhosts` and `exoplanets`. It defaults to 1,000 returned rows,
+caps at 10,000, and waits at most 30 seconds for the blocking task. A timeout
+ends the request wait; it does not guarantee cancellation of running Polars work.
+
+Curated insights use the registry and SQL definitions in `exo-core`, with
+shared metadata in `exo-types`. REST exposes list/run endpoints, Leptos uses
+server functions, and MCP exposes tools over the same server data.
+
+MCP tools are `health`, `list_insights`, `run_insight`, `describe_catalog`,
+`query_catalog`, and `download_detail`. MCP SQL defaults to 100 rows and
+caps at 1,000; it shares validation and execution with REST.
+
+Detail export middleware recognizes unprefixed host/planet URLs ending in
+`.json` or `.csv`. JSON contains the detail payload; CSV contains matching
+source rows. Responses include download filenames and content types.
+Missing entities return 404. MCP `download_detail` uses the same export
+functions and returns filename, MIME type, content, and URL.
+
+REST table processing failures currently map to 500. SQL validation and
+execution failures map to 400, timeouts to 408, and join failures to 500. Unknown insight
+slugs return 404. Server functions return `ServerFnError`; page components
+decide presentation. These behaviors are distinct from website route errors.
+
+## Sitemaps
+
+Sitemap XML is generated once at server startup and served from memory.
+`/sitemap-index.xml` lists `/sitemap-static.xml` and entity chunks named
+`/sitemap-stellarhosts-N.xml` and `/sitemap-exoplanets-N.xml`. Entity chunks
+contain at most 1,000 URLs each, with deterministic numbering starting at 1,
+using sorted, unique hostnames or planet names from the loaded datasets.
+`public/robots.txt` points to the sitemap index.
+
+The static sitemap includes `/`, `/zh-CN`, `/ja`, `/docs`, `/docs/cli`,
+`/docs/api`, `/stellarhosts`, `/exoplanets`, `/insights`, and registered
+`/insights/:slug` pages. Localized table/detail routes are not advertised;
+see [localization.md](localization.md) for translation and metadata eligibility.
+`/docs/mcp` and `/about` are currently absent from the sitemap; their intended
+inclusion remains proposed in [ideas.md](ideas.md#routing-and-documentation).
+
+All entries share a `YYYY-MM-DD` `<lastmod>` date selected by
+`compute_build_date()` in `src/main.rs`: the build-time `BUILD_DATE` value,
+then the date portion of `BUILD_TIMESTAMP`, then the current UTC date at
+startup as the local-development fallback. This is a build/startup date,
+not a per-record source-update timestamp.
+
+Only generated entity chunk routes are registered. Unknown chunks and the
+old unchunked `/sitemap-stellarhosts.xml` and `/sitemap-exoplanets.xml` return
+404; no compatibility aliases are provided.
+
+Implementation lives in `src/server/handlers.rs`, with startup wiring in
+`src/main.rs`. Encoding, deduplication, chunking, and route behavior are covered
+by the existing tests in `src/server/tests.rs`.
+
+
+## Verification
+
+See [testing.md](testing.md) for coverage and the
+[checks skill](../.agents/skills/exodata-checks/SKILL.md) for execution.
+Development data inspection uses the
+[data skill](../.agents/skills/exodata-data/SKILL.md); deployment remains
+documented in [DEPLOY.md](../DEPLOY.md).

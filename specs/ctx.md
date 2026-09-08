@@ -8,6 +8,10 @@ Generate a brief natural-language description for each stellar host and its know
 
 ## Plan
 
+- [ ] Implement shared source-row selection: fullest stellar-host summary row
+  and unique planetary default row; preserve source values and missing fields.
+- [ ] Align detail displays/exports and verify selection before resuming prompt work.
+
 - [x] Finalize Phase 1 metadata storage and scan-report defaults for date-based regeneration selection.
 - [x] Implement and verify the read-only Phase 1 scanner.
 - [ ] Define generation inputs from current host/planet records and any precalculated values.
@@ -156,13 +160,104 @@ data values, or download versioning are required.
 ## Open Decisions
 
 - Generation: system identifier encoding/collision handling and detailed metadata/request schemas.
-- Input field selection, reference/default-row policy, optional precalculations, and final target length for brief descriptions.
+- Final input schema and field coverage, optional precalculations, and length defaults; current experiments use 300–600 words per request with permission to be shorter. Source selection is now agreed: fullest host summary row and unique planetary default row, with no cross-row filling.
 - Generation stage count, prompt/output contracts, validation criteria, repair limits, and pilot acceptance criteria.
 - Request TOML schema and multistep artifact layout, review/publish states, handling of removed systems, and behavior when published articles become stale.
 - Initial language coverage and how translations depend on source articles and evidence.
 - CLI command surface, concurrency defaults, timeouts, retry policy, run limits, and usage reporting.
 - Article placement on host detail pages and how stored content is packaged with deployment.
 
+## DeepSeek Probe
+
+- Added `exodata dev descriptions probe` before generation input design;
+  see [cli.md](cli.md#deepseek-connectivity-probe).
+- Use `DEEPSEEK_API_KEY` from the environment, one fixed request, at most 32
+  output tokens, thinking disabled, a 60-second timeout, and no retries.
+- Developer's live probe passed: `OK`, 9 prompt tokens, 1 completion token,
+  normal stop, 743 ms.
+- Added `descriptions generate --input <file> --max-tokens 256` for manual
+  experiments with arbitrary text/TOML; it sends the file verbatim and uses
+  the same single-request settings and report as the probe. Live generation
+  tests so far were run by the developer; structured generation inputs remain
+  unspecified. Next session the user intends to expose the key to the agent
+  for bounded API evaluations.
+
 ## Next
+
+### Baseline and Preparation Handoff (2026-09-08)
+
+- Keep these five systems fixed while improving generation quality: LHS 1140,
+  Kepler-11, TRAPPIST-1, 51 Peg, and HD 41004 A. Inspect their current selected
+  rows when implementing automatic input preparation; retain the existing
+  manual experiment files as baselines.
+- Implement automatic evidence/input preparation under
+  `exodata dev descriptions` (proposed subcommand: `prepare`). Default
+  `--output-dir` to `content/systems`, placing each system's artifacts in its
+  own directory. Normalize system directory names by removing escape/unsafe
+  characters and replacing spaces with dashes; preserve the exact NASA
+  hostname in artifacts. Specify exact normalization and collision handling
+  before implementation.
+- Add a repository `prose-generation` skill explaining how future LLM agents
+  prepare inputs, run bounded generation trials, preserve artifacts, and
+  evaluate factual support and prose quality.
+- First fix `cargo test`, then pause for the user's commit before implementing
+  preparation or the skill. Fixed the host export/cache test to use Tokio's
+  multithreaded runtime required by Polars. Ran `cargo fmt --all` and
+  `cargo test`: 134 tests passed, no failures. This does not establish workspace
+  or hydration verification.
+
+Current manual experiment: `generate --system-prompt <file>` separates editorial
+rules from evidence. Kepler-11 v2 in `tmp/` uses prose-ready values, approved
+comparisons, explicit upper-limit qualifiers, and uncertainty cautions instead
+of raw error/limit columns. Raw evidence remains available locally. This is an
+experiment, not the final input schema; the developer has run revision 3.
+
+Kepler-11 manual review: the compact input preserved the mass upper limit and
+removed the earlier mass contradiction, but output still inferred orbital
+spacing/observing feasibility, calculated an unapproved ratio, and exposed an
+editorial caution. Prompt revision 3 updates the same v2 input and system file:
+separate publishable comparisons from silent constraints and require a specific
+supported ending. Measurements and the 300–600-word target are unchanged.
+
+### Prompt Evaluation Handoff (2026-09-08)
+
+- Latest Kepler-11 revision preserved the upper limit and removed earlier
+  numerical contradictions and unsupported composition claims. Remaining
+  issues: repeated periods/radii, filler, catalog-style prose, and describing
+  all six masses as estimates despite one being an upper limit.
+- LHS 1140 was tested next: one star, two planets. Host input uses the unique
+  fullest summary row (Cadieux et al. 2024, 10/10 fields); each planet uses its
+  default `ps` row. Age is a lower limit, not an exact age.
+- Preserved local experiment files: `tmp/description-system.txt`,
+  `tmp/request-lhs-1140.toml`, `tmp/response-lhs-1140.md`, and
+  `tmp/evaluation-lhs-1140.toml`. Response wording comes from the user's pasted
+  output, with terminal wraps removed. Subsequent revisions should use new
+  filenames to preserve this baseline. These are not published articles.
+- LHS 1140 preserved core numbers and the age qualifier but added classification,
+  an unapproved mass ratio/ranking, orbital-speed wording inferred from period,
+  and extra transit wording. Repetition/hype remain. See the saved evaluation.
+  Returned usage, timing, finish reason, and model metadata were not pasted;
+  do not invent them.
+- Prompt structure: a reusable system message and TOML user message separating
+  publishable facts/comparisons, explanatory guide, audit metadata, and silent
+  constraints. Pass explicit lower/upper-limit qualifiers and relevant uncertainty
+  cautions; retain raw errors/flags in source evidence. Precalculate and approve
+  conversions/comparisons. Prompt compliance remains imperfect despite these rules.
+- Next session: check only whether `DEEPSEEK_API_KEY` is present, never print it.
+  The user uses fish and will launch the agent from the shell with the exported
+  variable. Develop the small evaluation-harness contract and perform bounded
+  live comparisons, capturing exact system/user input, response, request settings,
+  returned metadata/usage/timing, and review results. Separate deterministic
+  evidence tests from live prose evaluation; no exact-prose assertions,
+  catalog-wide batch, or automatic repair loop yet.
+- Retain the 1,536-output-token cap, thinking disabled, and no retries for article
+  trials unless explicitly changed. The agent has not made generation calls yet.
+  No server is needed: the user handles manual web testing. Do not start a server
+  to validate offline generation work.
+- Source-selection implementation was added. Shared selector and canonical tests
+  passed; export/related-planet tests added later and hydration verification were
+  not run before the user stopped server testing. The user subsequently reported
+  it looked good. Do not claim remaining checks passed or resume server work as
+  part of article evaluation.
 
 Define the brief-description input and generation contract. Operate on current files; download versioning and diffs are excluded. Keep remaining proposals distinct from agreed decisions.

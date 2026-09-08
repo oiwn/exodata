@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use super::format::{format_json_value, format_number, format_numeric_primary};
+use super::provenance::ProvenanceCell;
 use crate::server::functions::{
     CategoricalFieldSummary, NumericFieldSummary, StableValueSummary,
     StellarHostDetail,
@@ -8,6 +9,10 @@ use crate::server::functions::{
 
 #[component]
 pub fn CanonicalSummarySection(host: StellarHostDetail) -> impl IntoView {
+    let selected = host
+        .selected_record_index
+        .and_then(|index| host.records.get(index))
+        .cloned();
     let primary_cards = vec![
         host.star.teff.clone(),
         host.star.mass.clone(),
@@ -27,12 +32,20 @@ pub fn CanonicalSummarySection(host: StellarHostDetail) -> impl IntoView {
             <div class="host-detail-section__header">
                 <div>
                     <p class="host-detail-section__eyebrow host-detail-section__eyebrow--summary">"Canonical Summary"</p>
-                    <h2 class="host-detail-section__title">"Adopted host values from all rows"</h2>
+                    <h2 class="host-detail-section__title">"Adopted host values from one source row"</h2>
                 </div>
                 <p class="host-detail-section__description host-detail-section__description--summary">
-                    "Numeric fields use the median of non-null measurements. Disagreement stays visible through ranges, counts, and provenance."
+                    "Values come from the row with the most populated summary measurements. Missing values stay missing. Ranges and counts describe all source rows."
                 </p>
             </div>
+
+            {match selected {
+                Some(row) => view! {
+                    <p>"Stellar source: "<ProvenanceCell column="st_refname".to_string() value=row["st_refname"].clone()/>
+                        " • System source: "<ProvenanceCell column="sy_refname".to_string() value=row["sy_refname"].clone()/></p>
+                }.into_any(),
+                None => view! { <p>"No source row contains usable summary measurements."</p> }.into_any(),
+            }}
 
             <div class="host-detail-summary-grid">
                 {primary_cards.into_iter().map(|summary| view! {
@@ -43,6 +56,7 @@ pub fn CanonicalSummarySection(host: StellarHostDetail) -> impl IntoView {
             </div>
         </section>
     }
+    .into_any()
 }
 
 #[component]

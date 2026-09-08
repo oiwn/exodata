@@ -1,7 +1,8 @@
 # CLI Specification: exodata
 
-`exodata` is the public CLI binary for Exoplanets Catalog. The package/crate
-name is `exodata`; the source folder remains `crates/exo-cli`.
+`exodata` is the public CLI binary for Exoplanets Catalog. The package and binary
+are named `exodata`; the Rust library is `exo_cli`, and the source folder
+remains `crates/exo-cli`.
 
 The CLI is primarily a third-party terminal client for the catalog API, with an
 offline local-data backend for users who download the static data bundle.
@@ -19,7 +20,7 @@ exodata
 ├── insights                 List and run curated insight queries
 ├── download                 Download parquet and metadata files for offline use
 ├── config                   Read or update persistent CLI config
-├── skill                    Print or install agent instructions
+├── skill                    Install public catalog-query agent instructions
 └── dev                      Repository/data-preparation commands
 ```
 
@@ -96,9 +97,9 @@ Local dataset resolution:
 
 ## Configuration
 
-Config is stored outside the repository, using the platform config directory.
+Config is stored at `~/.exodata/config.toml`, under the user's home directory.
 
-Initial config shape:
+Default config shape:
 
 ```toml
 default_backend = "auto"
@@ -196,6 +197,44 @@ exodata dev insights run-all --data-dir data
 The old top-level development command paths are intentionally removed. Existing
 local scripts should migrate to `exodata dev ...`.
 
+### DeepSeek Connectivity Probe
+
+`exodata dev descriptions probe` sends one fixed prompt ("Reply with only OK.")
+to `https://api.deepseek.com/chat/completions` with `deepseek-v4-flash`,
+`max_tokens = 32`, thinking disabled, and streaming disabled. There are no
+retries or redirects; the request timeout is 60 seconds. No catalog data is
+sent and no artifacts are written.
+
+Read credentials only from `DEEPSEEK_API_KEY`; missing/blank values fail before
+network access. Do not log credentials or HTTP response bodies on failure.
+No dotenv loading or persistent credential configuration is used.
+
+Shared table/JSON/CSV output reports text, returned model, finish reason,
+prompt/completion/total tokens, and elapsed milliseconds. HTTP failures,
+timeouts, malformed responses, empty text, and finish reasons other than
+`stop` fail the command. A live request is manually tested by the developer.
+
+### Manual DeepSeek Generation
+
+```bash
+exodata dev descriptions generate --input request.toml --output json
+exodata dev descriptions generate --input prompt.txt --max-tokens 512
+```
+
+Read the UTF-8 file verbatim and send it as a single user message, without
+TOML parsing or schema validation. Optional `--system-prompt <file>` reads a
+second UTF-8 file verbatim and places it in a `system` message before the user
+message. Without that option, no system message is added. An unreadable or
+blank system prompt fails before network access. Missing/unreadable
+files and blank input fail before network access. `--max-tokens` must be
+positive and defaults to 256 output tokens. Input tokens are billed separately.
+
+Use the probe's model, environment credential, timeout, disabled thinking,
+no-retry policy, response validation, and shared table/JSON/CSV report format.
+Truncation (`finish_reason = "length"`) fails without retrying; the user may
+explicitly rerun with a larger limit. No content artifacts are written.
+This command supports manual prompt experiments; it is not batch generation.
+
 ### Description Regeneration Scan
 
 ```bash
@@ -266,7 +305,7 @@ same-date corrections, or independent stellar-host updates.
 
 ## REST And Agent Integration
 
-API mode targets the public REST API documented in `docs/api.md`:
+API mode targets the public REST API documented in [docs/api.md](../docs/api.md):
 
 - `/rest/stellarhosts`
 - `/rest/exoplanets`
@@ -285,18 +324,13 @@ The installed skill follows the Agent Skills directory convention and includes
 an `installed-by: exodata` marker. Existing `exodata` installs are updated;
 foreign/manual skill files are skipped.
 
-The hosted MCP server is mounted by the web service at `/mcp` and is built on
-top of the server's in-memory catalog state, not local parquet files. The
-server uses Streamable HTTP in stateless JSON response mode. Current MCP tools
-are:
+The installed public skill is maintained at
+[crates/exo-cli/skills/exodata.md](../crates/exo-cli/skills/exodata.md).
+It serves catalog users; repository development skills have distinct names
+and live under `.agents/skills/`. The `skill` command currently supports
+installation, not printing instructions.
 
-- `health()`
-- `list_insights()`
-- `run_insight(slug)`
-- `describe_catalog(table, columns)`
-- `query_catalog(sql, limit)`
-
-The MCP surface is read-only. `query_catalog` accepts one SQL `SELECT`
-statement, registers `stellarhosts` and `exoplanets`, defaults to 100 rows, and
-caps MCP responses at 1000 rows. Agents should call `describe_catalog` before
-writing SQL when column names, units, or data types are uncertain.
+Hosted MCP belongs to the web service, not the CLI process. Its shared-state
+integration is described in [web-backend.md](web-backend.md#sql-insights-mcp-and-exports);
+the complete tool inventory, including `download_detail`, is maintained in
+[docs/mcp.md](../docs/mcp.md).
