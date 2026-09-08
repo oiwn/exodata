@@ -1,0 +1,19 @@
+hostname = "K2-18"
+fingerprint = "sha256:4b7f9b36535fbcc9cc85dffd7af9f738f3a7f3bc1c5e348a6dd3b9e66ece5f97"
+fingerprint_version = 1
+elapsed_ms = 2350
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 2223
+completion_tokens = 309
+total_tokens = 2532
+generated_at = "2026-09-08T17:20:49.538677+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

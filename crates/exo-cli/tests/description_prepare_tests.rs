@@ -37,20 +37,19 @@ impl Fixture {
     }
 
     fn command(&self, args: &[&str]) -> Output {
-        Command::new(assert_cmd::cargo::cargo_bin!("exodata"))
+        self.command_hosts(&["Test Host"], args)
+    }
+
+    fn command_hosts(&self, hosts: &[&str], args: &[&str]) -> Output {
+        let mut command = Command::new(assert_cmd::cargo::cargo_bin!("exodata"));
+        command
             .current_dir(&self.0)
-            .args([
-                "dev",
-                "descriptions",
-                "prepare",
-                "--hostname",
-                "Test Host",
-                "--data-dir",
-            ])
-            .arg(&self.0)
-            .args(args)
-            .output()
-            .unwrap()
+            .args(["dev", "descriptions", "prepare", "--data-dir"])
+            .arg(&self.0);
+        for host in hosts {
+            command.arg("--hostname").arg(host);
+        }
+        command.args(args).output().unwrap()
     }
 
     fn directory(&self) -> PathBuf {
@@ -117,6 +116,26 @@ fn default_paths_parseable_artifacts_and_safe_force() {
         "hostname = 'Test Host'\nsource_date = '2024-01-01'\n"
     );
     assert!(!f.directory().join("system.txt").exists());
+}
+
+#[test]
+fn multiple_hostnames_share_one_invocation_and_continue_on_error() {
+    let f = Fixture::new();
+    f.data(&["Test Host", "Other Host", "Bad Host"], &[1, 1, 0]);
+    let output = f.command_hosts(&["Test Host", "Other Host", "Bad Host"], &[]);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Bad Host"));
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("content/systems/test-host")
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("content/systems/other-host")
+    );
+    assert!(f.0.join("content/systems/test-host/request.toml").exists());
+    assert!(f.0.join("content/systems/other-host/request.toml").exists());
+    assert!(!f.0.join("content/systems/bad-host").exists());
 }
 
 #[test]

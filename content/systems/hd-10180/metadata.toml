@@ -1,0 +1,19 @@
+hostname = "HD 10180"
+fingerprint = "sha256:db35510ba4e95bd9991d690cc9828a604d847a9d77ffe183cb90ca36b9b16919"
+fingerprint_version = 1
+elapsed_ms = 3272
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 3146
+completion_tokens = 432
+total_tokens = 3578
+generated_at = "2026-09-08T17:28:53.098658+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

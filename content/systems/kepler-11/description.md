@@ -1,0 +1,9 @@
+# Kepler-11 and its planets
+
+Kepler-11 is a star with an estimated age of about 8 billion years, a mass of about 0.95 solar masses, and a radius of about 1.1 solar radii. Its surface temperature is estimated at about 5680 K, and it lies roughly 2110 light-years from Earth. Six planets are associated with this host, all discovered by the transit method in 2010—a technique in which a planet passes in front of its star, causing a small dip in observed brightness, with repeated dips helping establish orbital periods.
+
+The system's planets span a range of reported radii, from the smallest, Kepler-11 b at about 1.8 Earth radii, to the largest, Kepler-11 e at about 4.19 Earth radii. Kepler-11 f has the second-smallest reported radius at about 2.49 Earth radii, while Kepler-11 g has the second-largest at about 3.33 Earth radii. All six planets have reported radius estimates larger than Earth's.
+
+Each planet's year is also shorter than Earth's roughly 365-day year. Kepler-11 b has the shortest year among the listed planets at about 10.3 days, followed by Kepler-11 c with the second-shortest at about 13 days. Kepler-11 d's year is about 22.7 days, and Kepler-11 e's about 32 days. At the longer end, Kepler-11 f has the second-longest year at about 46.7 days, while Kepler-11 g has the longest at about 118 days.
+
+Mass estimates are available for several of these worlds. Kepler-11 b carries an estimated mass of about 1.9 Earth masses. Kepler-11 c is estimated at about 2.9 Earth masses, and both this planet and Kepler-11 d through f have reported mass estimates larger than Earth's. Kepler-11 d is estimated at about 7.3 Earth masses, Kepler-11 e at about 8 Earth masses, and Kepler-11 f at about 2 Earth masses. For Kepler-11 g, the reported mass is an upper limit of 25 Earth masses, indicating its true mass does not exceed that bound.

@@ -1,0 +1,19 @@
+hostname = "GJ 1214"
+fingerprint = "sha256:b10138b5fedfed1bf53703fbe95c89af6188a095f0f6dbc96c63f80d0e7f0412"
+fingerprint_version = 1
+elapsed_ms = 2351
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 1908
+completion_tokens = 201
+total_tokens = 2109
+generated_at = "2026-09-08T17:20:45.851648+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

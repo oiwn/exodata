@@ -1,0 +1,7 @@
+# K2-18 and its planets
+
+K2-18 is a small, cool red dwarf star (spectral type M2.5 V) located about 124 light-years away. The star's reported mass estimate is about 0.359 solar masses, and its reported radius estimate is about 0.411 solar radii—both smaller than the Sun's. Its estimated temperature is about 3460 K, cooler than the Sun's.
+
+Two planets are associated with this host. K2-18 b, discovered by the transit method in 2015, has a reported radius estimate of about 2.37 Earth radii—larger than Earth's—and a reported mass estimate of about 8.92 Earth masses, also larger than Earth's. Its year is estimated at about 32.9 days, shorter than Earth's roughly 365-day year. Among the listed planets, K2-18 b has the longest year by reported estimates.
+
+K2-18 c, discovered by the radial velocity method in 2017, has a reported minimum-mass quantity (M sin i) of about 7.51 Earth masses. This represents a lower bound on the planet's true mass: when the orbit's tilt is unknown, the measurable gravitational pull gives at least this value, distinct from an estimate of the planet's true mass. Its year is estimated at about 8.96 days, shorter than Earth's roughly 365-day year, and among the listed planets it has the shortest year by reported estimates.

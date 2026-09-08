@@ -2,19 +2,24 @@ schema_version = 1
 publishable_comparisons = [
     "The star's reported mass estimate is smaller than the Sun's.",
     "The star's reported radius estimate is smaller than the Sun's.",
+    "The star's reported temperature is cooler than the Sun's.",
     "LHS 1140 b's reported radius estimate is larger than Earth's.",
+    "LHS 1140 b's reported mass estimate is larger than Earth's.",
     "LHS 1140 b's year is shorter than Earth's roughly 365-day year.",
     "LHS 1140 c's reported radius estimate is larger than Earth's.",
+    "LHS 1140 c's reported mass estimate is larger than Earth's.",
     "LHS 1140 c's year is shorter than Earth's roughly 365-day year.",
     "Among the listed planets, LHS 1140 c has the shortest year by reported estimates (about 3.78 days).",
     "Among the listed planets, LHS 1140 b has the longest year by reported estimates (about 24.7 days).",
     "Among the listed planets, LHS 1140 c has the smallest radius by reported estimates (about 1.27 Earth radii).",
     "Among the listed planets, LHS 1140 b has the largest radius by reported estimates (about 1.73 Earth radii).",
+    "Among the listed planets, LHS 1140 c has the smallest reported mass (about 1.91 Earth masses).",
+    "Among the listed planets, LHS 1140 b has the largest reported mass (about 5.6 Earth masses).",
 ]
 silent_constraints = [
     "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.",
     "These constraints and diagnostics are silent instructions, never reader-facing prose.",
-    "Missing measurements are unknown. Do not infer composition, density, habitability, spectral classifications, orbital spacing, orbital speed, or observing feasibility.",
+    "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.",
     "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.",
     "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.",
 ]
@@ -27,15 +32,15 @@ task = "Describe this stellar host and its associated planets for curious genera
 
 [guide]
 limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
-mass_provenance = "A minimum-mass quantity is not a measurement of the true mass."
+spectral = "A spectral type such as 'M4.5 V' or 'G5V' classifies a star: the leading letter and number give its temperature class (M coolest and reddest, then K, G, F, A hotter; the Sun is G-type), and a trailing 'V' marks a main-sequence dwarf. A supplied spectral type may be restated in words at class level, e.g. an M-type dwarf as a small, cool red dwarf, or a G-type dwarf as Sun-like; a range such as 'K1/K2' shares the letter class. Omit the wording when the label is unusual or its class is ambiguous."
 transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
-units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A light-year is a unit of distance."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
 year = "An orbital period is the time a planet takes to complete one orbit: its year."
 
 [source]
 evidence_file = "evidence.json"
 distance_conversion = "parsecs * 3.26156 = light-years"
-selection = "Fullest stellar-host summary row and unique default planet rows; no cross-row filling"
+selection = "Fullest stellar-host summary row and unique default planet rows; spectral type may be taken from any host row"
 
 [source.files]
 stellarhosts = "data/stellarhosts.parquet"
@@ -103,7 +108,7 @@ source_field = "pl_bmasse"
 value = 5.6
 unit = "Earth masses"
 qualifier = "estimate"
-display = "mass: about 5.6 Earth masses"
+display = "planet mass (not a minimum-mass quantity): about 5.6 Earth masses"
 error_plus = 0.19
 error_minus = -0.19
 provenance = "Mass"
@@ -136,7 +141,7 @@ source_field = "pl_bmasse"
 value = 1.91
 unit = "Earth masses"
 qualifier = "estimate"
-display = "mass: about 1.91 Earth masses"
+display = "planet mass (not a minimum-mass quantity): about 1.91 Earth masses"
 error_plus = 0.06
 error_minus = -0.06
 provenance = "Mass"

@@ -3,24 +3,32 @@ publishable_comparisons = [
     "Kepler-11 b's reported radius estimate is larger than Earth's.",
     "Kepler-11 b's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 c's reported radius estimate is larger than Earth's.",
+    "Kepler-11 c's reported mass estimate is larger than Earth's.",
     "Kepler-11 c's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 d's reported radius estimate is larger than Earth's.",
+    "Kepler-11 d's reported mass estimate is larger than Earth's.",
     "Kepler-11 d's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 e's reported radius estimate is larger than Earth's.",
+    "Kepler-11 e's reported mass estimate is larger than Earth's.",
     "Kepler-11 e's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 f's reported radius estimate is larger than Earth's.",
+    "Kepler-11 f's reported mass estimate is larger than Earth's.",
     "Kepler-11 f's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 g's reported radius estimate is larger than Earth's.",
     "Kepler-11 g's year is shorter than Earth's roughly 365-day year.",
     "Among the listed planets, Kepler-11 b has the shortest year by reported estimates (about 10.3 days).",
     "Among the listed planets, Kepler-11 g has the longest year by reported estimates (about 118 days).",
+    "Among the listed planets, Kepler-11 c has the second-shortest year by reported estimates (about 13 days).",
+    "Among the listed planets, Kepler-11 f has the second-longest year by reported estimates (about 46.7 days).",
     "Among the listed planets, Kepler-11 b has the smallest radius by reported estimates (about 1.8 Earth radii).",
     "Among the listed planets, Kepler-11 e has the largest radius by reported estimates (about 4.19 Earth radii).",
+    "Among the listed planets, Kepler-11 f has the second-smallest radius by reported estimates (about 2.49 Earth radii).",
+    "Among the listed planets, Kepler-11 g has the second-largest radius by reported estimates (about 3.33 Earth radii).",
 ]
 silent_constraints = [
     "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.",
     "These constraints and diagnostics are silent instructions, never reader-facing prose.",
-    "Missing measurements are unknown. Do not infer composition, density, habitability, spectral classifications, orbital spacing, orbital speed, or observing feasibility.",
+    "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.",
     "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.",
     "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.",
 ]
@@ -33,15 +41,14 @@ task = "Describe this stellar host and its associated planets for curious genera
 
 [guide]
 limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
-mass_provenance = "A minimum-mass quantity is not a measurement of the true mass."
 transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
-units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A light-year is a unit of distance."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
 year = "An orbital period is the time a planet takes to complete one orbit: its year."
 
 [source]
 evidence_file = "evidence.json"
 distance_conversion = "parsecs * 3.26156 = light-years"
-selection = "Fullest stellar-host summary row and unique default planet rows; no cross-row filling"
+selection = "Fullest stellar-host summary row and unique default planet rows; spectral type may be taken from any host row"
 
 [source.files]
 stellarhosts = "data/stellarhosts.parquet"
@@ -108,7 +115,7 @@ source_field = "pl_bmasse"
 value = 1.9
 unit = "Earth masses"
 qualifier = "estimate"
-display = "mass: about 1.9 Earth masses"
+display = "planet mass (not a minimum-mass quantity): about 1.9 Earth masses"
 error_plus = 1.4
 error_minus = -1.0
 provenance = "Mass"
@@ -141,7 +148,7 @@ source_field = "pl_bmasse"
 value = 2.9
 unit = "Earth masses"
 qualifier = "estimate"
-display = "mass: about 2.9 Earth masses"
+display = "planet mass (not a minimum-mass quantity): about 2.9 Earth masses"
 error_plus = 2.9
 error_minus = -1.6
 provenance = "Mass"
@@ -174,7 +181,7 @@ source_field = "pl_bmasse"
 value = 7.3
 unit = "Earth masses"
 qualifier = "estimate"
-display = "mass: about 7.3 Earth masses"
+display = "planet mass (not a minimum-mass quantity): about 7.3 Earth masses"
 error_plus = 0.8
 error_minus = -1.5
 provenance = "Mass"
@@ -207,7 +214,7 @@ source_field = "pl_bmasse"
 value = 8.0
 unit = "Earth masses"
 qualifier = "estimate"
-display = "mass: about 8 Earth masses"
+display = "planet mass (not a minimum-mass quantity): about 8 Earth masses"
 error_plus = 1.5
 error_minus = -2.1
 provenance = "Mass"
@@ -240,7 +247,7 @@ source_field = "pl_bmasse"
 value = 2.0
 unit = "Earth masses"
 qualifier = "estimate"
-display = "mass: about 2 Earth masses"
+display = "planet mass (not a minimum-mass quantity): about 2 Earth masses"
 error_plus = 0.8
 error_minus = -0.9
 provenance = "Mass"
@@ -273,7 +280,7 @@ source_field = "pl_bmasse"
 value = 25.0
 unit = "Earth masses"
 qualifier = "upper_limit"
-display = "mass: a reported upper limit of 25 Earth masses"
+display = "planet mass (not a minimum-mass quantity): a reported upper limit of 25 Earth masses"
 provenance = "Mass"
 
 [planets.measurements.orbital_period]

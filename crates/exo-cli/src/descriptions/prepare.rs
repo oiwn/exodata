@@ -14,6 +14,9 @@ use serde_json::{Value, json};
 const GUIDE: &str =
     include_str!("../../../../content/prompts/stellarhost_guide.toml");
 const LIGHT_YEARS_PER_PARSEC: f64 = 3.26156;
+const EARTH_DAYS_PER_YEAR: f64 = 365.0;
+const EARTH_MASSES_PER_JUPITER: f64 = 317.8;
+const SUN_EFFECTIVE_TEMPERATURE_K: f64 = 5772.0;
 
 #[derive(Serialize)]
 struct Measurement {
@@ -180,9 +183,25 @@ fn write_pair(
     force: bool,
     evidence: &str,
     request: &str,
+    install: impl FnMut(&Path, &Path) -> std::io::Result<()>,
+) -> Result<()> {
+    store_pair(
+        directory,
+        ".prepare",
+        [("evidence.json", evidence), ("request.toml", request)],
+        || check_existing(directory, hostname, force),
+        install,
+    )
+}
+
+pub(super) fn store_pair(
+    directory: &Path,
+    staging_name: &str,
+    files: [(&str, &str); 2],
+    validate: impl FnOnce() -> Result<()>,
     mut install: impl FnMut(&Path, &Path) -> std::io::Result<()>,
 ) -> Result<()> {
-    let staging = directory.join(".prepare");
+    let staging = directory.join(staging_name);
     fs::create_dir(&staging).with_context(|| {
         format!(
             "Cannot create {}; another preparation or recovery may be pending",
@@ -191,8 +210,7 @@ fn write_pair(
     })?;
     let mut recovery_failed = false;
     let result = (|| -> Result<()> {
-        check_existing(directory, hostname, force)?;
-        let files = [("evidence.json", evidence), ("request.toml", request)];
+        validate()?;
         let mut had_previous = [false; 2];
         for (i, (name, text)) in files.iter().enumerate() {
             fs::write(staging.join(name), text)
@@ -413,7 +431,10 @@ fn prepare(
                 Some("Msini") => {
                     format!("minimum-mass quantity (M sin i): {}", mass.display)
                 }
-                Some("Mass") => format!("mass: {}", mass.display),
+                Some("Mass") => format!(
+                    "planet mass (not a minimum-mass quantity): {}",
+                    mass.display
+                ),
                 Some("M-R relationship") => format!(
                     "mass inferred from a mass-radius relationship: {}",
                     mass.display
@@ -442,6 +463,19 @@ fn prepare(
         spectral_type: string(host, "st_spectype"),
         measurements: BTreeMap::new(),
     };
+    if star.spectral_type.is_none() {
+        if let Some(spectype) = host_rows
+            .iter()
+            .filter_map(|row| string(row, "st_spectype"))
+            .next()
+        {
+            diagnostics.push(
+                "st_spectype missing from the selected host row; taken from another host row"
+                    .into(),
+            );
+            star.spectral_type = Some(spectype);
+        }
+    }
     for (key, field, unit) in [
         ("temperature", "st_teff", "K"),
         ("mass", "st_mass", "solar masses"),
@@ -472,10 +506,27 @@ fn prepare(
     };
     let comparisons = comparisons(&star, &planets);
     let source = json!({"evidence_file": "evidence.json", "distance_conversion": "parsecs * 3.26156 = light-years",
-        "selection": "Fullest stellar-host summary row and unique default planet rows; no cross-row filling"});
+        "selection": "Fullest stellar-host summary row and unique default planet rows; spectral type may be taken from any host row"});
     let evidence = json!({"schema_version": 1, "hostname": hostname,
         "host": {"source_row_count": host_rows.len(), "row": host}, "planets": selected,
         "diagnostics": diagnostics});
+    let mut guide: BTreeMap<String, String> = toml::from_str(GUIDE)?;
+    if !planets.iter().any(|p| {
+        p.measurements
+            .get("mass")
+            .is_some_and(|m| m.provenance.as_deref() == Some("Msini"))
+    }) {
+        guide.remove("minimum_mass");
+    }
+    if !planets
+        .iter()
+        .any(|p| p.discovery_method.as_deref() == Some("Transit"))
+    {
+        guide.remove("transit");
+    }
+    if star.spectral_type.is_none() {
+        guide.remove("spectral");
+    }
     let request = Request { schema_version: 1,
         request: BTreeMap::from([
             ("task", "Describe this stellar host and its associated planets for curious general readers."),
@@ -483,26 +534,17 @@ fn prepare(
             ("format", "A factual Markdown title and connected paragraphs; no tables or bullet lists"),
             ("coverage", "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."),
         ]),
-        guide: toml::from_str(GUIDE)?, source, system, star, planets,
+        guide, source, system, star, planets,
         publishable_comparisons: comparisons,
         silent_constraints: vec![
             "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.".into(),
             "These constraints and diagnostics are silent instructions, never reader-facing prose.".into(),
-            "Missing measurements are unknown. Do not infer composition, density, habitability, spectral classifications, orbital spacing, orbital speed, or observing feasibility.".into(),
+            "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.".into(),
             "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.".into(),
             "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.".into(),
-        ].into_iter().chain(diagnostics.iter().cloned()).collect(),
+        ],
     };
     Ok((request, evidence, diagnostics))
-}
-
-fn separated(a: &Measurement, b: &Measurement) -> bool {
-    match (a.interval(), b.interval()) {
-        (Some((_, high)), Some((low, _))) => {
-            high < low && significant(a.value) != significant(b.value)
-        }
-        _ => false,
-    }
 }
 
 fn against(m: &Measurement, reference: f64) -> Option<&'static str> {
@@ -519,6 +561,22 @@ fn against(m: &Measurement, reference: f64) -> Option<&'static str> {
     }
 }
 
+fn distinct_from_all(values: &[(&str, &Measurement)], index: usize) -> bool {
+    let digits = significant(values[index].1.value);
+    values
+        .iter()
+        .enumerate()
+        .all(|(i, (_, m))| i == index || significant(m.value) != digits)
+}
+
+fn mass_noun(m: &Measurement) -> &'static str {
+    if m.provenance.as_deref() == Some("Msini") {
+        "minimum-mass quantity"
+    } else {
+        "mass estimate"
+    }
+}
+
 fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
     let mut result = Vec::new();
     for key in ["mass", "radius"] {
@@ -527,6 +585,20 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
         {
             result.push(format!("The star's reported {key} estimate is {direction} than the Sun's."));
         }
+    }
+    if let Some(direction) = star
+        .measurements
+        .get("temperature")
+        .and_then(|m| against(m, SUN_EFFECTIVE_TEMPERATURE_K))
+    {
+        let direction = if direction == "larger" {
+            "hotter"
+        } else {
+            "cooler"
+        };
+        result.push(format!(
+            "The star's reported temperature is {direction} than the Sun's."
+        ));
     }
     for planet in planets {
         if let Some(direction) = planet
@@ -539,10 +611,27 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
                 planet.name
             ));
         }
+        if let Some(m) = planet.measurements.get("mass") {
+            if let Some(direction) = against(m, 1.0) {
+                result.push(format!(
+                    "{}'s reported {} is {direction} than Earth's.",
+                    planet.name,
+                    mass_noun(m)
+                ));
+            }
+            if against(m, EARTH_MASSES_PER_JUPITER) == Some("larger") {
+                result.push(format!(
+                    "{}'s reported {} is roughly {} times Jupiter's mass.",
+                    planet.name,
+                    mass_noun(m),
+                    significant(m.value / EARTH_MASSES_PER_JUPITER)
+                ));
+            }
+        }
         if let Some(direction) = planet
             .measurements
             .get("orbital_period")
-            .and_then(|m| against(m, 365.0))
+            .and_then(|m| against(m, EARTH_DAYS_PER_YEAR))
         {
             let direction = if direction == "smaller" {
                 "shorter"
@@ -564,22 +653,93 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
     ] {
         let mut values: Vec<_> = planets
             .iter()
-            .filter_map(|p| p.measurements.get(key).map(|m| (&p.name, m)))
+            .filter_map(|p| {
+                p.measurements
+                    .get(key)
+                    .filter(|m| m.interval().is_some())
+                    .map(|m| (p.name.as_str(), m))
+            })
             .collect();
         if values.len() != planets.len() {
             continue;
         }
         values.sort_by(|a, b| a.1.value.total_cmp(&b.1.value));
-        let first = values[0];
-        let last = values[values.len() - 1];
-        if values[1..].iter().all(|(_, m)| separated(first.1, m)) {
-            result.push(format!("Among the listed planets, {} has the {low_label} by reported estimates ({}).", first.0, first.1.display));
+        let last = values.len() - 1;
+        if distinct_from_all(&values, 0) {
+            result.push(format!("Among the listed planets, {} has the {low_label} by reported estimates ({}).", values[0].0, values[0].1.display));
         }
-        if values[..values.len() - 1]
-            .iter()
-            .all(|(_, m)| separated(m, last.1))
+        if distinct_from_all(&values, last) {
+            result.push(format!("Among the listed planets, {} has the {high_label} by reported estimates ({}).", values[last].0, values[last].1.display));
+        }
+        if values.len() >= 3 {
+            if distinct_from_all(&values, 1) {
+                result.push(format!("Among the listed planets, {} has the second-{low_label} by reported estimates ({}).", values[1].0, values[1].1.display));
+            }
+            if distinct_from_all(&values, last - 1) {
+                result.push(format!("Among the listed planets, {} has the second-{high_label} by reported estimates ({}).", values[last - 1].0, values[last - 1].1.display));
+            }
+        }
+    }
+    let mut masses: Vec<_> = planets
+        .iter()
+        .filter_map(|p| {
+            p.measurements
+                .get("mass")
+                .filter(|m| m.interval().is_some())
+                .map(|m| (p.name.as_str(), m))
+        })
+        .collect();
+    if masses.len() == planets.len() {
+        let provenance = masses[0].1.provenance.as_deref();
+        if matches!(provenance, Some("Mass") | Some("Msini"))
+            && masses
+                .iter()
+                .all(|(_, m)| m.provenance.as_deref() == provenance)
         {
-            result.push(format!("Among the listed planets, {} has the {high_label} by reported estimates ({}).", last.0, last.1.display));
+            let label = if provenance == Some("Msini") {
+                "reported minimum-mass quantity"
+            } else {
+                "reported mass"
+            };
+            masses.sort_by(|a, b| a.1.value.total_cmp(&b.1.value));
+            let last = masses.len() - 1;
+            let amount = |index: usize| {
+                format!(
+                    "about {} {}",
+                    significant(masses[index].1.value),
+                    masses[index].1.unit
+                )
+            };
+            if distinct_from_all(&masses, 0) {
+                result.push(format!(
+                    "Among the listed planets, {} has the smallest {label} ({}).",
+                    masses[0].0,
+                    amount(0)
+                ));
+            }
+            if distinct_from_all(&masses, last) {
+                result.push(format!(
+                    "Among the listed planets, {} has the largest {label} ({}).",
+                    masses[last].0,
+                    amount(last)
+                ));
+            }
+            if masses.len() >= 3 {
+                if distinct_from_all(&masses, 1) {
+                    result.push(format!(
+                        "Among the listed planets, {} has the second-smallest {label} ({}).",
+                        masses[1].0,
+                        amount(1)
+                    ));
+                }
+                if distinct_from_all(&masses, last - 1) {
+                    result.push(format!(
+                        "Among the listed planets, {} has the second-largest {label} ({}).",
+                        masses[last - 1].0,
+                        amount(last - 1)
+                    ));
+                }
+            }
         }
     }
     result
@@ -779,6 +939,7 @@ mod tests {
         let (request, _, _) = prepare("Test", &[host()], &[p.clone()]).unwrap();
         let m = &request.planets[0].measurements["mass"];
         assert_eq!(m.provenance.as_deref(), Some("Msini"));
+        assert!(request.guide.contains_key("minimum_mass"));
         assert!(m.display.contains("minimum-mass quantity"));
         assert!(m.display.contains("upper limit"));
         p["pl_bmasse"] = Value::Null;
@@ -788,13 +949,47 @@ mod tests {
         let m = &request.planets[0].measurements["mass"];
         assert_eq!(m.source_field, "pl_masse");
         assert_eq!(m.provenance.as_deref(), Some("Mass"));
+        assert!(!request.guide.contains_key("minimum_mass"));
+        assert!(!request.guide.contains_key("transit"));
+        assert!(
+            !request
+                .silent_constraints
+                .iter()
+                .any(|s| s.contains("missing or unusable"))
+        );
         assert!(m.display.contains("lower limit of 4.56789"));
+    }
+
+    #[test]
+    fn spectral_type_filled_from_any_host_row_and_guide_follows() {
+        let other = json!({"hostname": "Test", "st_spectype": "K1/K2 V",
+            "st_refname": "Other"});
+        let (request, evidence, diagnostics) =
+            prepare("Test", &[host(), other], &[planet("Test b", 10.0)]).unwrap();
+        assert_eq!(request.star.spectral_type.as_deref(), Some("K1/K2 V"));
+        assert!(request.guide.contains_key("spectral"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|s| s.contains("taken from another host row"))
+        );
+        assert!(evidence["host"]["row"]["st_spectype"].is_null());
+        let (request, _, _) =
+            prepare("Test", &[host()], &[planet("Test b", 10.0)]).unwrap();
+        assert!(request.star.spectral_type.is_none());
+        assert!(!request.guide.contains_key("spectral"));
+        assert!(
+            !request
+                .silent_constraints
+                .iter()
+                .any(|s| s.contains("spectral"))
+        );
     }
 
     #[test]
     fn suppresses_overlaps_bounds_unknown_qualifiers_and_rounded_ties() {
         let mut diagnostics = Vec::new();
-        let mut a = measurement(
+        let a = measurement(
             &planet("a", 10.0),
             "pl_orbper",
             "days",
@@ -802,7 +997,7 @@ mod tests {
             &mut diagnostics,
         )
         .unwrap();
-        let b = measurement(
+        let mut bound = measurement(
             &planet("b", 20.0),
             "pl_orbper",
             "days",
@@ -810,18 +1005,186 @@ mod tests {
             &mut diagnostics,
         )
         .unwrap();
-        assert!(separated(&a, &b));
-        a.error_plus = Some(15.0);
-        assert!(!separated(&a, &b));
-        a.error_plus = None;
-        a.qualifier = "upper_limit";
-        assert!(!separated(&a, &b));
-        assert!(against(&a, 365.0).is_none());
-        a.qualifier = "unspecified";
-        assert!(!separated(&a, &b));
-        a.qualifier = "estimate";
-        a.value = 19.98;
-        assert!(!separated(&a, &b));
+        bound.qualifier = "upper_limit";
+        assert_eq!(against(&a, 365.0), Some("smaller"));
+        assert!(against(&bound, 365.0).is_none());
+        bound.qualifier = "unspecified";
+        assert!(against(&bound, 365.0).is_none());
+        let mut tie = measurement(
+            &planet("c", 19.98),
+            "pl_orbper",
+            "days",
+            "c",
+            &mut diagnostics,
+        )
+        .unwrap();
+        tie.value = 10.0;
+        let values: Vec<(&str, &Measurement)> =
+            [("a", &a), ("c", &tie)].into_iter().collect();
+        assert!(!distinct_from_all(&values, 0));
+        assert!(!distinct_from_all(&values, 1));
+    }
+
+    #[test]
+    fn mass_and_temperature_comparisons_follow_provenance() {
+        let mut giant = planet("Test b", 10.0);
+        giant["pl_bmasse"] = json!(2000.0);
+        giant["pl_bmasselim"] = json!(0);
+        giant["pl_bmasseerr1"] = json!(100.0);
+        giant["pl_bmasseerr2"] = json!(-100.0);
+        let mut small = planet("Test c", 20.0);
+        small["pl_bmasse"] = json!(4.5);
+        small["pl_bmasselim"] = json!(0);
+        small["pl_bmasseerr1"] = json!(0.2);
+        small["pl_bmasseerr2"] = json!(-0.2);
+        let mut h = host();
+        h["st_teff"] = json!(3096.0);
+        h["st_tefflim"] = json!(0);
+        let (request, _, _) =
+            prepare("Test", &[h.clone()], &[giant.clone(), small.clone()])
+                .unwrap();
+        let facts = &request.publishable_comparisons;
+        assert!(
+            facts.iter().any(|s| s
+                == "The star's reported temperature is cooler than the Sun's.")
+        );
+        assert!(
+            facts.iter().any(|s| s
+                == "Test b's reported mass estimate is larger than Earth's.")
+        );
+        assert!(facts.iter().any(|s| s.contains(
+            "Test b's reported mass estimate is roughly 6.29 times Jupiter's mass."
+        )));
+        assert!(
+            facts.iter().any(|s| s
+                == "Test c's reported mass estimate is larger than Earth's.")
+        );
+        assert!(
+            !facts
+                .iter()
+                .any(|s| s.contains("Test c") && s.contains("Jupiter"))
+        );
+        assert!(facts.iter().any(|s| s.contains(
+            "Among the listed planets, Test b has the largest reported mass (about 2000 Earth masses)."
+        )));
+        assert!(facts.iter().any(|s| s.contains(
+            "Among the listed planets, Test c has the smallest reported mass (about 4.5 Earth masses)."
+        )));
+
+        let mut hot = h.clone();
+        hot["st_teff"] = json!(7400.0);
+        let (request, _, _) =
+            prepare("Test", &[hot], &[giant.clone(), small.clone()]).unwrap();
+        assert!(
+            request.publishable_comparisons.iter().any(|s| s
+                == "The star's reported temperature is hotter than the Sun's.")
+        );
+
+        small["pl_bmassprov"] = json!("Msini");
+        let (request, _, _) =
+            prepare("Test", &[h], &[giant.clone(), small.clone()]).unwrap();
+        let facts = &request.publishable_comparisons;
+        assert!(facts.iter().any(|s| s
+            == "Test c's reported minimum-mass quantity is larger than Earth's."));
+        assert!(
+            !facts.iter().any(|s| s.contains("reported mass (about"))
+                || !facts
+                    .iter()
+                    .any(|s| s.contains("minimum-mass quantity (about"))
+        );
+        let (request, _, _) =
+            prepare("Test", &[host()], &[giant.clone(), small.clone()]).unwrap();
+        assert!(
+            !request
+                .publishable_comparisons
+                .iter()
+                .any(|s| s.contains("has the largest reported")
+                    || s.contains("has the smallest reported"))
+        );
+
+        giant["pl_bmassprov"] = json!("Msini");
+        let (request, _, _) =
+            prepare("Test", &[host()], &[giant, small]).unwrap();
+        assert!(request.publishable_comparisons.iter().any(|s| s.contains(
+            "Test b has the largest reported minimum-mass quantity (about 2000 Earth masses)."
+        )));
+
+        let mut overlap = planet("Test d", 30.0);
+        overlap["pl_bmasse"] = json!(1.05);
+        overlap["pl_bmasselim"] = json!(0);
+        overlap["pl_bmasseerr1"] = json!(0.06);
+        overlap["pl_bmasseerr2"] = json!(-0.06);
+        let (request, _, _) =
+            prepare("Test", &[host()], &[planet("Test e", 40.0), overlap])
+                .unwrap();
+        assert!(
+            !request
+                .publishable_comparisons
+                .iter()
+                .any(|s| s.contains("Test d's reported mass"))
+        );
+    }
+
+    #[test]
+    fn second_place_facts_require_three_planets_and_separation() {
+        let mut b = planet("Test b", 10.0);
+        b["pl_rade"] = json!(1.5);
+        b["pl_radelim"] = json!(0);
+        b["pl_bmasse"] = json!(2.0);
+        b["pl_bmasselim"] = json!(0);
+        let mut c = planet("Test c", 20.0);
+        c["pl_rade"] = json!(2.5);
+        c["pl_radelim"] = json!(0);
+        c["pl_bmasse"] = json!(4.5);
+        c["pl_bmasselim"] = json!(0);
+        let mut d = planet("Test d", 30.0);
+        d["pl_rade"] = json!(3.5);
+        d["pl_radelim"] = json!(0);
+        d["pl_bmasse"] = json!(2000.0);
+        d["pl_bmasselim"] = json!(0);
+        let (request, _, _) =
+            prepare("Test", &[host()], &[b.clone(), c.clone(), d.clone()])
+                .unwrap();
+        let facts = &request.publishable_comparisons;
+        assert!(facts.iter().any(|s| s.contains(
+            "Test c has the second-shortest year by reported estimates (about 20 days)."
+        )));
+        assert!(facts.iter().any(|s| s.contains(
+            "Test c has the second-longest year by reported estimates (about 20 days)."
+        )));
+        assert!(facts.iter().any(|s| s.contains(
+            "Test c has the second-smallest radius by reported estimates (about 2.5 Earth radii)."
+        )));
+        assert!(facts.iter().any(|s| s.contains(
+            "Test c has the second-largest reported mass (about 4.5 Earth masses)."
+        )));
+        let mut tied = planet("Test g", 25.0);
+        tied["pl_rade"] = json!(1.5049);
+        tied["pl_radelim"] = json!(0);
+        let (request, _, _) = prepare("Test", &[host()], &[b, tied, d]).unwrap();
+        let facts = &request.publishable_comparisons;
+        assert!(facts.iter().any(|s| s.contains(
+            "Test d has the largest radius by reported estimates (about 3.5 Earth radii)."
+        )));
+        assert!(!facts.iter().any(|s| s.contains("smallest radius")
+            || s.contains("second-largest radius")));
+        let mut two = planet("Test e", 40.0);
+        two["pl_rade"] = json!(1.5);
+        two["pl_radelim"] = json!(0);
+        two["pl_bmasse"] = json!(2.0);
+        two["pl_bmasselim"] = json!(0);
+        let mut other = planet("Test f", 50.0);
+        other["pl_rade"] = json!(3.5);
+        other["pl_radelim"] = json!(0);
+        other["pl_bmasse"] = json!(4.5);
+        other["pl_bmasselim"] = json!(0);
+        let (request, _, _) = prepare("Test", &[host()], &[two, other]).unwrap();
+        assert!(
+            !request
+                .publishable_comparisons
+                .iter()
+                .any(|s| s.contains("second-"))
+        );
     }
 
     #[test]

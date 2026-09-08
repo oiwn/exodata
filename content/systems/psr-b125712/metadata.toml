@@ -1,0 +1,19 @@
+hostname = "PSR B1257+12"
+fingerprint = "sha256:04276d11cf8fdca40a3c437a6fc9021a8f99e22ffad4e702a6169b40dd70965d"
+fingerprint_version = 1
+elapsed_ms = 2825
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 2226
+completion_tokens = 351
+total_tokens = 2577
+generated_at = "2026-09-08T17:28:52.651282+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

@@ -1,7 +1,4 @@
-use std::time::{Duration, Instant};
-
 use anyhow::{Context, Result, bail};
-use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -20,7 +17,7 @@ pub fn columns() -> Vec<String> {
     .collect()
 }
 
-fn request_body(
+pub(super) fn request_body(
     input: &str,
     system_prompt: Option<&str>,
     max_tokens: u32,
@@ -31,7 +28,7 @@ fn request_body(
     }
     messages.push(json!({"role": "user", "content": input}));
     json!({
-        "model": "deepseek-v4-flash",
+        "model": super::client::MODEL,
         "messages": messages,
         "max_tokens": max_tokens,
         "thinking": {"type": "disabled"},
@@ -61,47 +58,25 @@ pub fn generate_with_system(
     if max_tokens == 0 {
         bail!("max_tokens must be greater than zero");
     }
-    let key = std::env::var("DEEPSEEK_API_KEY").context(
-        "Set DEEPSEEK_API_KEY in the environment before calling DeepSeek",
-    )?;
-    if key.trim().is_empty() {
-        bail!("DEEPSEEK_API_KEY must not be blank");
-    }
-    let client = Client::builder()
-        .timeout(Duration::from_secs(60))
-        .redirect(reqwest::redirect::Policy::none())
-        .retry(reqwest::retry::never())
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
         .build()?;
-    let start = Instant::now();
-    let response = client.post("https://api.deepseek.com/chat/completions")
-        .bearer_auth(key.trim())
-        .json(&request_body(input, system_prompt, max_tokens))
-        .send()
-        .map_err(|error| {
-            if error.is_timeout() {
-                anyhow::anyhow!("DeepSeek request timed out after 60 seconds; no retry attempted")
-            } else {
-                anyhow::anyhow!("DeepSeek connection/request failed; no retry attempted")
-            }
-        })?;
-    let status = response.status();
-    if !status.is_success() {
-        let reason = match status.as_u16() {
-            401 | 403 => "authentication/authorization failed",
-            402 => "insufficient balance",
-            429 => "rate limited",
-            _ => "request failed",
-        };
-        bail!("DeepSeek HTTP {status}: {reason}; no retry attempted");
-    }
-    let response: Response = response
-        .json()
-        .context("DeepSeek response could not be read or parsed")?;
-    report(response, start.elapsed().as_millis())
+    runtime.block_on(async {
+        let outcome = super::client::Client::from_env()?
+            .generate(input, system_prompt, max_tokens)
+            .await;
+        outcome.report.ok_or_else(|| {
+            anyhow::anyhow!(
+                outcome
+                    .error
+                    .unwrap_or_else(|| "DeepSeek generation failed".into())
+            )
+        })
+    })
 }
 
 #[derive(Deserialize)]
-struct Response {
+pub(super) struct Response {
     model: String,
     choices: Vec<Choice>,
     usage: Usage,
@@ -125,7 +100,7 @@ struct Usage {
     total_tokens: u64,
 }
 
-fn report(response: Response, elapsed_ms: u128) -> Result<Value> {
+pub(super) fn report(response: Response, elapsed_ms: u128) -> Result<Value> {
     let choice = response
         .choices
         .first()

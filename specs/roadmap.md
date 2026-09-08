@@ -18,7 +18,7 @@ Command [tailwindcss] requested version v4.2.1, but a newer version v4.3.3 is av
 - [ ] Implement and verify shared selection for detail pages and exports,
   retaining raw records and a selected-record index for references, errors,
   and qualifiers. Confirm hero values, summary cards, and comparisons agree.
-- [ ] Reuse shared selection when implementing description-generation inputs.
+- [x] Reuse shared selection when implementing description-generation inputs.
 - [ ] Present measurement qualifiers consistently: distinguish mass, minimum
   mass, and upper/lower bounds using the selected source record. This remains
   a separate pre-release requirement from selecting existing numeric values.

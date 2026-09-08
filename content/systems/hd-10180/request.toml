@@ -1,0 +1,243 @@
+schema_version = 1
+publishable_comparisons = [
+    "The star's reported mass estimate is larger than the Sun's.",
+    "The star's reported temperature is hotter than the Sun's.",
+    "HD 10180 c's reported minimum-mass quantity is larger than Earth's.",
+    "HD 10180 c's year is shorter than Earth's roughly 365-day year.",
+    "HD 10180 d's reported minimum-mass quantity is larger than Earth's.",
+    "HD 10180 d's year is shorter than Earth's roughly 365-day year.",
+    "HD 10180 e's reported minimum-mass quantity is larger than Earth's.",
+    "HD 10180 e's year is shorter than Earth's roughly 365-day year.",
+    "HD 10180 f's reported minimum-mass quantity is larger than Earth's.",
+    "HD 10180 f's year is shorter than Earth's roughly 365-day year.",
+    "HD 10180 g's reported minimum-mass quantity is larger than Earth's.",
+    "HD 10180 g's year is longer than Earth's roughly 365-day year.",
+    "HD 10180 h's reported minimum-mass quantity is larger than Earth's.",
+    "HD 10180 h's year is longer than Earth's roughly 365-day year.",
+    "Among the listed planets, HD 10180 c has the shortest year by reported estimates (about 5.76 days).",
+    "Among the listed planets, HD 10180 h has the longest year by reported estimates (about 2210 days).",
+    "Among the listed planets, HD 10180 d has the second-shortest year by reported estimates (about 16.4 days).",
+    "Among the listed planets, HD 10180 g has the second-longest year by reported estimates (about 605 days).",
+    "Among the listed planets, HD 10180 d has the smallest reported minimum-mass quantity (about 12 Earth masses).",
+    "Among the listed planets, HD 10180 h has the largest reported minimum-mass quantity (about 65.7 Earth masses).",
+    "Among the listed planets, HD 10180 c has the second-smallest reported minimum-mass quantity (about 13.2 Earth masses).",
+    "Among the listed planets, HD 10180 e has the second-largest reported minimum-mass quantity (about 25.6 Earth masses).",
+]
+silent_constraints = [
+    "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.",
+    "These constraints and diagnostics are silent instructions, never reader-facing prose.",
+    "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.",
+    "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.",
+    "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.",
+]
+
+[request]
+coverage = "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."
+format = "A factual Markdown title and connected paragraphs; no tables or bullet lists"
+target_words = "300–600; shorter when needed to avoid repetition or unsupported claims"
+task = "Describe this stellar host and its associated planets for curious general readers."
+
+[guide]
+limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+minimum_mass = "A minimum-mass quantity (M sin i) is a lower bound on the planet's true mass: when the orbit's tilt is unknown, the measurable gravitational pull gives at least this value. It is distinct from an estimate of the planet's true mass."
+spectral = "A spectral type such as 'M4.5 V' or 'G5V' classifies a star: the leading letter and number give its temperature class (M coolest and reddest, then K, G, F, A hotter; the Sun is G-type), and a trailing 'V' marks a main-sequence dwarf. A supplied spectral type may be restated in words at class level, e.g. an M-type dwarf as a small, cool red dwarf, or a G-type dwarf as Sun-like; a range such as 'K1/K2' shares the letter class. Omit the wording when the label is unusual or its class is ambiguous."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
+year = "An orbital period is the time a planet takes to complete one orbit: its year."
+
+[source]
+evidence_file = "evidence.json"
+distance_conversion = "parsecs * 3.26156 = light-years"
+selection = "Fullest stellar-host summary row and unique default planet rows; spectral type may be taken from any host row"
+
+[source.files]
+stellarhosts = "data/stellarhosts.parquet"
+exoplanets = "data/exoplanets.parquet"
+
+[system]
+hostname = "HD 10180"
+matching_host_planet_count = 6
+catalog_system_planet_count = 6
+catalog_system_star_count = 1
+
+[system.distance]
+source_field = "sy_dist"
+value = 127.072660692
+unit = "light-years"
+qualifier = "estimate"
+display = "about 127 light-years"
+error_plus = 0.126222372
+error_minus = -0.125896216
+
+[star]
+spectral_type = "G1 V"
+
+[star.measurements.age]
+source_field = "st_age"
+value = 4.3
+unit = "billion years"
+qualifier = "estimate"
+display = "about 4.3 billion years"
+error_plus = 0.5
+error_minus = -0.5
+
+[star.measurements.mass]
+source_field = "st_mass"
+value = 1.06
+unit = "solar masses"
+qualifier = "estimate"
+display = "about 1.06 solar masses"
+error_plus = 0.05
+error_minus = -0.05
+
+[star.measurements.temperature]
+source_field = "st_teff"
+value = 5911.0
+unit = "K"
+qualifier = "estimate"
+display = "about 5910 K"
+error_plus = 19.0
+error_minus = -19.0
+
+[[planets]]
+name = "HD 10180 c"
+discovery_method = "Radial Velocity"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 13.221728
+unit = "Earth masses"
+qualifier = "estimate"
+display = "minimum-mass quantity (M sin i): about 13.2 Earth masses"
+error_plus = 0.444962
+error_minus = -0.444962
+provenance = "Msini"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 5.75969
+unit = "days"
+qualifier = "estimate"
+display = "about 5.76 days"
+error_plus = 0.00028
+error_minus = -0.00028
+
+[[planets]]
+name = "HD 10180 d"
+discovery_method = "Radial Velocity"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 12.013974
+unit = "Earth masses"
+qualifier = "estimate"
+display = "minimum-mass quantity (M sin i): about 12 Earth masses"
+error_plus = 0.699226
+error_minus = -0.699226
+provenance = "Msini"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 16.357
+unit = "days"
+qualifier = "estimate"
+display = "about 16.4 days"
+error_plus = 0.0038
+error_minus = -0.0038
+
+[[planets]]
+name = "HD 10180 e"
+discovery_method = "Radial Velocity"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 25.585315
+unit = "Earth masses"
+qualifier = "estimate"
+display = "minimum-mass quantity (M sin i): about 25.6 Earth masses"
+error_plus = 1.017056
+error_minus = -1.017056
+provenance = "Msini"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 49.748
+unit = "days"
+qualifier = "estimate"
+display = "about 49.7 days"
+error_plus = 0.025
+error_minus = -0.025
+
+[[planets]]
+name = "HD 10180 f"
+discovery_method = "Radial Velocity"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 22.947326
+unit = "Earth masses"
+qualifier = "estimate"
+display = "minimum-mass quantity (M sin i): about 22.9 Earth masses"
+error_plus = 1.493801
+error_minus = -1.493801
+provenance = "Msini"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 122.744
+unit = "days"
+qualifier = "estimate"
+display = "about 123 days"
+error_plus = 0.232
+error_minus = -0.232
+
+[[planets]]
+name = "HD 10180 g"
+discovery_method = "Radial Velocity"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 23.265156
+unit = "Earth masses"
+qualifier = "estimate"
+display = "minimum-mass quantity (M sin i): about 23.3 Earth masses"
+error_plus = 4.386054
+error_minus = -4.386054
+provenance = "Msini"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 604.67
+unit = "days"
+qualifier = "estimate"
+display = "about 605 days"
+error_plus = 10.42
+error_minus = -10.42
+
+[[planets]]
+name = "HD 10180 h"
+discovery_method = "Radial Velocity"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 65.663678
+unit = "Earth masses"
+qualifier = "estimate"
+display = "minimum-mass quantity (M sin i): about 65.7 Earth masses"
+error_plus = 4.417837
+error_minus = -4.417837
+provenance = "Msini"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 2205.0
+unit = "days"
+qualifier = "estimate"
+display = "about 2210 days"
+error_plus = 105.9
+error_minus = -105.9

@@ -1,0 +1,11 @@
+## TRAPPIST-1 and its planets
+
+TRAPPIST-1 is a cool red dwarf star with a spectral type of M8.0 V. Its reported mass estimate is about 0.0898 solar masses, smaller than the Sun's, and its reported radius estimate is about 0.119 solar radii, also smaller than the Sun's. The star's estimated temperature of about 2570 K makes it cooler than the Sun, and it is thought to be about 7.6 billion years old.
+
+Seven planets are associated with this host, all discovered via the transit method between 2016 and 2017. Each one completes its orbit—its year—in far less than Earth's roughly 365-day year. TRAPPIST-1 b has the shortest year among the listed planets, about 1.51 days, and also carries the largest reported mass at about 1.37 Earth masses, larger than Earth's. Its radius is about 1.12 Earth radii, making it the second-largest reported radius in this system, larger than Earth's.
+
+TRAPPIST-1 c follows with the second-shortest year at about 2.42 days. It has an estimated mass of about 1.31 Earth masses and a radius of about 1.1 Earth radii, both larger than Earth's. TRAPPIST-1 d has a longer year of about 4.05 days but is smaller and lighter than Earth, with a radius of about 0.788 Earth radii (the second-smallest among the listed planets) and a mass of about 0.388 Earth masses (the second-smallest reported mass).
+
+TRAPPIST-1 e, with a year of about 6.1 days, is also smaller and less massive than Earth, with a radius of about 0.92 Earth radii and a mass of about 0.692 Earth masses. TRAPPIST-1 f, completing its orbit in about 9.21 days, is larger and more massive than Earth, with a radius of about 1.05 Earth radii and a mass of about 1.04 Earth masses.
+
+TRAPPIST-1 g has the second-longest year among the listed planets, about 12.4 days, and it holds the largest reported radius at about 1.13 Earth radii, larger than Earth's. Its estimated mass of about 1.32 Earth masses is the second-largest reported in this system. TRAPPIST-1 h has the longest year, about 18.8 days, but the smallest radius among the listed planets at about 0.755 Earth radii, smaller than Earth's, and the smallest reported mass at about 0.326 Earth masses, also smaller than Earth's.

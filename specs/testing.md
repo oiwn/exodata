@@ -14,6 +14,9 @@ commands, and selection of focused checks live in the
   identifier collisions, and replacement behavior preserving articles/metadata.
   Paired-write tests inject installation failures to verify restoration of
   previous files or absences and preservation of pending recovery backups.
+  Native generation tests use a local mock HTTP server for concurrency limits,
+  response settings/capture, skip/force decisions, timeout and account errors,
+  partial responses, and preservation of the previous successful result.
   API/local backend and download changes need focused verification; the presence
   of those modules does not establish automated coverage.
 - Web tests cover data queries, summaries, exports, REST/MCP, sitemaps, locale

@@ -12,7 +12,9 @@ ad hoc scripts.
 
 ## Prepare and inspect
 
-The fixed baseline is LHS 1140, Kepler-11, TRAPPIST-1, 51 Peg, and HD 41004 A.
+The fixed baseline is 51 Peg, HD 41004 A, Kepler-11, LHS 1140, TRAPPIST-1,
+HR 8799, PSR B1257+12, Kepler-16, 55 Cnc, Proxima Cen, HD 189733, GJ 1214,
+K2-18, HD 10180, and OGLE-2016-BLG-1195L.
 Keep it fixed while improving results; do not silently replace a difficult case.
 
 ```sh
@@ -33,7 +35,10 @@ reported backups before recovery; do not discard them or blindly retry.
 Inspect evidence selection, missing measurements, uncertainty/limit flags, and
 mass provenance before evaluating prose. Check the exact-host planet count
 separately from the catalog system count. A missing unique default row is an
-input problem to resolve, not permission to fill from another row.
+input problem to resolve, not permission to fill from another row. Host
+spectral type is the one cross-row exception: when the selected summary row
+lacks `st_spectype`, `prepare` fills it from any host row and records a
+diagnostic.
 
 The single shared system prompt is
 [content/stellarhost_prompt.txt](../../../content/stellarhost_prompt.txt).
@@ -43,46 +48,54 @@ must never become reader-facing prose. Shared explanatory text lives in
 preparation; rebuild/reprepare after editing the guide. Prompt edits are read
 directly by `generate` and do not require a rebuild.
 
-## Authorized generation trials
+## Generate and regenerate
 
-Input preparation alone does not authorize paid API trials. When trials are
-requested, check only whether `DEEPSEEK_API_KEY` is present/nonblank; never print
-it. Do not start a web server or download data.
+When generation is requested, check only whether `DEEPSEEK_API_KEY` is
+present/nonblank; never print it. Use the native Rust command:
 
 ```sh
-cargo run --locked -p exodata -- dev descriptions generate \
-  --input content/systems/lhs-1140/request.toml \
-  --system-prompt content/stellarhost_prompt.txt \
-  --max-tokens 1536 --output json
+cargo run --locked -p exodata -- dev descriptions generate-batch \
+  --input-dir content/systems --concurrency 4 --output json
 ```
 
-Use thinking disabled, no retries, and the existing 60-second timeout. The
-request target remains 300–600 words with permission to be shorter. Do not
-change the token cap, add repair calls, or expand to catalog-wide runs without
-an explicit change in scope.
+Optional repeated `--hostname` arguments limit the batch. The command consumes
+saved requests, preserving their edits. Run `prepare` explicitly after source
+data or preparation-guide changes. Shared-prompt changes are picked up directly.
 
-Before a trial, copy its exact request, evidence, and shared prompt into a new
-named trial directory under `tmp/`; pass the copied request and prompt to the
-generator. Save the complete JSON report, not just extracted article text.
-Record command/settings and review alongside it. Preserve previous trials and
-the existing manually reviewed baselines. On failure, record the failure; do
-not invent missing response text, usage, timing, or returned model metadata.
-The current CLI discards non-normal responses, so failed calls may have no
-response artifact. Automatic artifact capture is not implemented yet.
+The default cap is 1,536 output tokens per call, thinking disabled, no retries,
+and a 60-second timeout. The word target remains 300–600 with permission to be
+shorter. Keep the fixed five-system set during harness improvement; do not add
+repair calls or expand a requested baseline run to the full catalog.
 
-## Review
+An unchanged successful fingerprint is skipped. `--force` requests a new result
+with unchanged inputs. Fingerprints compare the prompt, canonical structured
+request, and generation settings; they do not inspect live Parquet data.
 
-Separate deterministic input verification from prose review. Check every
-factual claim against publishable input, including units, rounding, upper/lower
-limits, and minimum-mass quantities. Scientific plausibility does not make an
-unapproved claim supported. Look for newly calculated ratios, mass rankings,
-orbital-speed/spacing inferences, remembered classifications, and leaked notes.
+Everything per-system lives in `content/systems/<system-id>/`: tracked
+`request.toml`, `description.md`, and compact `metadata.toml`; ignored
+`evidence.json` and latest `fail.toml`. Success updates prose and metadata
+together and clears old failure information. Failure keeps the previous success
+and records diagnostics and any available returned text/usage in `fail.toml`.
+Do not build Python orchestration, trial folders, or a root `tmp/` workflow.
+Do not copy the shared prompt per system or create permanent response archives.
 
-Then assess repetition, unnecessary numerical inventories, hype, filler,
-readability, and useful coverage. Record factual and editorial failures
-separately; avoid exact-prose assertions or treating a model critique as proof
-of correctness. Store actual usage and timing only when returned.
+Progress and aggregate usage go to stderr; stdout contains table/JSON/CSV
+outcomes. Account/rate-limit/storage failures stop new scheduling while in-flight
+requests finish. A nonzero exit may include successful systems; inspect outcomes
+before rerunning. Pending `.generate` or `.fail-write` files require inspection
+before recovery, just like `.prepare` artifacts.
 
-These are preparation and review artifacts, not published articles. Do not
-advance generation source dates, overwrite manual articles, stage, or commit
-as part of an experiment unless specifically requested.
+## Check generation quality during development
+
+Compare prose with supplied facts: numbers, bounds, Mass versus Msini, radius
+wording, exact-host counts, and approved comparisons. Check for unlicensed
+classifications/history (a supplied spectral type restated through the guide's
+`spectral` entry is licensed), orbital-position/speed inferences, unapproved
+mass rankings, repeated inventories, and leaked diagnostic language. A normal
+model response is not proof of factual correctness. Do not invent returned
+usage or timing.
+
+Report findings in task context while improving the harness. There are no
+draft/accepted/published states or per-article approval workflow. Never stage or
+commit unless explicitly requested. Do not start a web server or download data
+for offline preparation/generation work.

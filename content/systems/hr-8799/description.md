@@ -1,0 +1,9 @@
+# HR 8799 and its planets
+
+HR 8799 is a star with a reported temperature of about 7400 K, which is hotter than the Sun's. The star is estimated to be about 0.03 billion years old and lies roughly 135 light-years away. Four planets are associated with this host: HR 8799 b, c, d, and e, all discovered through imaging between 2008 and 2010.
+
+The four planets are massive and large. HR 8799 b has an estimated mass of about 2000 Earth masses and a radius of about 13 Earth radii, both larger than Earth's corresponding values. Its year is estimated at about 170000 days, longer than Earth's roughly 365-day year. HR 8799 c carries an estimated mass of about 3000 Earth masses, also larger than Earth's, and its radius is about 13 Earth radii, again exceeding Earth's. HR 8799 c's year lasts roughly 69000 days, longer than an Earth year.
+
+HR 8799 d shares similar proportions: an estimated mass of about 3000 Earth masses, a radius of about 13 Earth radii, and an orbital period of about 37000 days—all exceeding Earth's mass, radius, and year. The fourth planet, HR 8799 e, has the largest reported radius among the listed planets at about 13.1 Earth radii, along with the largest reported mass at roughly 3180 Earth masses. Its year has not been supplied, but its mass is roughly 10 times Jupiter's mass, and its radius and mass both exceed Earth's.
+
+Among these planets, HR 8799 b has the smallest reported mass at about 2000 Earth masses, while HR 8799 e leads in both mass and radius by reported estimates. Each planet's mass estimate surpasses Earth's, and each listed radius is larger than Earth's as well.

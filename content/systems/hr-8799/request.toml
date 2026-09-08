@@ -1,0 +1,199 @@
+schema_version = 1
+publishable_comparisons = [
+    "The star's reported temperature is hotter than the Sun's.",
+    "HR 8799 b's reported radius estimate is larger than Earth's.",
+    "HR 8799 b's reported mass estimate is larger than Earth's.",
+    "HR 8799 b's reported mass estimate is roughly 6.29 times Jupiter's mass.",
+    "HR 8799 b's year is longer than Earth's roughly 365-day year.",
+    "HR 8799 c's reported radius estimate is larger than Earth's.",
+    "HR 8799 c's reported mass estimate is larger than Earth's.",
+    "HR 8799 c's reported mass estimate is roughly 9.44 times Jupiter's mass.",
+    "HR 8799 c's year is longer than Earth's roughly 365-day year.",
+    "HR 8799 d's reported radius estimate is larger than Earth's.",
+    "HR 8799 d's reported mass estimate is larger than Earth's.",
+    "HR 8799 d's reported mass estimate is roughly 9.44 times Jupiter's mass.",
+    "HR 8799 d's year is longer than Earth's roughly 365-day year.",
+    "HR 8799 e's reported radius estimate is larger than Earth's.",
+    "HR 8799 e's reported mass estimate is larger than Earth's.",
+    "HR 8799 e's reported mass estimate is roughly 10 times Jupiter's mass.",
+    "Among the listed planets, HR 8799 e has the largest radius by reported estimates (about 13.1 Earth radii).",
+    "Among the listed planets, HR 8799 b has the smallest reported mass (about 2000 Earth masses).",
+    "Among the listed planets, HR 8799 e has the largest reported mass (about 3180 Earth masses).",
+]
+silent_constraints = [
+    "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.",
+    "These constraints and diagnostics are silent instructions, never reader-facing prose.",
+    "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.",
+    "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.",
+    "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.",
+]
+
+[request]
+coverage = "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."
+format = "A factual Markdown title and connected paragraphs; no tables or bullet lists"
+target_words = "300–600; shorter when needed to avoid repetition or unsupported claims"
+task = "Describe this stellar host and its associated planets for curious general readers."
+
+[guide]
+limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+spectral = "A spectral type such as 'M4.5 V' or 'G5V' classifies a star: the leading letter and number give its temperature class (M coolest and reddest, then K, G, F, A hotter; the Sun is G-type), and a trailing 'V' marks a main-sequence dwarf. A supplied spectral type may be restated in words at class level, e.g. an M-type dwarf as a small, cool red dwarf, or a G-type dwarf as Sun-like; a range such as 'K1/K2' shares the letter class. Omit the wording when the label is unusual or its class is ambiguous."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
+year = "An orbital period is the time a planet takes to complete one orbit: its year."
+
+[source]
+evidence_file = "evidence.json"
+distance_conversion = "parsecs * 3.26156 = light-years"
+selection = "Fullest stellar-host summary row and unique default planet rows; spectral type may be taken from any host row"
+
+[source.files]
+stellarhosts = "data/stellarhosts.parquet"
+exoplanets = "data/exoplanets.parquet"
+
+[system]
+hostname = "HR 8799"
+matching_host_planet_count = 4
+catalog_system_planet_count = 4
+catalog_system_star_count = 1
+
+[system.distance]
+source_field = "sy_dist"
+value = 134.520106796
+unit = "light-years"
+qualifier = "estimate"
+display = "about 135 light-years"
+error_plus = 0.49412633999999994
+error_minus = -0.49086477999999995
+
+[star]
+spectral_type = "A5"
+
+[star.measurements.age]
+source_field = "st_age"
+value = 0.03
+unit = "billion years"
+qualifier = "estimate"
+display = "about 0.03 billion years"
+
+[star.measurements.temperature]
+source_field = "st_teff"
+value = 7400.0
+unit = "K"
+qualifier = "estimate"
+display = "about 7400 K"
+
+[[planets]]
+name = "HR 8799 b"
+discovery_method = "Imaging"
+discovery_year = 2008
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 2000.0
+unit = "Earth masses"
+qualifier = "estimate"
+display = "planet mass (not a minimum-mass quantity): about 2000 Earth masses"
+error_plus = 1000.0
+error_minus = -600.0
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 170000.0
+unit = "days"
+qualifier = "estimate"
+display = "about 170000 days"
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 13.0
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 13 Earth radii"
+error_plus = 1.0
+error_minus = -1.0
+
+[[planets]]
+name = "HR 8799 c"
+discovery_method = "Imaging"
+discovery_year = 2008
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 3000.0
+unit = "Earth masses"
+qualifier = "estimate"
+display = "planet mass (not a minimum-mass quantity): about 3000 Earth masses"
+error_plus = 1000.0
+error_minus = -1000.0
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 69000.0
+unit = "days"
+qualifier = "estimate"
+display = "about 69000 days"
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 13.0
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 13 Earth radii"
+error_plus = 1.0
+error_minus = 0.0
+
+[[planets]]
+name = "HR 8799 d"
+discovery_method = "Imaging"
+discovery_year = 2008
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 3000.0
+unit = "Earth masses"
+qualifier = "estimate"
+display = "planet mass (not a minimum-mass quantity): about 3000 Earth masses"
+error_plus = 1000.0
+error_minus = -1000.0
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 37000.0
+unit = "days"
+qualifier = "estimate"
+display = "about 37000 days"
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 13.0
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 13 Earth radii"
+error_plus = 1.0
+error_minus = 0.0
+
+[[planets]]
+name = "HR 8799 e"
+discovery_method = "Imaging"
+discovery_year = 2010
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 3178.3
+unit = "Earth masses"
+qualifier = "estimate"
+display = "planet mass (not a minimum-mass quantity): about 3180 Earth masses"
+error_plus = 2224.81
+error_minus = -1271.32
+provenance = "Mass"
+
+[planets.measurements.radius]
+source_field = "pl_rade"
+value = 13.11453
+unit = "Earth radii"
+qualifier = "estimate"
+display = "about 13.1 Earth radii"
+error_plus = 1.45717
+error_minus = -1.23299

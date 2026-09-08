@@ -1,0 +1,5 @@
+# OGLE-2016-BLG-1195L and its planet
+
+OGLE-2016-BLG-1195L is a star with a reported mass estimate of about 0.37 solar masses, which is smaller than the Sun's. The system lies at an estimated distance of about 23,500 light-years from Earth. This stellar host is accompanied by one known planet, OGLE-2016-BLG-1195L b, which was discovered in 2017 via microlensing.
+
+The planet has a reported mass estimate of about 1.43 Earth masses, making it larger than Earth's mass. This mass is not a minimum-mass quantity, meaning the estimate reflects the planet's actual reported mass rather than a lower bound. The planet's year—the time it takes to complete one orbit—was not specified in the available measurements, leaving its orbital period uncharacterized here. The system contains no additional reported planets beyond this single companion.

@@ -1,0 +1,19 @@
+hostname = "51 Peg"
+fingerprint = "sha256:5866e187ae010fb9427a95824b4a90f15e1791a2552a7b2fef24e7f57bd7ba76"
+fingerprint_version = 1
+elapsed_ms = 1502
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 1770
+completion_tokens = 167
+total_tokens = 1937
+generated_at = "2026-09-08T17:20:45.002688+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

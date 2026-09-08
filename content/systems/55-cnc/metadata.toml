@@ -1,0 +1,19 @@
+hostname = "55 Cnc"
+fingerprint = "sha256:0b6fe49083637f60ff817d402dd0be0d25e125fb634c327516021c379edc0bf7"
+fingerprint_version = 1
+elapsed_ms = 4353
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 2903
+completion_tokens = 461
+total_tokens = 3364
+generated_at = "2026-09-08T17:20:47.853973+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

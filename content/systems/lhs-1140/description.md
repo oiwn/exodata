@@ -1,0 +1,9 @@
+# LHS 1140 and Its Planets
+
+LHS 1140 is a small, cool M-type red dwarf star located about 48.9 light-years away. With a reported mass estimate of about 0.184 solar masses and a radius estimate of about 0.216 solar radii, the star is smaller than the Sun in both respects. Its estimated temperature of about 3100 K is cooler than the Sun's, and it has a reported lower limit of 5 billion years in age.
+
+Two planets are known to orbit this star, both discovered through the transit method, in which a planet passes in front of its star and causes a small dip in observed brightness. The first, LHS 1140 b, was found in 2017. It has an estimated mass of about 5.6 Earth masses and an estimated radius of about 1.73 Earth radii, making it both more massive and larger than Earth. Its year lasts about 24.7 days, shorter than Earth's roughly 365-day year.
+
+The second planet, LHS 1140 c, was discovered in 2018. It carries an estimated mass of about 1.91 Earth masses and an estimated radius of about 1.27 Earth radii—again exceeding Earth in both measures. Its orbital period is about 3.78 days, also shorter than Earth's year.
+
+Among the two planets, LHS 1140 c has the shortest year by reported estimates at about 3.78 days, while LHS 1140 b has the longest at about 24.7 days. In terms of size, LHS 1140 c holds the smallest reported radius at about 1.27 Earth radii, while LHS 1140 b has the largest at about 1.73 Earth radii. The same ordering applies to mass: LHS 1140 c is the least massive planet in the system at about 1.91 Earth masses, and LHS 1140 b is the most massive at about 5.6 Earth masses.

@@ -1,0 +1,19 @@
+hostname = "Kepler-11"
+fingerprint = "sha256:bfd9879d8e53c1c164dda36c50f681c53b851cbc868890c68bb972ccdb4ec67d"
+fingerprint_version = 1
+elapsed_ms = 3518
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 3426
+completion_tokens = 461
+total_tokens = 3887
+generated_at = "2026-09-08T17:20:51.373675+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

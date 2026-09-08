@@ -1,0 +1,19 @@
+hostname = "TRAPPIST-1"
+fingerprint = "sha256:ce6781de7d7357c47b29ac6b9c9939b06f54c23b1b0c6f0d8cac83eb340914b4"
+fingerprint_version = 1
+elapsed_ms = 4320
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 4088
+completion_tokens = 562
+total_tokens = 4650
+generated_at = "2026-09-08T17:28:54.146267+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

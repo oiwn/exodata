@@ -168,11 +168,28 @@ enum DevCommands {
 
 #[derive(Parser, Debug)]
 enum DescriptionCommands {
+    /// Generate changed saved requests concurrently and persist per-system results
+    GenerateBatch {
+        #[arg(long, default_value = "content/systems")]
+        input_dir: std::path::PathBuf,
+        /// Optional repeated exact hostname filters
+        #[arg(long = "hostname")]
+        hostnames: Vec<String>,
+        #[arg(long, default_value = "content/stellarhost_prompt.txt")]
+        system_prompt: std::path::PathBuf,
+        #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..))]
+        concurrency: u32,
+        #[arg(long, default_value_t = 1536, value_parser = clap::value_parser!(u32).range(1..))]
+        max_tokens: u32,
+        /// Regenerate even when successful input fingerprints match
+        #[arg(long)]
+        force: bool,
+    },
     /// Prepare offline stellar-host evidence and a writing request
     Prepare {
-        /// Exact NASA hostname
-        #[arg(long)]
-        hostname: String,
+        /// Exact NASA hostnames; repeat to prepare several systems in one run
+        #[arg(long = "hostname", required = true)]
+        hostnames: Vec<String>,
         #[arg(long, default_value = "content/systems")]
         output_dir: std::path::PathBuf,
         /// Replace preparation files, preserving articles and generation metadata
@@ -276,22 +293,78 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Dev { command } => match command {
             DevCommands::Descriptions { command } => match command {
+                DescriptionCommands::GenerateBatch {
+                    input_dir,
+                    hostnames,
+                    system_prompt,
+                    concurrency,
+                    max_tokens,
+                    force,
+                } => {
+                    let rows = descriptions::batch::run(
+                        &descriptions::batch::Options {
+                            input_dir,
+                            hostnames,
+                            system_prompt,
+                            concurrency: concurrency as usize,
+                            max_tokens,
+                            force,
+                        },
+                    )?;
+                    output::render_rows(
+                        &rows,
+                        &descriptions::batch::columns(),
+                        format,
+                    )?;
+                    if rows.iter().any(|row| {
+                        row["status"] == "failed"
+                            || row["status"] == "not_started"
+                    }) {
+                        anyhow::bail!(
+                            "Batch incomplete; see per-system outcomes and fail.toml files"
+                        );
+                    }
+                }
                 DescriptionCommands::Prepare {
-                    hostname,
+                    hostnames,
                     output_dir,
                     force,
                 } => {
-                    let row = descriptions::prepare::run(
-                        Path::new(cli.data_dir.as_deref().unwrap_or("data")),
-                        &output_dir,
-                        &hostname,
-                        force,
-                    )?;
-                    output::render_rows(
-                        &[row],
-                        &descriptions::prepare::columns(),
-                        format,
-                    )?;
+                    let mut rows = Vec::new();
+                    let mut failed = false;
+                    for hostname in &hostnames {
+                        match descriptions::prepare::run(
+                            Path::new(cli.data_dir.as_deref().unwrap_or("data")),
+                            &output_dir,
+                            hostname,
+                            force,
+                        ) {
+                            Ok(row) => rows.push(row),
+                            Err(error) => {
+                                failed = true;
+                                let message = format!("{hostname}: {error:#}");
+                                if format == OutputFormat::Json {
+                                    rows.push(serde_json::json!({
+                                        "hostname": hostname, "error": message,
+                                    }));
+                                } else {
+                                    eprintln!("{message}");
+                                }
+                            }
+                        }
+                    }
+                    if !rows.is_empty() {
+                        output::render_rows(
+                            &rows,
+                            &descriptions::prepare::columns(),
+                            format,
+                        )?;
+                    }
+                    if failed {
+                        anyhow::bail!(
+                            "Preparation failed for at least one hostname"
+                        );
+                    }
                 }
                 DescriptionCommands::Probe => {
                     let row = descriptions::probe::run()?;

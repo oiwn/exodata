@@ -1,0 +1,19 @@
+hostname = "LHS 1140"
+fingerprint = "sha256:30844812317bc2ebe549bc90a70a3eb6410c78b1fb241522ee62bd620f5f5afe"
+fingerprint_version = 1
+elapsed_ms = 2502
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 2437
+completion_tokens = 418
+total_tokens = 2855
+generated_at = "2026-09-08T17:20:51.585972+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

@@ -1,0 +1,19 @@
+hostname = "HD 41004 A"
+fingerprint = "sha256:ac8c47307d4875679a5f448f269f73409b7d503f29d1dbb17456e40bde207722"
+fingerprint_version = 1
+elapsed_ms = 2374
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 1886
+completion_tokens = 256
+total_tokens = 2142
+generated_at = "2026-09-08T17:20:48.227006+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

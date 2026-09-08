@@ -1,0 +1,19 @@
+hostname = "Proxima Cen"
+fingerprint = "sha256:e485df5ed3aa037568036a58f69a92e2ae849199270c226f71be8a96c164b226"
+fingerprint_version = 1
+elapsed_ms = 2048
+http_status = 200
+model = "deepseek-v4-flash"
+finish_reason = "stop"
+prompt_tokens = 2145
+completion_tokens = 235
+total_tokens = 2380
+generated_at = "2026-09-08T17:20:53.283352+00:00"
+
+[settings]
+model = "deepseek-v4-flash"
+max_tokens = 1536
+thinking = "disabled"
+stream = false
+request_timeout_seconds = 60
+retries = 0

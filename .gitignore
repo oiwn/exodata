@@ -6,6 +6,7 @@
 /data/*.toml
 /data/*.parquet
 /content/systems/*/evidence.json
+/content/systems/*/fail.toml
 .crush/
 
 tmp/

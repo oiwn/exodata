@@ -235,17 +235,63 @@ Truncation (`finish_reason = "length"`) fails without retrying; the user may
 explicitly rerun with a larger limit. No content artifacts are written.
 This command supports manual prompt experiments; it is not batch generation.
 
+### Bulk DeepSeek Generation
+
+`exodata dev descriptions generate-batch` reads saved requests from immediate
+subdirectories of `--input-dir` (default `content/systems`). Repeated `--hostname`
+filters match exact request hostnames. Defaults: `--concurrency 4`,
+`--max-tokens 1536`, and `--system-prompt content/stellarhost_prompt.txt`.
+It never runs preparation or changes saved requests. `--force` regenerates
+matching successful inputs. The existing single-request commands remain available.
+
+Before network access, validate prepared schema version 1, hostname uniqueness,
+matching local evidence, metadata identity, prompt, settings, and writable
+output directories. Missing requested hosts and pending `.prepare`, `.generate`,
+or `.fail-write` recovery artifacts fail preflight. Credentials are needed only
+when calls remain after skip selection. One shared async client and a bounded
+Tokio task set enforce concurrency. Model, thinking, timeout, streaming, redirects,
+and retry settings match the single-call command. On 401/402/403/429 or storage
+failure, stop scheduling but finish in-flight work. Other individual failures
+do not stop the queue. Failed/not-started systems make the final exit nonzero.
+
+The versioned SHA-256 fingerprint covers exact prompt text, parsed request
+content, and generation settings. Recursively sorted object keys and preserved
+array order/string contents make formatting and object order irrelevant. Send
+deterministically serialized TOML. Credentials, timestamps, and returned usage
+are not hash inputs. Matching metadata plus a nonempty description skips a call.
+
+Successful results replace `description.md` and compact `metadata.toml` as a
+pair with ordinary-error rollback, using `.generate` staging. Metadata includes
+hostname, fingerprint/version, settings, timestamp, returned model, usage, and
+duration. A source date is recorded only if present in the saved request; the
+legacy NASA-date scanner remains separate from prepared-input fingerprinting.
+Success clears old `fail.toml`. Failure preserves the previous successful pair
+and replaces ignored `fail.toml` with attempted fingerprint/settings, timestamp,
+error/status and available response body, finish reason, usage, and duration.
+Non-success HTTP responses use sanitized diagnostics rather than raw bodies;
+incomplete/invalid successful HTTP bodies are retained in the failure record.
+Credentials are never persisted. No trial archive or root `tmp/` workflow is used.
+
+Progress and aggregate reported tokens/wall time go to stderr; stdout uses
+existing table/JSON/CSV per-system output. Generation success is a transport/
+response check, not a factual correctness guarantee; no editorial states exist.
+
 ### Stellar-Host Input Preparation
 
 ```bash
 exodata dev descriptions prepare --hostname "LHS 1140"
+exodata dev descriptions prepare --hostname "LHS 1140" --hostname "TRAPPIST-1" --force
 exodata dev descriptions prepare --hostname "LHS 1140" --data-dir data --output-dir content/systems --force
 ```
 
 Offline preparation reads the two local Parquet files (`--data-dir`, default
 `data`) and writes `evidence.json` and `request.toml` under
-`<output-dir>/<system-id>/`. Output defaults to `content/systems`. One exact
-NASA hostname is required. No API, download, or generation metadata writes occur.
+`<output-dir>/<system-id>/`. Output defaults to `content/systems`. One or
+more exact NASA hostnames are required; repeat `--hostname` to prepare
+several systems in one invocation. A per-system failure does not stop the
+remaining hostnames; errors are reported per row (stderr, or an `error` row
+in JSON) and the process exits nonzero when any preparation failed. No API,
+download, or generation metadata writes occur.
 
 Identifiers lowercase ASCII letters, replace whitespace with dashes, remove
 characters other than ASCII letters/digits/dashes, collapse dashes, and trim
@@ -282,12 +328,27 @@ is treated as an estimate. Other missing/unrecognized limit flags are marked
 unspecified and suppress comparisons. Nonpositive or nonfinite measurements
 are omitted from publishable fields and reported in diagnostics; their selected
 source rows remain in evidence.
+Missing-field diagnostics are retained in local evidence and CLI output, not
+appended to model instructions. Minimum-mass and transit guide entries are
+included only when relevant to the selected planets. Mass display wording
+explicitly distinguishes a `Mass` quantity from `Msini`.
 
-Comparisons cover stellar mass/radius against solar units, planetary radius
-against Earth, periods against 365 days, and extrema of reported period/radius
-estimates. Bounds, unknown qualifiers, overlapping supplied uncertainty
-intervals, and rounded ties suppress comparisons. No mass ranking or new
-interplanetary ratios are generated. Unknown mass provenance remains explicit.
+Comparisons cover stellar mass/radius against solar units, stellar
+temperature against the Sun's 5772 K, planetary radius and mass against
+Earth, Jupiter-scale context for planetary masses clearly exceeding
+Jupiter's 317.8 Earth masses, periods against 365 days, and first- and
+second-place extrema of reported period/radius estimates and of reported
+masses. Extrema rank by point value: every listed planet must carry an
+estimate (interval-bearing) measurement for the key, and a fact fires only
+when its value differs in rounded significant digits from every other
+ranked planet; the "by reported estimates" wording is the uncertainty
+hedge. Second-place facts additionally require at least three measured
+planets. Mass extrema also require uniform provenance (`Mass` or `Msini`);
+Msini sets are worded as minimum-mass quantities. Bounds and unknown
+qualifiers suppress comparisons; overlapping supplied uncertainty
+intervals suppress only baseline comparisons (against Earth, the Sun, or
+Jupiter), not extrema. No deeper ordinals or new interplanetary ratios are
+generated. Unknown mass provenance remains explicit.
 
 The writing target stays 300–600 words, permitting shorter supported text.
 `content/stellarhost_prompt.txt` is the single editable system prompt passed

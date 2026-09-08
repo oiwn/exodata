@@ -1,0 +1,148 @@
+schema_version = 1
+publishable_comparisons = [
+    "The star's reported mass estimate is larger than the Sun's.",
+    "PSR B1257+12 b's reported mass estimate is smaller than Earth's.",
+    "PSR B1257+12 b's year is shorter than Earth's roughly 365-day year.",
+    "PSR B1257+12 c's reported mass estimate is larger than Earth's.",
+    "PSR B1257+12 c's year is shorter than Earth's roughly 365-day year.",
+    "PSR B1257+12 d's reported mass estimate is larger than Earth's.",
+    "PSR B1257+12 d's year is shorter than Earth's roughly 365-day year.",
+    "Among the listed planets, PSR B1257+12 b has the shortest year by reported estimates (about 25.3 days).",
+    "Among the listed planets, PSR B1257+12 d has the longest year by reported estimates (about 98.2 days).",
+    "Among the listed planets, PSR B1257+12 c has the second-shortest year by reported estimates (about 66.5 days).",
+    "Among the listed planets, PSR B1257+12 c has the second-longest year by reported estimates (about 66.5 days).",
+    "Among the listed planets, PSR B1257+12 b has the smallest reported mass (about 0.02 Earth masses).",
+    "Among the listed planets, PSR B1257+12 c has the largest reported mass (about 4.3 Earth masses).",
+    "Among the listed planets, PSR B1257+12 d has the second-smallest reported mass (about 3.9 Earth masses).",
+    "Among the listed planets, PSR B1257+12 d has the second-largest reported mass (about 3.9 Earth masses).",
+]
+silent_constraints = [
+    "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.",
+    "These constraints and diagnostics are silent instructions, never reader-facing prose.",
+    "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.",
+    "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.",
+    "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.",
+]
+
+[request]
+coverage = "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."
+format = "A factual Markdown title and connected paragraphs; no tables or bullet lists"
+target_words = "300–600; shorter when needed to avoid repetition or unsupported claims"
+task = "Describe this stellar host and its associated planets for curious general readers."
+
+[guide]
+limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
+year = "An orbital period is the time a planet takes to complete one orbit: its year."
+
+[source]
+evidence_file = "evidence.json"
+distance_conversion = "parsecs * 3.26156 = light-years"
+selection = "Fullest stellar-host summary row and unique default planet rows; spectral type may be taken from any host row"
+
+[source.files]
+stellarhosts = "data/stellarhosts.parquet"
+exoplanets = "data/exoplanets.parquet"
+
+[system]
+hostname = "PSR B1257+12"
+matching_host_planet_count = 3
+catalog_system_planet_count = 3
+catalog_system_star_count = 1
+
+[system.distance]
+source_field = "sy_dist"
+value = 1956.936
+unit = "light-years"
+qualifier = "estimate"
+display = "about 1960 light-years"
+error_plus = 326.156
+error_minus = -326.156
+
+[star.measurements.age]
+source_field = "st_age"
+value = 3.0
+unit = "billion years"
+qualifier = "estimate"
+display = "about 3 billion years"
+error_plus = 3.0
+error_minus = -3.0
+
+[star.measurements.mass]
+source_field = "st_mass"
+value = 1.4
+unit = "solar masses"
+qualifier = "estimate"
+display = "about 1.4 solar masses"
+
+[[planets]]
+name = "PSR B1257+12 b"
+discovery_method = "Pulsar Timing"
+discovery_year = 1994
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 0.02
+unit = "Earth masses"
+qualifier = "estimate"
+display = "planet mass (not a minimum-mass quantity): about 0.02 Earth masses"
+error_plus = 0.002
+error_minus = -0.002
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 25.262
+unit = "days"
+qualifier = "estimate"
+display = "about 25.3 days"
+error_plus = 0.003
+error_minus = -0.003
+
+[[planets]]
+name = "PSR B1257+12 c"
+discovery_method = "Pulsar Timing"
+discovery_year = 1992
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 4.3
+unit = "Earth masses"
+qualifier = "estimate"
+display = "planet mass (not a minimum-mass quantity): about 4.3 Earth masses"
+error_plus = 0.2
+error_minus = -0.2
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 66.5419
+unit = "days"
+qualifier = "estimate"
+display = "about 66.5 days"
+error_plus = 0.0001
+error_minus = -0.0001
+
+[[planets]]
+name = "PSR B1257+12 d"
+discovery_method = "Pulsar Timing"
+discovery_year = 1992
+
+[planets.measurements.mass]
+source_field = "pl_bmasse"
+value = 3.9
+unit = "Earth masses"
+qualifier = "estimate"
+display = "planet mass (not a minimum-mass quantity): about 3.9 Earth masses"
+error_plus = 0.2
+error_minus = -0.2
+provenance = "Mass"
+
+[planets.measurements.orbital_period]
+source_field = "pl_orbper"
+value = 98.2114
+unit = "days"
+qualifier = "estimate"
+display = "about 98.2 days"
+error_plus = 0.0002
+error_minus = -0.0002
