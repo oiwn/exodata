@@ -105,7 +105,9 @@ const UNIT_PREFIXES: &[&str] = &[
     "million years",
     "million year",
     "g/cm",
+    "times jupiter's",
     "times jupiter",
+    "times earth's",
     "times earth",
     "days",
     "day",
@@ -436,6 +438,83 @@ pub(super) fn numeric_tokens(markdown: &str) -> BTreeSet<String> {
     tokens
 }
 
+/// Algorithmic formatting pass applied to stage outputs before
+/// validation: wraps detected measurement phrases and the spectral label
+/// in bold inside body text that is not already strong, and repairs the
+/// "times Earth" possessive. Bolding is a presentation concern, never an
+/// LLM responsibility. Idempotent.
+pub(super) fn normalize_article(
+    markdown: &str,
+    spectral_label: Option<&str>,
+) -> String {
+    let (title, body) = match markdown.split_once("\n\n") {
+        Some((title, body)) => (title, body),
+        None => return fix_earth_possessive(markdown),
+    };
+    let body = bold_plain_phrases(&fix_earth_possessive(body), spectral_label);
+    format!("{title}\n\n{body}")
+}
+
+fn bold_in_segment(segment: &str, spectral_label: Option<&str>) -> String {
+    let mut wrapped = String::with_capacity(segment.len());
+    let mut rest = segment;
+    while let Some(phrase) = number_with_unit(rest) {
+        let position = rest.find(&phrase).unwrap_or(0);
+        wrapped.push_str(&rest[..position]);
+        wrapped.push_str("**");
+        wrapped.push_str(&phrase);
+        wrapped.push_str("**");
+        rest = &rest[position + phrase.len()..];
+    }
+    wrapped.push_str(rest);
+    match spectral_label {
+        Some(label) if !label.is_empty() => {
+            wrapped.replace(label, &format!("**{label}**"))
+        }
+        _ => wrapped,
+    }
+}
+
+fn bold_plain_phrases(text: &str, spectral_label: Option<&str>) -> String {
+    let mut out = String::with_capacity(text.len());
+    for line in text.split_inclusive('\n') {
+        let mut rest = line;
+        let mut inside_strong = false;
+        while let Some(index) = rest.find("**") {
+            let (segment, tail) = rest.split_at(index);
+            if inside_strong {
+                out.push_str(segment);
+            } else {
+                out.push_str(&bold_in_segment(segment, spectral_label));
+            }
+            out.push_str("**");
+            rest = &tail[2..];
+            inside_strong = !inside_strong;
+        }
+        if inside_strong {
+            out.push_str(rest);
+        } else {
+            out.push_str(&bold_in_segment(rest, spectral_label));
+        }
+    }
+    out
+}
+
+fn fix_earth_possessive(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(position) = rest.find("times Earth") {
+        out.push_str(&rest[..position]);
+        out.push_str("times Earth's");
+        rest = &rest[position + "times Earth".len()..];
+        if let Some(stripped) = rest.strip_prefix("'s") {
+            rest = stripped;
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
 fn describe(event: Event<'_>) -> String {
     match event {
         Event::Start(tag) => format!("{tag:?}"),
@@ -592,6 +671,30 @@ follows.";
         assert!(banned_patterns("# T\n\na massive pulsar", &licensed).is_err());
         let licensed = BTreeSet::from(["pulsar".to_owned()]);
         assert!(banned_patterns("# T\n\na massive pulsar", &licensed).is_ok());
+    }
+
+    #[test]
+    fn normalize_bolds_measurements_and_repairs_possessives() {
+        let normalized = normalize_article(
+            "# Title with 3 planets\n\n**Planet b** orbits in about 1.51 \
+             days at 2570 K, type M8.0 V, 0.989 times Earth. Already \
+             **about 5 days** stays once.",
+            Some("M8.0 V"),
+        );
+        assert!(normalized.contains("# Title with 3 planets\n\n"));
+        assert!(normalized.contains("about **1.51 days**"));
+        assert!(normalized.contains("**2570 K**"));
+        assert!(normalized.contains("**M8.0 V**"));
+        assert!(normalized.contains("**0.989 times Earth's**"));
+        assert!(normalized.contains("Already **about 5 days** stays once."));
+        assert!(!normalized.contains("times Earth."));
+        assert_eq!(
+            normalize_article(&normalized, Some("M8.0 V")),
+            normalized,
+            "normalize must be idempotent"
+        );
+        let untouched = normalize_article("no body split", None);
+        assert_eq!(untouched, "no body split");
     }
 
     #[test]

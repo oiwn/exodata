@@ -146,6 +146,18 @@ the flash model still produces false positives on licensed restatements;
 the editor resists them and the gates bound the damage, but the
 per-call hit rate is low.
 
+## Algorithmic Formatting (2026-09-10)
+
+Bolding is a presentation concern, never an LLM responsibility. Every
+stage output passes `validate::normalize_article` before the gates: plain
+`number+unit` phrases (including the full `times Earth's` /
+`times Jupiter's` forms) and the supplied spectral label are wrapped in
+bold when they appear outside strong spans in body text, and
+`times Earth` is repaired to `times Earth's`. The pass is idempotent,
+skips the title, and the bolding gate remains only as a backstop for
+detector misses. `dev descriptions normalize` re-applies the same pass to
+stored descriptions for retroactive fixes.
+
 ## Manual Notes
 
 An optional hand-edited tracked `notes.toml` beside the request carries

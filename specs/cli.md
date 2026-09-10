@@ -300,6 +300,11 @@ licensing-aware: phrases licensed by prepared facts (a per-planet
 `circumbinary` flag, star `host_kind = "pulsar"` and the `Pulsar Timing`
 method label, star `age_class = "very young"`, and "sun-like" only for a
 supplied G-type spectral label) are stripped before the ban list runs.
+Stage outputs pass an algorithmic formatting pass before the gates:
+plain number+unit measurement phrases (including full
+`times Earth's` / `times Jupiter's` forms) and the supplied spectral
+label are bolded automatically outside strong spans, and `times Earth`
+is repaired to `times Earth's`; the bolding gate stays as a backstop.
 Each drafter/editor stage retries with violations appended as formatting
 feedback, at most three attempts per stage; transport/HTTP failures are
 never retried. Exhausted retries fail the system naming the failed stage
@@ -323,8 +328,18 @@ failed attempt, else `generated` for a nonempty description, else
 count, generated timestamp, and the failure error, with an aggregate
 summary on stderr.
 
+`dev descriptions normalize` re-applies the algorithmic formatting pass
+(bolding and the density possessive) to stored descriptions without
+model calls, rewriting only files that change.
+
+`generate-batch`, `status`, `prepare`, and `normalize` default to the
+`lines` output format: one compact single-line row per system (hostname,
+state, attempts, short token count, duration or failure reason). Pass
+`--output table`, `--output json`, or `--output csv` for the previous
+renderings.
+
 Progress and aggregate reported tokens/wall time go to stderr; stdout uses
-existing table/JSON/CSV per-system output. Generation success is a transport/
+the per-system output above. Generation success is a transport/
 response check, not a factual correctness guarantee; no editorial states exist.
 
 ### Stellar-Host Input Preparation

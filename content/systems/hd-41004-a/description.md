@@ -1,5 +1,0 @@
-# HD 41004 A and its planet
-
-**HD 41004 A** is a **K1/K2 V** star, a cooler stellar host than the Sun with a mass of **about 0.95 solar masses**. Its radius is **about 0.85 solar radii**, smaller than the Sun's. The star's temperature is **about 5310 K**, cooler than the Sun's, and it has an age upper limit of **1 billion years**. The system lies **about 120 light-years** away.
-
-The planet **HD 41004 A b** was discovered by the radial velocity method, which measures the wobble a planet's gravity induces in its star's motion, and its orbital period is **about 963 days**. That year is longer than Earth's roughly 365-day year. Its minimum-mass quantity (M sin i) is **about 807 Earth masses**, larger than Earth's and roughly **2.54 times Jupiter's mass**. This is a minimum-mass quantity, a lower bound on the planet's true mass when the orbit's tilt is unknown, not an estimate of its true mass.

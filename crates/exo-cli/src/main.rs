@@ -241,6 +241,11 @@ enum DescriptionCommands {
         #[arg(long, default_value = "content/systems")]
         content_dir: String,
     },
+    /// Apply algorithmic normalizers to stored descriptions
+    Normalize {
+        #[arg(long, default_value = "content/systems")]
+        content_dir: String,
+    },
 }
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -306,6 +311,21 @@ enum DevInsightCommands {
     },
 }
 
+/// Per-system commands default to compact single-line output when no
+/// explicit `--output` is requested; table, json, and csv stay available.
+fn render_per_system(
+    rows: &[serde_json::Value],
+    columns: &[String],
+    requested: Option<OutputFormat>,
+    line: impl Fn(&serde_json::Value) -> String,
+) -> Result<()> {
+    match requested.unwrap_or(OutputFormat::Lines) {
+        OutputFormat::Lines => output::render_lines(rows, line),
+        format => output::render_rows(rows, columns, format)?,
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = config::Config::load()?;
@@ -341,10 +361,11 @@ fn main() -> Result<()> {
                             failed,
                         },
                     )?;
-                    output::render_rows(
+                    render_per_system(
                         &rows,
                         &descriptions::batch::columns(),
-                        format,
+                        cli.output,
+                        descriptions::batch::line,
                     )?;
                     if rows.iter().any(|row| {
                         row["status"] == "failed"
@@ -412,10 +433,11 @@ fn main() -> Result<()> {
                         }
                     }
                     if !rows.is_empty() {
-                        output::render_rows(
+                        render_per_system(
                             &rows,
                             &descriptions::prepare::columns(),
-                            format,
+                            cli.output,
+                            descriptions::prepare::line,
                         )?;
                     }
                     if failed {
@@ -477,10 +499,31 @@ fn main() -> Result<()> {
                 DescriptionCommands::Status { content_dir } => {
                     let rows =
                         descriptions::status::run(Path::new(&content_dir))?;
-                    output::render_rows(
+                    render_per_system(
                         &rows,
                         &descriptions::status::columns(),
-                        format,
+                        cli.output,
+                        descriptions::status::line,
+                    )?;
+                }
+                DescriptionCommands::Normalize { content_dir } => {
+                    let rows =
+                        descriptions::normalize::run(Path::new(&content_dir))?;
+                    render_per_system(
+                        &rows,
+                        &descriptions::normalize::columns(),
+                        cli.output,
+                        |row| {
+                            let hostname =
+                                row["hostname"].as_str().unwrap_or("?");
+                            let path = row["path"].as_str().unwrap_or_default();
+                            let changed = if row["changed"] == true {
+                                "rewritten"
+                            } else {
+                                "unchanged"
+                            };
+                            format!("{hostname:<26} {changed:<10} {path}")
+                        },
                     )?;
                 }
             },

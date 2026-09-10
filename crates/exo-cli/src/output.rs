@@ -9,6 +9,7 @@ pub enum OutputFormat {
     Table,
     Json,
     Csv,
+    Lines,
 }
 
 impl OutputFormat {
@@ -17,7 +18,8 @@ impl OutputFormat {
             "table" => Ok(Self::Table),
             "json" => Ok(Self::Json),
             "csv" => Ok(Self::Csv),
-            _ => Err(anyhow!("output format must be table, json, or csv")),
+            "lines" => Ok(Self::Lines),
+            _ => Err(anyhow!("output format must be table, json, csv, or lines")),
         }
     }
 }
@@ -34,6 +36,51 @@ pub fn render_rows(
             Ok(())
         }
         OutputFormat::Csv => render_json_csv(rows, columns),
+        OutputFormat::Lines => {
+            for row in rows {
+                let fields: Vec<String> = columns
+                    .iter()
+                    .filter_map(|column| {
+                        let value = &row[column];
+                        if value.is_null() {
+                            None
+                        } else {
+                            Some(format_json_value(Some(value)))
+                        }
+                    })
+                    .collect();
+                println!("{}", fields.join("  "));
+            }
+            Ok(())
+        }
+    }
+}
+
+/// Compact per-system lines: the caller supplies the line formatter, one
+/// line per row, safe for narrow terminals.
+pub fn render_lines(rows: &[Value], line: impl Fn(&Value) -> String) {
+    for row in rows {
+        println!("{}", line(row));
+    }
+}
+
+/// Short human token counts: 9659 -> "9.7k", 37_804_704 -> "37.8M".
+pub fn short_tokens(value: u64) -> String {
+    if value >= 1_000_000 {
+        format!("{:.1}M", value as f64 / 1_000_000.0)
+    } else if value >= 1_000 {
+        format!("{:.1}k", value as f64 / 1_000.0)
+    } else {
+        value.to_string()
+    }
+}
+
+/// Elapsed milliseconds as a compact duration: "6.2s" or "481ms".
+pub fn short_elapsed_ms(value: u64) -> String {
+    if value >= 1_000 {
+        format!("{:.1}s", value as f64 / 1_000.0)
+    } else {
+        format!("{value}ms")
     }
 }
 

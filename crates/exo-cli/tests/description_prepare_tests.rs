@@ -125,14 +125,10 @@ fn multiple_hostnames_share_one_invocation_and_continue_on_error() {
     let output = f.command_hosts(&["Test Host", "Other Host", "Bad Host"], &[]);
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("Bad Host"));
-    assert!(
-        String::from_utf8_lossy(&output.stdout)
-            .contains("content/systems/test-host")
-    );
-    assert!(
-        String::from_utf8_lossy(&output.stdout)
-            .contains("content/systems/other-host")
-    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Test Host"));
+    assert!(stdout.contains("prepared"));
+    assert!(stdout.contains("Other Host"));
     assert!(f.0.join("content/systems/test-host/request.toml").exists());
     assert!(f.0.join("content/systems/other-host/request.toml").exists());
     assert!(!f.0.join("content/systems/bad-host").exists());

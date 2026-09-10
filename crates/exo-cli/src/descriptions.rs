@@ -1,5 +1,6 @@
 pub mod batch;
 mod client;
+pub mod normalize;
 pub mod prepare;
 pub mod probe;
 pub mod status;

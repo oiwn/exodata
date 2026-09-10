@@ -36,6 +36,31 @@ fn text(value: &Value, key: &str) -> Value {
     value[key].as_str().map_or(Value::Null, |s| json!(s))
 }
 
+/// Compact single-line state for the `lines` output format.
+pub fn line(row: &Value) -> String {
+    let hostname = row["hostname"].as_str().unwrap_or("?");
+    let state = row["state"].as_str().unwrap_or("?");
+    let version = match row["fingerprint_version"].as_u64() {
+        Some(v) => v.to_string(),
+        None => "-".to_owned(),
+    };
+    let attempts = match row["attempts"].as_u64() {
+        Some(a) => a.to_string(),
+        None => "-".to_owned(),
+    };
+    let tokens = row["total_tokens"].as_u64().unwrap_or_default();
+    let critic = match row["critic_findings"].as_u64() {
+        Some(c) => c.to_string(),
+        None => "-".to_owned(),
+    };
+    let tail = row["error"].as_str().unwrap_or_default();
+    let tail: String = tail.chars().take(70).collect();
+    format!(
+        "{hostname:<26} {state:<9} fp{version} {attempts:>2} att {:>6} tok {critic} crit {tail}",
+        crate::output::short_tokens(tokens),
+    )
+}
+
 fn number(value: &Value, key: &str) -> Value {
     value[key].clone()
 }

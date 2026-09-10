@@ -119,6 +119,22 @@ pub fn columns() -> Vec<String> {
     .collect()
 }
 
+/// Compact single-line outcome for the `lines` output format.
+pub fn line(row: &Value) -> String {
+    let hostname = row["hostname"].as_str().unwrap_or("?");
+    if let Some(error) = row["error"].as_str() {
+        let cut: String = error.chars().take(90).collect();
+        return format!("{hostname:<26} error     {cut}");
+    }
+    let count = row["diagnostics_count"].as_u64().unwrap_or_default();
+    let mode = if row["dry_run"] == true {
+        "dry-run"
+    } else {
+        "prepared"
+    };
+    format!("{hostname:<26} {mode:<9} {count} diagnostics")
+}
+
 pub fn system_id(hostname: &str) -> Result<String> {
     system_identifier(hostname).ok_or_else(|| {
         anyhow::anyhow!("Hostname produces an empty system identifier")

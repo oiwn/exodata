@@ -138,6 +138,12 @@ async fn run_stage(
             .and_then(|report| report["text"].as_str())
             .unwrap_or_default()
             .to_owned();
+        // Bolding and the density possessive are algorithmic formatting,
+        // applied before the gates; the gate remains a backstop.
+        let candidate = validate::normalize_article(
+            &candidate,
+            validation.spectral_label.as_deref(),
+        );
         let errors = if transport_failed {
             None
         } else {
@@ -547,20 +553,53 @@ fn merge_notes(directory: &Path, request: &mut Value) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn row(
     hostname: &str,
     status: &str,
     reason: &str,
+    attempts: Option<u32>,
     outcome: Option<&Outcome>,
 ) -> Value {
     let response = outcome.and_then(|o| o.response.as_ref());
     json!({"hostname": hostname, "status": status, "reason": reason,
+        "attempts": attempts,
         "model": response.and_then(|r|r["model"].as_str()),
         "finish_reason": response.and_then(|r|r["choices"][0]["finish_reason"].as_str()),
         "prompt_tokens": response.and_then(|r|r["usage"]["prompt_tokens"].as_u64()),
         "completion_tokens": response.and_then(|r|r["usage"]["completion_tokens"].as_u64()),
         "total_tokens": response.and_then(|r|r["usage"]["total_tokens"].as_u64()),
         "elapsed_ms": outcome.map(|o|o.elapsed_ms)})
+}
+
+/// Compact single-line outcome for the `lines` output format.
+pub fn line(row: &Value) -> String {
+    let hostname = row["hostname"].as_str().unwrap_or("?");
+    let status = row["status"].as_str().unwrap_or("?");
+    let attempts = row["attempts"].as_u64();
+    let tokens = row["total_tokens"].as_u64().unwrap_or_default();
+    let elapsed = row["elapsed_ms"].as_u64().unwrap_or_default();
+    let tail = match row["reason"].as_str() {
+        Some(reason) if !reason.is_empty() => truncate(reason, 80),
+        _ => row["model"].as_str().unwrap_or_default().to_owned(),
+    };
+    format!(
+        "{hostname:<26} {status:<9} {:>2} att {:>6} tok {:>7} {tail}",
+        attempts
+            .map(|a| a.to_string())
+            .unwrap_or_else(|| "-".into()),
+        crate::output::short_tokens(tokens),
+        crate::output::short_elapsed_ms(elapsed),
+    )
+}
+
+fn truncate(text: &str, max: usize) -> String {
+    if text.chars().count() <= max {
+        text.to_owned()
+    } else {
+        let cut: String = text.chars().take(max.saturating_sub(1)).collect();
+        format!("{cut}…")
+    }
 }
 
 fn preflight(
@@ -727,6 +766,7 @@ fn preflight(
                 "skipped",
                 "generation inputs unchanged",
                 None,
+                None,
             ));
         } else {
             // Verify that per-system staging is writable before starting paid work.
@@ -785,7 +825,7 @@ fn record(job: &Job, max_tokens: u32, result: &AttemptOutcome) -> Value {
     if let Some(status) = outcome.status {
         doc["http_status"] = json!(status);
     }
-    let report = row(&job.hostname, "", "", Some(outcome));
+    let report = row(&job.hostname, "", "", None, Some(outcome));
     for key in [
         "model",
         "finish_reason",
@@ -962,13 +1002,20 @@ async fn execute(
                 format!(" ({reason})")
             }
         );
-        rows.push(row(&job.hostname, status, &reason, Some(outcome)));
+        rows.push(row(
+            &job.hostname,
+            status,
+            &reason,
+            Some(attempts),
+            Some(outcome),
+        ));
     }
     rows.extend(jobs.iter().map(|job| {
         row(
             &job.hostname,
             "not_started",
             "batch stopped after an account, rate-limit, or storage failure",
+            None,
             None,
         )
     }));

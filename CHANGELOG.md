@@ -1,5 +1,50 @@
 # Changelog
 
+## 2026-09-10
+
+- Completed the full-catalog prose generation for #116: all 4,768
+  preparable systems described (~39.9M recorded tokens including retry
+  passes; one permanent skip, 2MASS J11011926-7732383, with no usable
+  stellar-host summary row). The first pass produced 4,494 systems; the
+  remaining 274 gate failures cleared across `--failed` retry passes.
+- Algorithmic formatting: stage outputs now pass a normalizer that bolds
+  measurement phrases (number+unit, full `times Earth's` forms, spectral
+  label) outside strong spans and repairs the density possessive before
+  the gates; the bolding gate is a backstop only. Bolding failures were
+  67% of first-pass gate failures.
+- Added `dev descriptions normalize` to re-apply the normalizers to
+  stored descriptions (retro-fix rewrote 258 files; zero possessive
+  slips remain).
+- Per-system commands (`generate-batch`, `status`, `prepare`,
+  `normalize`) default to a compact single-line `lines` output;
+  table/json/csv remain available via `--output`. Batch outcome rows now
+  include attempts.
+- Prose pipeline for this pass: draft → JSON-mode critic → editor with
+  deterministic gates (Markdown structure, licensing-aware banned
+  phrases, numeric allowlist, fact preservation), fingerprint v4.
+- Curated licensed facts: per-planet `circumbinary` (NASA `cb_flag`),
+  star `host_kind = "pulsar"`, `age_class = "very young"` (<0.1 Gyr), and
+  "No orbital period is reported" facts, each with guide entries; label
+  bans lift only with their facts.
+- Preparation scale-up: `Catalog` loads source Parquet files once;
+  `prepare --all` enumerates all hostnames, `--dry-run` validates without
+  writing; 4,769-system dry run classified failures and diagnostics.
+- Generation operations: `generate-batch --failed` retries failed systems
+  over matching fingerprints; new `dev descriptions status` summarizes
+  per-system state, usage, and failures with aggregate totals.
+- Per-system manual notes channel: tracked optional `notes.toml`
+  (`facts` merge into publishable comparisons, `guidance` into silent
+  constraints); fingerprint covers the merge, so edited notes regenerate.
+- Content layout for catalog scale: tracked set slimmed to
+  `description.md` + `notes.toml`; request/metadata/evidence/draft/fail
+  files ignored.
+- Tooling alignment: repo alias `cargo lx` (clippy
+  --workspace --all-targets --all-features) shared by prek hook, Justfile,
+  and rust-analyzer; prek test hook fixed to `--workspace` (previously ran
+  only the root package's tests); ~27 clippy warnings fixed.
+- Verified each round with the workspace suites (62 CLI lib tests,
+  integration, 137 web) and live baseline regenerations.
+
 ## 2026-09-06
 
 - Merged PR #142: added a single app-wide `<main>` landmark around routed

@@ -102,8 +102,12 @@ diagnostics and any available returned text/usage in `fail.toml`.
 Retry failed systems with `generate-batch --failed` (selects `fail.toml`
 systems and overrides the fingerprint skip); inspect catalog state with
 `dev descriptions status` (per-system state, usage totals, failure
-errors, aggregate summary). Do not build Python orchestration, trial
-folders, or a root `tmp/` workflow.
+errors, aggregate summary). Bolding and the density possessive are
+algorithmic (`normalize_article` runs before the gates; the gate is a
+backstop), and `dev descriptions normalize` re-applies the pass to
+stored files. These per-system commands print compact single-line rows
+by default; use `--output json`/`csv`/`table` otherwise. Do not build
+Python orchestration, trial folders, or a root `tmp/` workflow.
 Do not copy the shared prompt per system or create permanent response archives.
 
 Progress and aggregate usage go to stderr; stdout contains table/JSON/CSV

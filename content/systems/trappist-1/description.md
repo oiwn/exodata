@@ -1,9 +1,0 @@
-# TRAPPIST-1 and its seven planets
-
-**TRAPPIST-1** is an **M8.0 V** star, a small, cool red dwarf. Its mass is **about 0.0898 solar masses**, smaller than the Sun's, and its radius is **about 0.119 solar radii**, also smaller than the Sun's. The star's temperature is **about 2570 K**, cooler than the Sun's, and its age is **about 7.6 billion years**.
-
-Seven planets carry the TRAPPIST-1 name. Discovery years for these planets are 2016 and 2017. **TRAPPIST-1 b** was found in 2016 and has a radius of **about 1.12 Earth radii** and a mass of **about 1.37 Earth masses**, both larger than Earth's. Its year lasts **about 1.51 days**, shorter than Earth's roughly 365-day year. **TRAPPIST-1 c**, also from 2016, has a radius of **about 1.1 Earth radii** and a mass of **about 1.31 Earth masses**, both larger than Earth's. Its year is **about 2.42 days**. **TRAPPIST-1 d** has a radius of **about 0.788 Earth radii** and a mass of **about 0.388 Earth masses**, smaller than Earth's, with a year of **about 4.05 days**.
-
-**TRAPPIST-1 e**, discovered in 2017, has a radius of **about 0.92 Earth radii** and a mass of **about 0.692 Earth masses**, with a year of **about 6.1 days**. **TRAPPIST-1 f**, also from 2017, has a radius of **about 1.05 Earth radii** and a mass of **about 1.04 Earth masses**, with a year of **about 9.21 days**. **TRAPPIST-1 g** has a radius of **about 1.13 Earth radii** and a mass of **about 1.32 Earth masses**, with a year of **about 12.4 days**. **TRAPPIST-1 h** has a radius of **about 0.755 Earth radii** and a mass of **about 0.326 Earth masses**, with a year of **about 18.8 days**.
-
-Among the listed planets, **TRAPPIST-1 b** has the shortest year, while **TRAPPIST-1 h** has the longest. **TRAPPIST-1 g** has the largest radius, and **TRAPPIST-1 h** has the smallest. **TRAPPIST-1 b** has the largest mass, and **TRAPPIST-1 h** has the smallest.
