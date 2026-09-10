@@ -76,6 +76,10 @@ fn set_usage(outcome: &mut Outcome, prompt: u64, completion: u64, total: u64) {
     }
 }
 
+/// Optional extra validation applied after the deterministic gates, used
+/// for the editor's fact-preservation check.
+type Gate<'a> = &'a (dyn Fn(&str) -> Result<(), Vec<String>> + Send + Sync);
+
 /// One stage: up to MAX_ATTEMPTS validated calls with feedback retries.
 struct StageOutcome {
     outcome: Outcome,
@@ -92,7 +96,7 @@ async fn run_stage(
     input: &str,
     validation: &validate::ValidationContext,
     max_tokens: u32,
-    extra_gate: Option<&(dyn Fn(&str) -> Result<(), Vec<String>> + Send + Sync)>,
+    extra_gate: Option<Gate<'_>>,
 ) -> StageOutcome {
     let mut recovered: Vec<Vec<String>> = Vec::new();
     let mut usage = (0u64, 0u64, 0u64);
@@ -856,6 +860,7 @@ fn save_success(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn execute(
     mut jobs: VecDeque<Job>,
     mut rows: Vec<Value>,
@@ -937,11 +942,11 @@ async fn execute(
                 );
             }
         }
-        if status == "failed" {
-            if let Err(error) = save_failure(&job, max_tokens, &result, &reason) {
-                halted = true;
-                reason.push_str(&format!("; cannot save fail.toml: {error:#}"));
-            }
+        if status == "failed"
+            && let Err(error) = save_failure(&job, max_tokens, &result, &reason)
+        {
+            halted = true;
+            reason.push_str(&format!("; cannot save fail.toml: {error:#}"));
         }
         eprintln!(
             "{}: {status}{}{}",
@@ -957,7 +962,7 @@ async fn execute(
                 format!(" ({reason})")
             }
         );
-        rows.push(row(&job.hostname, status, &reason, Some(&outcome)));
+        rows.push(row(&job.hostname, status, &reason, Some(outcome)));
     }
     rows.extend(jobs.iter().map(|job| {
         row(

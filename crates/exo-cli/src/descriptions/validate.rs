@@ -65,12 +65,12 @@ pub(super) fn unbolded_measurements(
                             "measurement phrase '{phrase}' must be bolded"
                         ));
                     }
-                    if let Some(label) = spectral_label {
-                        if text.contains(label) {
-                            violations.push(format!(
-                                "spectral label '{label}' must be bolded"
-                            ));
-                        }
+                    if let Some(label) = spectral_label
+                        && text.contains(label)
+                    {
+                        violations.push(format!(
+                            "spectral label '{label}' must be bolded"
+                        ));
                     }
                 }
             }

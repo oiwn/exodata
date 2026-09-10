@@ -265,16 +265,16 @@ pub(super) fn store_pair(
         }
         Ok(())
     })();
-    if !recovery_failed {
-        if let Err(error) = fs::remove_dir_all(&staging) {
-            return match result {
-                Ok(()) => Err(error).context(
-                    "Preparation pair installed, but staging cleanup failed",
-                ),
-                Err(previous) => Err(previous
-                    .context(format!("Staging cleanup also failed: {error}"))),
-            };
-        }
+    if !recovery_failed && let Err(error) = fs::remove_dir_all(&staging) {
+        return match result {
+            Ok(()) => Err(error).context(
+                "Preparation pair installed, but staging cleanup failed",
+            ),
+            Err(previous) => {
+                Err(previous
+                    .context(format!("Staging cleanup also failed: {error}")))
+            }
+        };
     }
     result
 }
@@ -484,18 +484,17 @@ fn prepare(
         spectral_type: string(host, "st_spectype"),
         measurements: BTreeMap::new(),
     };
-    if star.spectral_type.is_none() {
-        if let Some(spectype) = host_rows
+    if star.spectral_type.is_none()
+        && let Some(spectype) = host_rows
             .iter()
             .filter_map(|row| string(row, "st_spectype"))
             .next()
-        {
-            diagnostics.push(
+    {
+        diagnostics.push(
                 "st_spectype missing from the selected host row; taken from another host row"
                     .into(),
             );
-            star.spectral_type = Some(spectype);
-        }
+        star.spectral_type = Some(spectype);
     }
     for (key, field, unit) in [
         ("temperature", "st_teff", "K"),
@@ -671,7 +670,7 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
         ));
     }
     for planet in planets {
-        if planet.measurements.get("orbital_period").is_none() {
+        if !planet.measurements.contains_key("orbital_period") {
             result.push(format!(
                 "No orbital period is reported for {}.",
                 planet.name
@@ -1001,7 +1000,7 @@ mod tests {
         let selected = planet("Test b", 10.0);
         let rows = vec![other, selected.clone()];
         let (request, evidence, diagnostics) =
-            prepare("Test", &[h.clone()], &rows).unwrap();
+            prepare("Test", std::slice::from_ref(&h), &rows).unwrap();
         assert_eq!(evidence["host"]["row"], h);
         assert_eq!(evidence["planets"][0]["row"], selected);
         assert!(!request.planets[0].measurements.contains_key("radius"));
@@ -1024,7 +1023,7 @@ mod tests {
     #[test]
     fn rejects_missing_or_ambiguous_selection() {
         let p = planet("Test b", 10.0);
-        assert!(prepare("Test", &[], &[p.clone()]).is_err());
+        assert!(prepare("Test", &[], std::slice::from_ref(&p)).is_err());
         assert!(prepare("Test", &[host()], &[]).is_err());
         assert!(prepare("Test", &[host()], &[p.clone(), p.clone()]).is_err());
         let mut nondefault = p;
@@ -1350,8 +1349,8 @@ mod tests {
         let (request, _, _) = prepare("Test", &[young], &[b, c.clone()]).unwrap();
         assert_eq!(request.planets[0].circumbinary, Some(true));
         assert_eq!(request.planets[1].circumbinary, None);
-        assert_eq!(request.star.host_kind.as_deref(), Some("pulsar"));
-        assert_eq!(request.star.age_class.as_deref(), Some("very young"));
+        assert_eq!(request.star.host_kind, Some("pulsar"));
+        assert_eq!(request.star.age_class, Some("very young"));
         assert!(request.guide.contains_key("circumbinary"));
         assert!(request.guide.contains_key("pulsar_timing"));
         assert!(request.guide.contains_key("stellar_age"));

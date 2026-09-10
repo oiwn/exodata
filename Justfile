@@ -1,6 +1,6 @@
 # Service commands
 clippy:
-  cargo clippy --locked --all-targets --all-features -- -D warnings
+  cargo lx --locked -- -D warnings
 
 # Download both NASA VOTable sources.
 download-data:

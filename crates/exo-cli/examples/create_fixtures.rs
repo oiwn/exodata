@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create output directory if it doesn't exist
     fs::create_dir_all(OUTPUT_DIR)
-        .expect(format!("Unable to create directory: {}", OUTPUT_DIR).as_str());
+        .unwrap_or_else(|_| panic!("Unable to create directory: {}", OUTPUT_DIR));
 
     // Find all .vot files in data directory
     let votable_files = discover_votable_files(DATA_DIR)?;
@@ -53,20 +53,18 @@ fn discover_votable_files(
     let mut votable_files = Vec::new();
 
     let entries = fs::read_dir(data_dir)
-        .expect(format!("Failed to read directory: {}", data_dir).as_str());
+        .unwrap_or_else(|_| panic!("Failed to read directory: {}", data_dir));
 
     for entry in entries {
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
-                if extension == "vot" {
-                    if let Some(path_str) = path.to_str() {
-                        votable_files.push(path_str.to_string());
-                    }
-                }
-            }
+        if path.is_file()
+            && let Some(extension) = path.extension()
+            && extension == "vot"
+            && let Some(path_str) = path.to_str()
+        {
+            votable_files.push(path_str.to_string());
         }
     }
 
@@ -80,7 +78,7 @@ fn process_votable(votable_path: &str) {
 
     // Load the VOTable
     let df = exo_cli::votable_loader::load_votable(votable_path, None)
-        .expect(format!("Failed to load VOTable: {}", votable_path).as_str());
+        .unwrap_or_else(|_| panic!("Failed to load VOTable: {}", votable_path));
 
     let total_rows = df.height();
     println!("  Total rows: {}", total_rows);
@@ -120,9 +118,9 @@ fn process_votable(votable_path: &str) {
 
     // Save as .fixture file (Parquet format)
     let fixture_path = format!("{}/{}.fixture", OUTPUT_DIR, basename);
-    let mut file = fs::File::create(&fixture_path).expect(
-        format!("Failed to create fixture file: {}", fixture_path).as_str(),
-    );
+    let mut file = fs::File::create(&fixture_path).unwrap_or_else(|_| {
+        panic!("Failed to create fixture file: {}", fixture_path)
+    });
 
     ParquetWriter::new(&mut file)
         .finish(&mut sampled.clone())
@@ -147,7 +145,7 @@ fn process_votable(votable_path: &str) {
         &json_path,
         serde_json::to_string_pretty(&metadata).expect("Failed to prettify json"),
     )
-    .expect(format!("Failed to write metadata: {}", json_path).as_str());
+    .unwrap_or_else(|_| panic!("Failed to write metadata: {}", json_path));
 
     println!("  ✓ Created: {}", json_path);
     println!();

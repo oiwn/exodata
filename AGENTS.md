@@ -23,6 +23,10 @@ This file defines agent workflow and points to project specifications. Implement
 8. When Rust formatting is needed, run `cargo fmt --all`; do not hand-edit code
    to imitate rustfmt output. Use `cargo fmt --all -- --check` only to verify an
    already formatted tree.
+9. Clippy scope: use `cargo lx` — the repo alias for
+   `clippy --workspace --all-targets --all-features` — so terminal, editor
+   (rust-analyzer), the prek hook, and the Justfile all evaluate the same
+   warnings.
 
 ## Project Development Skills
 
