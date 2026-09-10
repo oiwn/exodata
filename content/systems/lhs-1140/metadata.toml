@@ -1,14 +1,22 @@
 hostname = "LHS 1140"
-fingerprint = "sha256:30844812317bc2ebe549bc90a70a3eb6410c78b1fb241522ee62bd620f5f5afe"
-fingerprint_version = 1
-elapsed_ms = 2502
+fingerprint = "sha256:5fec5b9fc92fe50ed437c4fc280adb0b463b26cbbb4197a794d3b0f69c9b5035"
+fingerprint_version = 3
+elapsed_ms = 14466
+attempts = 4
+validation_recovered = [
+    "measurement phrase '5 billion years' must be bolded",
+    "measurement phrase '1.08 times Earth' must be bolded",
+    "measurement phrase '0.928 times Earth' must be bolded",
+    "measurement phrase '2.5 times Earth' must be bolded",
+    "measurement phrase '1.5 times Earth' must be bolded",
+]
 http_status = 200
 model = "deepseek-v4-flash"
 finish_reason = "stop"
-prompt_tokens = 2437
-completion_tokens = 418
-total_tokens = 2855
-generated_at = "2026-09-08T17:20:51.585972+00:00"
+prompt_tokens = 13960
+completion_tokens = 2038
+total_tokens = 15998
+generated_at = "2026-09-09T08:07:37.458488+00:00"
 
 [settings]
 model = "deepseek-v4-flash"
@@ -17,3 +25,13 @@ thinking = "disabled"
 stream = false
 request_timeout_seconds = 60
 retries = 0
+
+[stages.draft]
+attempts = 3
+prompt_tokens = 8455
+completion_tokens = 1557
+
+[stages.edit]
+attempts = 1
+prompt_tokens = 2812
+completion_tokens = 475

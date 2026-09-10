@@ -81,10 +81,12 @@ mass/year labels and proper facility names remain language-neutral. Unknown
 data-provided labels remain unchanged. All blocks use `StatSection`, which
 renders each category's count and percentage of the displayed distribution.
 
-Host details render hero/star visual, canonical summary, comparison, related
-planet cards, and provenance. Host and related-planet data use separate
-resources. Their contracts are in
-[backend details](web-backend.md#detail-contracts).
+Host details render hero/star visual, generated prose description (when one
+exists for the hostname), canonical summary, comparison, related planet cards,
+and provenance. Host and related-planet data use separate resources; the
+description arrives through `get_host_description` and folds to nothing on
+absence or error, so systems without stored prose render normally. Their
+contracts are in [backend details](web-backend.md#detail-contracts).
 
 Planet details render hero/visual, canonical summary, comparison, and provenance
 with JSON/CSV exports. See [exoplanet-detail.md](exoplanet-detail.md).

@@ -16,7 +16,8 @@ pub mod insights;
 pub mod tables;
 
 pub use details::{
-    get_exoplanet_detail, get_planets_for_host, get_stellar_host_detail,
+    get_exoplanet_detail, get_host_description, get_planets_for_host,
+    get_stellar_host_detail,
 };
 pub use insights::get_insight;
 pub use tables::{get_exoplanets_page, get_stellarhosts_page};

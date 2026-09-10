@@ -2,6 +2,7 @@ pub mod batch;
 mod client;
 pub mod prepare;
 pub mod probe;
+mod validate;
 
 use std::{
     collections::BTreeMap,

@@ -5,9 +5,11 @@ publishable_comparisons = [
     "The star's reported temperature is cooler than the Sun's.",
     "LHS 1140 b's reported radius estimate is larger than Earth's.",
     "LHS 1140 b's reported mass estimate is larger than Earth's.",
+    "LHS 1140 b's estimated mean density is about 5.96 g/cm³, about 1.08 times Earth's.",
     "LHS 1140 b's year is shorter than Earth's roughly 365-day year.",
     "LHS 1140 c's reported radius estimate is larger than Earth's.",
     "LHS 1140 c's reported mass estimate is larger than Earth's.",
+    "LHS 1140 c's estimated mean density is about 5.11 g/cm³, about 0.928 times Earth's.",
     "LHS 1140 c's year is shorter than Earth's roughly 365-day year.",
     "Among the listed planets, LHS 1140 c has the shortest year by reported estimates (about 3.78 days).",
     "Among the listed planets, LHS 1140 b has the longest year by reported estimates (about 24.7 days).",
@@ -32,6 +34,7 @@ task = "Describe this stellar host and its associated planets for curious genera
 
 [guide]
 limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+planet_classes = "Planet size classes compare radius with Earth's: a Sub-Earth is smaller than Earth, an Earth-like planet stays within about 1.5 times Earth's radius, a Super-Earth reaches about 2.5 times, a Neptune-like planet reaches about 4 times, and a Jupiter-like planet exceeds about 4 times Earth's radius."
 spectral = "A spectral type such as 'M4.5 V' or 'G5V' classifies a star: the leading letter and number give its temperature class (M coolest and reddest, then K, G, F, A hotter; the Sun is G-type), and a trailing 'V' marks a main-sequence dwarf. A supplied spectral type may be restated in words at class level, e.g. an M-type dwarf as a small, cool red dwarf, or a G-type dwarf as Sun-like; a range such as 'K1/K2' shares the letter class. Omit the wording when the label is unusual or its class is ambiguous."
 transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
 units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
@@ -100,6 +103,7 @@ error_minus = -48.0
 
 [[planets]]
 name = "LHS 1140 b"
+classification = "Super-Earth"
 discovery_method = "Transit"
 discovery_year = 2017
 
@@ -133,6 +137,7 @@ error_minus = -0.025
 
 [[planets]]
 name = "LHS 1140 c"
+classification = "Earth-like"
 discovery_method = "Transit"
 discovery_year = 2018
 

@@ -2,6 +2,22 @@
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+/// Normalized filesystem-safe identifier for a catalog hostname: lowercase
+/// ASCII letters and digits, whitespace and dashes collapsed to single
+/// dashes, edge dashes trimmed. Returns `None` when nothing remains.
+pub fn system_identifier(hostname: &str) -> Option<String> {
+    let mut result = String::new();
+    for c in hostname.chars() {
+        if c.is_ascii_alphanumeric() {
+            result.push(c.to_ascii_lowercase());
+        } else if (c.is_whitespace() || c == '-') && !result.ends_with('-') {
+            result.push('-');
+        }
+    }
+    let result = result.trim_matches('-').to_owned();
+    (!result.is_empty()).then_some(result)
+}
+
 pub const HOST_SUMMARY_FIELDS: &[&str] = &[
     "st_spectype",
     "st_teff",

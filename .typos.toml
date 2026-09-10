@@ -1,3 +1,4 @@
 [default.extend-words]
 rade = "rade"
 ratatui = "ratatui"
+unparseable = "unparseable"

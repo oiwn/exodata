@@ -1,7 +1,9 @@
-# Proxima Cen and its planets
+# Proxima Cen: a small, cool star with two planets
 
-Proxima Cen is a small, cool red dwarf star (spectral type M5.5 V) located about 4.24 light-years away. Its reported mass is roughly 0.12 times the Sun's, its radius is about 0.141 times the Sun's, and its surface temperature is approximately 3050 K—making it both smaller, less massive, and cooler than our Sun.
+**Proxima Cen** is a red dwarf star of spectral type **M5.5 V**. Its mass is **about 0.12 solar masses**, its radius is **about 0.141 solar radii**, and its temperature is **about 3050 K**. These values are all smaller than the Sun's corresponding values. The star lies at a distance of **about 4.24 light-years** from Earth.
 
-Two planets are associated with this host. Proxima Cen b, discovered in 2016 via radial velocity, has a reported minimum-mass quantity of about 1.06 Earth masses—the largest such quantity among the listed planets. It completes its orbit in roughly 11.2 days, giving it the longest year of the two.
+Two planets are associated with **Proxima Cen**, both discovered through the radial velocity method, which measures the wobble a planet's gravity induces in its star's motion. The first, **Proxima Cen b**, was found in 2016, and the second, **Proxima Cen d**, was found in 2025.
 
-Proxima Cen d, discovered in 2025 also via radial velocity, has a reported minimum-mass quantity of about 0.26 Earth masses, the smallest among the listed planets and smaller than Earth's. With a year of about 5.12 days, it has the shortest orbital period of the pair. Both planets have years shorter than Earth's roughly 365-day year.
+**Proxima Cen b** has a minimum-mass quantity (M sin i) of **about 1.06 Earth masses**. This quantity is a lower bound on the planet's true mass, because the gravitational pull measured when the orbit's tilt is unknown gives at least this value. Its year lasts **about 11.2 days**, shorter than Earth's roughly 365-day year. Among the listed planets, **Proxima Cen b** has the longest year and the largest minimum-mass quantity.
+
+**Proxima Cen d** has a minimum-mass quantity (M sin i) of **about 0.26 Earth masses**, smaller than Earth's mass and the smallest such quantity among the listed planets. Its year lasts **about 5.12 days**, also shorter than Earth's roughly 365-day year and the shortest among the listed planets. **Proxima Cen d** has a shorter year than **Proxima Cen b**, though the planets are named in a fixed order that does not reflect their sequence in orbit.

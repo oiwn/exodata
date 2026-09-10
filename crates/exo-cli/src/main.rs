@@ -177,6 +177,12 @@ enum DescriptionCommands {
         hostnames: Vec<String>,
         #[arg(long, default_value = "content/stellarhost_prompt.txt")]
         system_prompt: std::path::PathBuf,
+        /// Editorial second-stage system prompt
+        #[arg(long, default_value = "content/stellarhost_editor_prompt.txt")]
+        editor_prompt: std::path::PathBuf,
+        /// Verifier third-stage system prompt
+        #[arg(long, default_value = "content/stellarhost_critic_prompt.txt")]
+        critic_prompt: std::path::PathBuf,
         #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..))]
         concurrency: u32,
         #[arg(long, default_value_t = 1536, value_parser = clap::value_parser!(u32).range(1..))]
@@ -297,6 +303,8 @@ fn main() -> Result<()> {
                     input_dir,
                     hostnames,
                     system_prompt,
+                    editor_prompt,
+                    critic_prompt,
                     concurrency,
                     max_tokens,
                     force,
@@ -306,6 +314,8 @@ fn main() -> Result<()> {
                             input_dir,
                             hostnames,
                             system_prompt,
+                            editor_prompt,
+                            critic_prompt,
                             concurrency: concurrency as usize,
                             max_tokens,
                             force,
@@ -333,13 +343,31 @@ fn main() -> Result<()> {
                     let mut rows = Vec::new();
                     let mut failed = false;
                     for hostname in &hostnames {
+                        eprintln!("Preparing {hostname}");
                         match descriptions::prepare::run(
                             Path::new(cli.data_dir.as_deref().unwrap_or("data")),
                             &output_dir,
                             hostname,
                             force,
                         ) {
-                            Ok(row) => rows.push(row),
+                            Ok(row) => {
+                                if let Some(list) = row["diagnostics"].as_array()
+                                {
+                                    for diagnostic in list {
+                                        if let Some(text) = diagnostic.as_str() {
+                                            eprintln!("  - {text}");
+                                        }
+                                    }
+                                }
+                                let count = row["diagnostics_count"]
+                                    .as_u64()
+                                    .unwrap_or_default();
+                                eprintln!(
+                                    "Prepared {hostname} ({count} diagnostic{})",
+                                    if count == 1 { "" } else { "s" }
+                                );
+                                rows.push(row);
+                            }
                             Err(error) => {
                                 failed = true;
                                 let message = format!("{hostname}: {error:#}");

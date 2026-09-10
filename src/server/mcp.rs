@@ -416,6 +416,7 @@ mod tests {
             table_cache: build_table_cache(64),
             host_detail_cache: build_host_detail_cache(64),
             insight_cache: build_insight_cache(16),
+            host_descriptions: Arc::new(HashMap::new()),
         }
     }
 

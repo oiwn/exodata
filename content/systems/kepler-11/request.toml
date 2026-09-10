@@ -1,18 +1,23 @@
 schema_version = 1
 publishable_comparisons = [
     "Kepler-11 b's reported radius estimate is larger than Earth's.",
+    "Kepler-11 b's estimated mean density is about 1.8 g/cm³, about 0.326 times Earth's.",
     "Kepler-11 b's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 c's reported radius estimate is larger than Earth's.",
     "Kepler-11 c's reported mass estimate is larger than Earth's.",
+    "Kepler-11 c's estimated mean density is about 0.676 g/cm³, about 0.123 times Earth's.",
     "Kepler-11 c's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 d's reported radius estimate is larger than Earth's.",
     "Kepler-11 d's reported mass estimate is larger than Earth's.",
+    "Kepler-11 d's estimated mean density is about 1.32 g/cm³, about 0.24 times Earth's.",
     "Kepler-11 d's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 e's reported radius estimate is larger than Earth's.",
     "Kepler-11 e's reported mass estimate is larger than Earth's.",
+    "Kepler-11 e's estimated mean density is about 0.599 g/cm³, about 0.109 times Earth's.",
     "Kepler-11 e's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 f's reported radius estimate is larger than Earth's.",
     "Kepler-11 f's reported mass estimate is larger than Earth's.",
+    "Kepler-11 f's estimated mean density is about 0.714 g/cm³, about 0.13 times Earth's.",
     "Kepler-11 f's year is shorter than Earth's roughly 365-day year.",
     "Kepler-11 g's reported radius estimate is larger than Earth's.",
     "Kepler-11 g's year is shorter than Earth's roughly 365-day year.",
@@ -41,6 +46,7 @@ task = "Describe this stellar host and its associated planets for curious genera
 
 [guide]
 limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+planet_classes = "Planet size classes compare radius with Earth's: a Sub-Earth is smaller than Earth, an Earth-like planet stays within about 1.5 times Earth's radius, a Super-Earth reaches about 2.5 times, a Neptune-like planet reaches about 4 times, and a Jupiter-like planet exceeds about 4 times Earth's radius."
 transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
 units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
 year = "An orbital period is the time a planet takes to complete one orbit: its year."
@@ -107,6 +113,7 @@ error_minus = -100.0
 
 [[planets]]
 name = "Kepler-11 b"
+classification = "Super-Earth"
 discovery_method = "Transit"
 discovery_year = 2010
 
@@ -140,6 +147,7 @@ error_minus = -0.05
 
 [[planets]]
 name = "Kepler-11 c"
+classification = "Neptune-like"
 discovery_method = "Transit"
 discovery_year = 2010
 
@@ -173,6 +181,7 @@ error_minus = -0.06
 
 [[planets]]
 name = "Kepler-11 d"
+classification = "Neptune-like"
 discovery_method = "Transit"
 discovery_year = 2010
 
@@ -206,6 +215,7 @@ error_minus = -0.07
 
 [[planets]]
 name = "Kepler-11 e"
+classification = "Jupiter-like"
 discovery_method = "Transit"
 discovery_year = 2010
 
@@ -239,6 +249,7 @@ error_minus = -0.09
 
 [[planets]]
 name = "Kepler-11 f"
+classification = "Super-Earth"
 discovery_method = "Transit"
 discovery_year = 2010
 
@@ -272,6 +283,7 @@ error_minus = -0.07
 
 [[planets]]
 name = "Kepler-11 g"
+classification = "Neptune-like"
 discovery_method = "Transit"
 discovery_year = 2010
 

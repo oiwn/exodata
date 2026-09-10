@@ -14,7 +14,7 @@ silent_constraints = [
 [request]
 coverage = "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."
 format = "A factual Markdown title and connected paragraphs; no tables or bullet lists"
-target_words = "300–600; shorter when needed to avoid repetition or unsupported claims"
+target_words = "150–300; shorter when needed to avoid repetition or unsupported claims"
 task = "Describe this stellar host and its associated planets for curious general readers."
 
 [guide]

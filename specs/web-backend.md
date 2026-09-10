@@ -15,6 +15,16 @@ Startup computes overview statistics, creates caches and sitemap XML, and
 prewarms default table queries and registered insights before accepting requests.
 The HTML shell embeds serialized metadata for hydration.
 
+Startup also loads generated stellar-host prose: `EXO_CONTENT_DIR` (default
+`content/systems`) is scanned once for `*/description.md` files, keyed by the
+normalized system identifier and pre-rendered to HTML (leading level-one title
+stripped; raw HTML characters escaped before Markdown parsing). A missing
+content directory or per-system file is not an error: the map is simply empty
+and affected pages render without the prose section. The `get_host_description`
+server function normalizes the requested hostname via the shared
+`exo_core::selection::system_identifier` and returns `None` when no
+description exists.
+
 `ApiState` in [handlers.rs](../src/server/handlers.rs) owns shared references to
 the datasets, metadata, overview statistics, site URL, sitemap XML, and caches.
 It is supplied to Axum handlers and Leptos server-function context.

@@ -1,5 +1,5 @@
-# Kepler-16 and Its Planet
+# Kepler-16 and its circumbinary planet
 
-Kepler-16 is a stellar system located about 245 light-years away. The host star's reported mass estimate is about 0.63 solar masses, its reported radius estimate is about 0.769 solar radii, and its reported temperature is about 4020 K. Compared with the Sun, the star's mass estimate is smaller, its radius estimate is smaller, and its temperature is cooler. The system includes one planet, Kepler-16 b, which was discovered in 2011 using the transit method—a technique where a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness that helps establish orbital periods.
+Kepler-16 is a stellar system about **245 light-years** away. The system contains two stars, with one host star carrying a mass of about **0.63 solar masses**, a radius of about **0.769 solar radii**, and a temperature of about **4020 K**. That star is smaller, cooler, and less massive than the Sun.
 
-Kepler-16 b has an estimated orbital period of about 229 days, meaning its year is shorter than Earth's roughly 365-day year. The planet's estimated mass is about 106 Earth masses, which is larger than Earth's mass. Its estimated radius is about 8.45 Earth radii, which is larger than Earth's radius.
+One known planet, **Kepler-16 b**, orbits in this system. Discovered in 2011 via transit, its radius is about **8.45 Earth radii**, larger than Earth's, and its mass is about **106 Earth masses**, also larger than Earth's. The planet's orbital period spans about **229 days**, shorter than Earth's roughly 365-day year, with a mean density of about **0.967 g/cm³**, roughly **0.175 times Earth's** density.

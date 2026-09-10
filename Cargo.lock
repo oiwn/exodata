@@ -1350,6 +1350,7 @@ dependencies = [
  "indicatif",
  "polars",
  "predicates",
+ "pulldown-cmark",
  "rand 0.10.2",
  "reqwest 0.13.4",
  "serde",

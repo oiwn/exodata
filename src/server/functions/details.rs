@@ -10,6 +10,18 @@ use crate::server::exoplanet_canonical;
 #[cfg(feature = "ssr")]
 use crate::server::handlers::ApiState;
 
+/// Server function to fetch a generated prose description for a stellar
+/// host, when one is stored under the content directory. `None` means no
+/// description exists for this host.
+#[server(input = GetUrl)]
+pub async fn get_host_description(
+    hostname: String,
+) -> Result<Option<String>, ServerFnError> {
+    let state = expect_context::<ApiState>();
+    Ok(exo_core::selection::system_identifier(&hostname)
+        .and_then(|id| state.host_descriptions.get(&id).cloned()))
+}
+
 /// Server function to fetch a single stellar host's details.
 #[server(input = GetUrl)]
 pub async fn get_stellar_host_detail(

@@ -149,6 +149,19 @@ async fn start_server() {
     let table_cache = server::cache::build_table_cache(400);
     let host_detail_cache = server::cache::build_host_detail_cache(512);
     let insight_cache = server::cache::build_insight_cache(32);
+    let content_dir = std::env::var("EXO_CONTENT_DIR")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| "content/systems".to_string());
+    let host_descriptions =
+        Arc::new(server::data::descriptions::load_host_descriptions(
+            Path::new(&content_dir),
+        ));
+    tracing::info!(
+        "Loaded {} stellar-host descriptions from {}",
+        host_descriptions.len(),
+        content_dir
+    );
     let site_url = Arc::new(
         std::env::var("SITE_URL")
             .ok()
@@ -185,6 +198,7 @@ async fn start_server() {
         table_cache,
         host_detail_cache,
         insight_cache,
+        host_descriptions,
     };
 
     // Prewarm default table cache entries before serving any requests.

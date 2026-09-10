@@ -31,6 +31,7 @@ ARG BUILD_DATE=
 ENV BUILD_DATE=${BUILD_DATE}
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
+COPY content ./content
 COPY docs ./docs
 COPY src ./src
 COPY style ./style
@@ -65,6 +66,7 @@ RUN apt-get update && apt-get install -y ca-certificates libssl3 \
 WORKDIR /app
 COPY --from=builder /app/server-bin/exodata /app/exodata
 COPY --from=builder /app/target/site /app/site
+COPY --from=builder /app/content/systems /app/content/systems
 
 EXPOSE 3000
 CMD ["/app/exodata"]

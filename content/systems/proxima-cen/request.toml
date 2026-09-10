@@ -28,6 +28,7 @@ task = "Describe this stellar host and its associated planets for curious genera
 [guide]
 limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
 minimum_mass = "A minimum-mass quantity (M sin i) is a lower bound on the planet's true mass: when the orbit's tilt is unknown, the measurable gravitational pull gives at least this value. It is distinct from an estimate of the planet's true mass."
+radial_velocity = "The radial velocity method measures the wobble a planet's gravity induces in its star's motion; repeated wobbles reveal the planet and its orbital period."
 spectral = "A spectral type such as 'M4.5 V' or 'G5V' classifies a star: the leading letter and number give its temperature class (M coolest and reddest, then K, G, F, A hotter; the Sun is G-type), and a trailing 'V' marks a main-sequence dwarf. A supplied spectral type may be restated in words at class level, e.g. an M-type dwarf as a small, cool red dwarf, or a G-type dwarf as Sun-like; a range such as 'K1/K2' shares the letter class. Omit the wording when the label is unusual or its class is ambiguous."
 units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
 year = "An orbital period is the time a planet takes to complete one orbit: its year."

@@ -7,6 +7,7 @@
 /data/*.parquet
 /content/systems/*/evidence.json
 /content/systems/*/fail.toml
+/content/systems/*/draft.md
 .crush/
 
 tmp/

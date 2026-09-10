@@ -1,7 +1,9 @@
-# K2-18 and its planets
+# K2-18: two planets around a small, cool red dwarf
 
-K2-18 is a small, cool red dwarf star (spectral type M2.5 V) located about 124 light-years away. The star's reported mass estimate is about 0.359 solar masses, and its reported radius estimate is about 0.411 solar radii—both smaller than the Sun's. Its estimated temperature is about 3460 K, cooler than the Sun's.
+**K2-18** is a cool, red M-type dwarf star about **124 light-years** away. Its mass is **about 0.359 solar masses**, its radius is **about 0.411 solar radii**, and its temperature is **about 3460 K**. Each of these values is smaller and cooler than the Sun's corresponding ones.
 
-Two planets are associated with this host. K2-18 b, discovered by the transit method in 2015, has a reported radius estimate of about 2.37 Earth radii—larger than Earth's—and a reported mass estimate of about 8.92 Earth masses, also larger than Earth's. Its year is estimated at about 32.9 days, shorter than Earth's roughly 365-day year. Among the listed planets, K2-18 b has the longest year by reported estimates.
+Two planets orbit this host. **K2-18 b**, discovered in 2015, is a Super-Earth with a radius of **about 2.37 Earth radii**, which is larger than Earth's. Its mass is **about 8.92 Earth masses**, also larger than Earth's. The planet's mean density is **about 3.69 g/cm³**, roughly **0.67 times Earth's** density. Its year lasts **about 32.9 days**, which is shorter than Earth's roughly 365-day year.
 
-K2-18 c, discovered by the radial velocity method in 2017, has a reported minimum-mass quantity (M sin i) of about 7.51 Earth masses. This represents a lower bound on the planet's true mass: when the orbit's tilt is unknown, the measurable gravitational pull gives at least this value, distinct from an estimate of the planet's true mass. Its year is estimated at about 8.96 days, shorter than Earth's roughly 365-day year, and among the listed planets it has the shortest year by reported estimates.
+**K2-18 c**, discovered in 2017 through the radial velocity method, has a minimum-mass quantity (M sin i) of **about 7.51 Earth masses**. This quantity is a lower bound on the planet's true mass, since the orbit's tilt is unknown; the measurable gravitational pull gives at least this value. Its year is **about 8.96 days**, also shorter than Earth's roughly 365-day year.
+
+Among the two planets, **K2-18 c** has the shortest year, at **about 8.96 days**, while **K2-18 b** has the longest, at **about 32.9 days**.

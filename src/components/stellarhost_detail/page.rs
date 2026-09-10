@@ -6,6 +6,7 @@ use leptos_router::hooks::use_params_map;
 use leptos_router::lazy_route;
 
 use super::comparison::StarScaleComparisonSection;
+use super::description::DescriptionSection;
 use super::hero::HostHeroSection;
 use super::planets::PlanetsSection;
 use super::provenance::ProvenanceSection;
@@ -14,7 +15,9 @@ use crate::metadata_helpers::{
     canonical_url, decode_path_segment, encode_path_segment,
     stellarhost_detail_description, stellarhost_detail_title, title_with_site,
 };
-use crate::server::functions::{get_planets_for_host, get_stellar_host_detail};
+use crate::server::functions::{
+    get_host_description, get_planets_for_host, get_stellar_host_detail,
+};
 use crate::structured_data::{StructuredData, stellarhost_dataset_schema};
 
 #[derive(Clone)]
@@ -62,6 +65,11 @@ pub fn StellarHostDetailPage() -> impl IntoView {
         move |name| async move { get_planets_for_host(name).await },
     );
 
+    let description_resource = Resource::new(
+        move || hostname.get(),
+        move |name| async move { get_host_description(name).await },
+    );
+
     view! {
         <Title text=move || fallback_title()/>
         <Meta name="description" content=move || fallback_description()/>
@@ -87,6 +95,9 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                     {move || {
                         let host_data = host_resource.get();
                         let planets_data = planets_resource.get();
+                        let description = description_resource
+                            .get()
+                            .and_then(|result| result.ok().flatten());
 
                         match (host_data, planets_data) {
                             (Some(Ok(host)), Some(Ok(planets))) => view! {
@@ -98,6 +109,7 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                                     <CanonicalSummarySection host=host.clone() />
                                     <StarScaleComparisonSection host=host.clone() />
                                     <PlanetsSection planets=planets />
+                                    <DescriptionSection description=description />
                                     <ProvenanceSection host=host />
                                 </div>
                             }

@@ -6,7 +6,10 @@ use std::{
 };
 
 use anyhow::{Context, Result, bail};
-use exo_core::selection::{exoplanet_record_index, stellar_host_record_index};
+use exo_core::selection::{
+    exoplanet_record_index, stellar_host_record_index, system_identifier,
+};
+use exo_core::tables::overview::planet_size_class;
 use polars::prelude::{ChunkCompareEq, DataFrame, ParquetReader, SerReader};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -17,6 +20,7 @@ const LIGHT_YEARS_PER_PARSEC: f64 = 3.26156;
 const EARTH_DAYS_PER_YEAR: f64 = 365.0;
 const EARTH_MASSES_PER_JUPITER: f64 = 317.8;
 const SUN_EFFECTIVE_TEMPERATURE_K: f64 = 5772.0;
+const EARTH_DENSITY_G_CM3: f64 = 5.51;
 
 #[derive(Serialize)]
 struct Measurement {
@@ -55,6 +59,8 @@ impl Measurement {
 #[derive(Serialize)]
 struct Planet {
     name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    classification: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     discovery_method: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -95,26 +101,21 @@ struct Request {
 }
 
 pub fn columns() -> Vec<String> {
-    ["hostname", "evidence_path", "request_path", "diagnostics"]
-        .into_iter()
-        .map(str::to_owned)
-        .collect()
+    [
+        "hostname",
+        "evidence_path",
+        "request_path",
+        "diagnostics_count",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect()
 }
 
 pub fn system_id(hostname: &str) -> Result<String> {
-    let mut result = String::new();
-    for c in hostname.chars() {
-        if c.is_ascii_alphanumeric() {
-            result.push(c.to_ascii_lowercase());
-        } else if (c.is_whitespace() || c == '-') && !result.ends_with('-') {
-            result.push('-');
-        }
-    }
-    let result = result.trim_matches('-').to_owned();
-    if result.is_empty() {
-        bail!("Hostname produces an empty system identifier");
-    }
-    Ok(result)
+    system_identifier(hostname).ok_or_else(|| {
+        anyhow::anyhow!("Hostname produces an empty system identifier")
+    })
 }
 
 fn selected_rows(frame: &DataFrame, hostname: &str) -> Result<Vec<Value>> {
@@ -172,7 +173,8 @@ pub fn run(
     )?;
     Ok(
         json!({"hostname": hostname, "evidence_path": directory.join("evidence.json"),
-        "request_path": directory.join("request.toml"), "diagnostics": diagnostics.join("; ")}),
+        "request_path": directory.join("request.toml"), "diagnostics": diagnostics,
+        "diagnostics_count": diagnostics.len()}),
     )
 }
 
@@ -454,6 +456,10 @@ fn prepare(
         }
         planets.push(Planet {
             name: name.to_owned(),
+            classification: measurements
+                .get("radius")
+                .filter(|m| m.interval().is_some())
+                .map(|m| planet_size_class(m.value)),
             discovery_method: string(row, "discoverymethod"),
             discovery_year: row["disc_year"].as_i64(),
             measurements,
@@ -505,6 +511,11 @@ fn prepare(
         distance,
     };
     let comparisons = comparisons(&star, &planets);
+    let target_words = if comparisons.len() < 10 || planets.len() < 2 {
+        "150–300; shorter when needed to avoid repetition or unsupported claims"
+    } else {
+        "300–600; shorter when needed to avoid repetition or unsupported claims"
+    };
     let source = json!({"evidence_file": "evidence.json", "distance_conversion": "parsecs * 3.26156 = light-years",
         "selection": "Fullest stellar-host summary row and unique default planet rows; spectral type may be taken from any host row"});
     let evidence = json!({"schema_version": 1, "hostname": hostname,
@@ -524,13 +535,22 @@ fn prepare(
     {
         guide.remove("transit");
     }
+    if !planets
+        .iter()
+        .any(|p| p.discovery_method.as_deref() == Some("Radial Velocity"))
+    {
+        guide.remove("radial_velocity");
+    }
+    if !planets.iter().any(|p| p.classification.is_some()) {
+        guide.remove("planet_classes");
+    }
     if star.spectral_type.is_none() {
         guide.remove("spectral");
     }
     let request = Request { schema_version: 1,
         request: BTreeMap::from([
             ("task", "Describe this stellar host and its associated planets for curious general readers."),
-            ("target_words", "300–600; shorter when needed to avoid repetition or unsupported claims"),
+            ("target_words", target_words),
             ("format", "A factual Markdown title and connected paragraphs; no tables or bullet lists"),
             ("coverage", "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."),
         ]),
@@ -627,6 +647,26 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
                     significant(m.value / EARTH_MASSES_PER_JUPITER)
                 ));
             }
+        }
+        if let (Some(mass), Some(radius)) = (
+            planet
+                .measurements
+                .get("mass")
+                .filter(|m| m.interval().is_some())
+                .filter(|m| m.provenance.as_deref() == Some("Mass")),
+            planet
+                .measurements
+                .get("radius")
+                .filter(|m| m.interval().is_some()),
+        ) {
+            let relative = mass.value / radius.value.powi(3);
+            result.push(format!(
+                "{}'s estimated mean density is about {} g/cm³, about {} \
+                 times Earth's.",
+                planet.name,
+                significant(relative * EARTH_DENSITY_G_CM3),
+                significant(relative)
+            ));
         }
         if let Some(direction) = planet
             .measurements
@@ -1184,6 +1224,68 @@ mod tests {
                 .publishable_comparisons
                 .iter()
                 .any(|s| s.contains("second-"))
+        );
+    }
+
+    #[test]
+    fn density_and_classification_follow_provenance() {
+        let mut b = planet("Test b", 10.0);
+        b["pl_rade"] = json!(2.0);
+        b["pl_radelim"] = json!(0);
+        b["pl_bmasse"] = json!(16.0);
+        b["pl_bmasselim"] = json!(0);
+        let mut c = planet("Test c", 20.0);
+        c["pl_rade"] = json!(3.0);
+        c["pl_radelim"] = json!(0);
+        c["pl_bmasse"] = json!(50.0);
+        c["pl_bmasselim"] = json!(0);
+        c["pl_bmassprov"] = json!("Msini");
+        let (request, _, _) = prepare("Test", &[host()], &[b, c]).unwrap();
+        assert_eq!(request.planets[0].classification, Some("Super-Earth"));
+        assert_eq!(request.planets[1].classification, Some("Neptune-like"));
+        assert!(request.guide.contains_key("planet_classes"));
+        assert!(request.publishable_comparisons.iter().any(|s| s.contains(
+            "Test b's estimated mean density is about 11 g/cm³, about 2 times Earth's."
+        )));
+        assert!(
+            !request
+                .publishable_comparisons
+                .iter()
+                .any(|s| s.contains("Test c's estimated mean density"))
+        );
+        let (request, _, _) =
+            prepare("Test", &[host()], &[planet("Test b", 10.0)]).unwrap();
+        assert_eq!(request.planets[0].classification, None);
+        assert!(!request.guide.contains_key("planet_classes"));
+    }
+
+    #[test]
+    fn target_words_follows_fact_richness() {
+        let mut b = planet("Test b", 10.0);
+        b["pl_rade"] = json!(2.5);
+        b["pl_radelim"] = json!(0);
+        b["pl_bmasse"] = json!(4.5);
+        b["pl_bmasselim"] = json!(0);
+        let mut c = planet("Test c", 20.0);
+        c["pl_rade"] = json!(3.5);
+        c["pl_radelim"] = json!(0);
+        c["pl_bmasse"] = json!(2000.0);
+        c["pl_bmasselim"] = json!(0);
+        let (request, _, _) = prepare("Test", &[host()], &[b, c]).unwrap();
+        assert!(
+            request.publishable_comparisons.len() >= 10,
+            "fixture should be fact-rich, got {}",
+            request.publishable_comparisons.len()
+        );
+        assert_eq!(
+            request.request["target_words"],
+            "300–600; shorter when needed to avoid repetition or unsupported claims"
+        );
+        let (request, _, _) =
+            prepare("Test", &[host()], &[planet("Test b", 10.0)]).unwrap();
+        assert_eq!(
+            request.request["target_words"],
+            "150–300; shorter when needed to avoid repetition or unsupported claims"
         );
     }
 

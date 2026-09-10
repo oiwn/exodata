@@ -1,9 +1,9 @@
-# PSR B1257+12 and its planets
+# PSR B1257+12: Three Planets Around a Massive Pulsar
 
-PSR B1257+12 is a pulsar located roughly 1960 light-years away, with a reported mass estimate larger than the Sun's at about 1.4 solar masses. The star is estimated to be about 3 billion years old. Three planets are associated with this host: PSR B1257+12 b, PSR B1257+12 c, and PSR B1257+12 d, each discovered through pulsar timing, with b found in 1994 and both c and d identified in 1992.
+**PSR B1257+12** is a pulsar about **1960 light-years** from Earth. The star holds about **1.4 solar masses**, exceeding the Sun's mass, and its age is about **3 billion years**. Three planets accompany this stellar host: **PSR B1257+12 b**, **PSR B1257+12 c**, and **PSR B1257+12 d**.
 
-Among the three planets, PSR B1257+12 b has the shortest year by reported estimates, completing an orbit in about 25.3 days—shorter than Earth's roughly 365-day year. It also carries the smallest reported mass of the group at about 0.02 Earth masses, a figure smaller than Earth's own mass.
+**PSR B1257+12 b** has the shortest year of the three planets, completing an orbit in **about 25.3 days**, far short of Earth's roughly 365-day year. Its mass is **about 0.02 Earth masses**, the smallest among the listed planets and well below Earth's mass.
 
-PSR B1257+12 c holds the largest reported mass among the listed planets at about 4.3 Earth masses, exceeding Earth's mass, with a year of about 66.5 days that is also shorter than an Earth year. This orbital period places it as both the second-shortest and second-longest year among the trio by reported estimates.
+Recognized second in the system, **PSR B1257+12 c** posts the second-shortest year at **about 66.5 days**, also briefer than an Earth year. Its mass of **about 4.3 Earth masses** ranks as the largest among the listed planets, exceeding Earth's mass.
 
-PSR B1257+12 d completes its orbit in about 98.2 days, the longest year of the three planets by reported estimates, yet still shorter than Earth's roughly 365-day year. Its reported mass of about 3.9 Earth masses is larger than Earth's, ranking as the second-smallest and second-largest reported mass among the planets, ahead of b but behind c.
+**PSR B1257+12 d** takes the longest year of the trio at **about 98.2 days**, though this still falls short of Earth's roughly 365-day year. Its mass of **about 3.9 Earth masses** exceeds Earth's, placing it second-largest among the listed planets. It also holds the second-smallest mass in the group, underscoring how narrow the gap is between it and **PSR B1257+12 c**.

@@ -1,14 +1,16 @@
 hostname = "HD 189733"
-fingerprint = "sha256:40991b8a6b05728939e8007b86ef4f5ebc871788615cdfd8b7b0fb48c21a10c7"
-fingerprint_version = 1
-elapsed_ms = 1545
+fingerprint = "sha256:df12b82fed27e845eb69b34cb354d63d59fd61b26ff4f1668e816bd869ce701f"
+fingerprint_version = 3
+elapsed_ms = 6799
+attempts = 3
+validation_recovered = ["spectral label 'G5' must be bolded"]
 http_status = 200
 model = "deepseek-v4-flash"
 finish_reason = "stop"
-prompt_tokens = 1942
-completion_tokens = 179
-total_tokens = 2121
-generated_at = "2026-09-08T17:20:46.550096+00:00"
+prompt_tokens = 8625
+completion_tokens = 809
+total_tokens = 9434
+generated_at = "2026-09-09T08:07:17.947538+00:00"
 
 [settings]
 model = "deepseek-v4-flash"
@@ -17,3 +19,13 @@ thinking = "disabled"
 stream = false
 request_timeout_seconds = 60
 retries = 0
+
+[stages.draft]
+attempts = 2
+prompt_tokens = 4600
+completion_tokens = 551
+
+[stages.edit]
+attempts = 1
+prompt_tokens = 2052
+completion_tokens = 252

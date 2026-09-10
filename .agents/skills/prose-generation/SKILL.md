@@ -40,13 +40,15 @@ spectral type is the one cross-row exception: when the selected summary row
 lacks `st_spectype`, `prepare` fills it from any host row and records a
 diagnostic.
 
-The single shared system prompt is
-[content/stellarhost_prompt.txt](../../../content/stellarhost_prompt.txt).
+The drafter prompt is
+[content/stellarhost_prompt.txt](../../../content/stellarhost_prompt.txt) and
+the editorial second-stage prompt is
+[content/stellarhost_editor_prompt.txt](../../../content/stellarhost_editor_prompt.txt);
+both are read at batch runtime (`--system-prompt`/`--editor-prompt` override).
 Per-system editorial notes go in `request.toml`'s `silent_constraints`; they
 must never become reader-facing prose. Shared explanatory text lives in
 [the guide](../../../content/prompts/stellarhost_guide.toml), compiled into
-preparation; rebuild/reprepare after editing the guide. Prompt edits are read
-directly by `generate` and do not require a rebuild.
+preparation; rebuild/reprepare after editing the guide.
 
 ## Generate and regenerate
 
@@ -62,14 +64,26 @@ Optional repeated `--hostname` arguments limit the batch. The command consumes
 saved requests, preserving their edits. Run `prepare` explicitly after source
 data or preparation-guide changes. Shared-prompt changes are picked up directly.
 
-The default cap is 1,536 output tokens per call, thinking disabled, no retries,
-and a 60-second timeout. The word target remains 300–600 with permission to be
-shorter. Keep the fixed five-system set during harness improvement; do not add
-repair calls or expand a requested baseline run to the full catalog.
+Generation is three-stage: the drafter produces a factual draft (kept as
+ignored `draft.md`), the editor polishes it with the draft plus the full
+evidence request, and a critic verifies the article against the source facts;
+nonempty critic findings trigger one correction pass. All stages pass the
+deterministic gates (title, paragraphs, bolded names and measurement
+phrases, no em dashes, numeric allowlist, banned-phrase list); the editor
+also passes strict fact preservation (identical numeric-token set, no planet
+dropped), with up to three attempts per stage. The editor and critic prompts
+are `content/stellarhost_editor_prompt.txt` and
+`content/stellarhost_critic_prompt.txt`. The default cap is 1,536 output tokens per
+call, thinking disabled, no transport retries, and a 60-second timeout. The
+word target is computed per system (150-300 for fact-poor systems, else
+300-600), always permitting shorter supported text. Keep the fixed baseline
+set during harness improvement; do not expand a requested baseline run to the
+full catalog.
 
 An unchanged successful fingerprint is skipped. `--force` requests a new result
-with unchanged inputs. Fingerprints compare the prompt, canonical structured
-request, and generation settings; they do not inspect live Parquet data.
+with unchanged inputs. Fingerprints (version 3) compare all three prompt texts,
+the canonical structured request, and generation settings; they do not inspect
+live Parquet data.
 
 Everything per-system lives in `content/systems/<system-id>/`: tracked
 `request.toml`, `description.md`, and compact `metadata.toml`; ignored

@@ -1,14 +1,16 @@
 hostname = "55 Cnc"
-fingerprint = "sha256:0b6fe49083637f60ff817d402dd0be0d25e125fb634c327516021c379edc0bf7"
-fingerprint_version = 1
-elapsed_ms = 4353
+fingerprint = "sha256:f18d25695199736e71dc44a17e20056734fa1e73e8acae65cc9e1591cc39bd83"
+fingerprint_version = 3
+elapsed_ms = 13781
+attempts = 3
+validation_recovered = ["measurement phrase '3.82 times Jupiter' must be bolded"]
 http_status = 200
 model = "deepseek-v4-flash"
 finish_reason = "stop"
-prompt_tokens = 2903
-completion_tokens = 461
-total_tokens = 3364
-generated_at = "2026-09-08T17:20:47.853973+00:00"
+prompt_tokens = 9729
+completion_tokens = 1449
+total_tokens = 11178
+generated_at = "2026-09-09T08:07:18.891244+00:00"
 
 [settings]
 model = "deepseek-v4-flash"
@@ -17,3 +19,13 @@ thinking = "disabled"
 stream = false
 request_timeout_seconds = 60
 retries = 0
+
+[stages.draft]
+attempts = 2
+prompt_tokens = 6523
+completion_tokens = 1002
+
+[stages.edit]
+attempts = 1
+prompt_tokens = 3206
+completion_tokens = 447

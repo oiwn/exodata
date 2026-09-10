@@ -4,18 +4,22 @@ publishable_comparisons = [
     "HR 8799 b's reported radius estimate is larger than Earth's.",
     "HR 8799 b's reported mass estimate is larger than Earth's.",
     "HR 8799 b's reported mass estimate is roughly 6.29 times Jupiter's mass.",
+    "HR 8799 b's estimated mean density is about 5.02 g/cm³, about 0.91 times Earth's.",
     "HR 8799 b's year is longer than Earth's roughly 365-day year.",
     "HR 8799 c's reported radius estimate is larger than Earth's.",
     "HR 8799 c's reported mass estimate is larger than Earth's.",
     "HR 8799 c's reported mass estimate is roughly 9.44 times Jupiter's mass.",
+    "HR 8799 c's estimated mean density is about 7.52 g/cm³, about 1.37 times Earth's.",
     "HR 8799 c's year is longer than Earth's roughly 365-day year.",
     "HR 8799 d's reported radius estimate is larger than Earth's.",
     "HR 8799 d's reported mass estimate is larger than Earth's.",
     "HR 8799 d's reported mass estimate is roughly 9.44 times Jupiter's mass.",
+    "HR 8799 d's estimated mean density is about 7.52 g/cm³, about 1.37 times Earth's.",
     "HR 8799 d's year is longer than Earth's roughly 365-day year.",
     "HR 8799 e's reported radius estimate is larger than Earth's.",
     "HR 8799 e's reported mass estimate is larger than Earth's.",
     "HR 8799 e's reported mass estimate is roughly 10 times Jupiter's mass.",
+    "HR 8799 e's estimated mean density is about 7.76 g/cm³, about 1.41 times Earth's.",
     "Among the listed planets, HR 8799 e has the largest radius by reported estimates (about 13.1 Earth radii).",
     "Among the listed planets, HR 8799 b has the smallest reported mass (about 2000 Earth masses).",
     "Among the listed planets, HR 8799 e has the largest reported mass (about 3180 Earth masses).",
@@ -36,6 +40,7 @@ task = "Describe this stellar host and its associated planets for curious genera
 
 [guide]
 limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+planet_classes = "Planet size classes compare radius with Earth's: a Sub-Earth is smaller than Earth, an Earth-like planet stays within about 1.5 times Earth's radius, a Super-Earth reaches about 2.5 times, a Neptune-like planet reaches about 4 times, and a Jupiter-like planet exceeds about 4 times Earth's radius."
 spectral = "A spectral type such as 'M4.5 V' or 'G5V' classifies a star: the leading letter and number give its temperature class (M coolest and reddest, then K, G, F, A hotter; the Sun is G-type), and a trailing 'V' marks a main-sequence dwarf. A supplied spectral type may be restated in words at class level, e.g. an M-type dwarf as a small, cool red dwarf, or a G-type dwarf as Sun-like; a range such as 'K1/K2' shares the letter class. Omit the wording when the label is unusual or its class is ambiguous."
 units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
 year = "An orbital period is the time a planet takes to complete one orbit: its year."
@@ -83,6 +88,7 @@ display = "about 7400 K"
 
 [[planets]]
 name = "HR 8799 b"
+classification = "Jupiter-like"
 discovery_method = "Imaging"
 discovery_year = 2008
 
@@ -114,6 +120,7 @@ error_minus = -1.0
 
 [[planets]]
 name = "HR 8799 c"
+classification = "Jupiter-like"
 discovery_method = "Imaging"
 discovery_year = 2008
 
@@ -145,6 +152,7 @@ error_minus = 0.0
 
 [[planets]]
 name = "HR 8799 d"
+classification = "Jupiter-like"
 discovery_method = "Imaging"
 discovery_year = 2008
 
@@ -176,6 +184,7 @@ error_minus = 0.0
 
 [[planets]]
 name = "HR 8799 e"
+classification = "Jupiter-like"
 discovery_method = "Imaging"
 discovery_year = 2010
 

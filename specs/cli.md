@@ -262,15 +262,45 @@ are not hash inputs. Matching metadata plus a nonempty description skips a call.
 
 Successful results replace `description.md` and compact `metadata.toml` as a
 pair with ordinary-error rollback, using `.generate` staging. Metadata includes
-hostname, fingerprint/version, settings, timestamp, returned model, usage, and
-duration. A source date is recorded only if present in the saved request; the
-legacy NASA-date scanner remains separate from prepared-input fingerprinting.
-Success clears old `fail.toml`. Failure preserves the previous successful pair
-and replaces ignored `fail.toml` with attempted fingerprint/settings, timestamp,
-error/status and available response body, finish reason, usage, and duration.
-Non-success HTTP responses use sanitized diagnostics rather than raw bodies;
-incomplete/invalid successful HTTP bodies are retained in the failure record.
-Credentials are never persisted. No trial archive or root `tmp/` workflow is used.
+hostname, fingerprint/version, settings, timestamp, returned model, usage,
+duration, the attempt count, and any recovered validation violations. A source
+date is recorded only if present in the saved request; the legacy NASA-date
+scanner remains separate from prepared-input fingerprinting. Success clears
+old `fail.toml`. Failure preserves the previous successful pair and replaces
+ignored `fail.toml` with attempted fingerprint/settings, timestamp,
+error/status and available response body, finish reason, usage, duration, and
+attempts. Non-success HTTP responses use sanitized diagnostics rather than raw
+bodies; incomplete/invalid successful HTTP bodies are retained in the failure
+record. Credentials are never persisted. No trial archive or root `tmp/`
+workflow is used.
+
+Generation is three-stage. Stage one (drafter) uses the shared system prompt
+to turn the saved request into a factual draft, which is stored per system
+as ignored `draft.md` once it validates. Stage two (editor) uses
+`content/stellarhost_editor_prompt.txt` (override with `--editor-prompt`)
+and receives the draft plus the full evidence request; it polishes prose
+while preserving the science. Stage three (critic) uses
+`content/stellarhost_critic_prompt.txt` (override with `--critic-prompt`)
+to verify the finished article against the source facts, returning strict
+JSON findings; nonempty findings trigger one correction pass through the
+editor-stage gates, and a failed correction fails the system naming the
+critic stage. Unparseable or transport-failed critic responses fail open
+with a metadata note. Every response passes deterministic gates before
+installation: one leading level-one title, paragraphs only (no links,
+lists, tables, code, or extra headings), no em dashes or double hyphens,
+every planet-name occurrence bolded, every used measurement phrase
+(number plus unit, and the spectral label) bolded, output numeric tokens
+within the request-licensed set (display strings, comparisons, guide
+values, years, counts, object names - never raw audit values or errors),
+and no banned phrasings (orbital position/speed, significance/hype,
+missing-field commentary, raw-uncertainty derivation, unlicensed labels).
+Each drafter/editor/correction stage retries with violations appended as
+formatting feedback, at most three attempts per stage; transport/HTTP
+failures are never retried. Exhausted retries fail the system naming the
+failed stage while preserving the previous description. Metadata records
+per-stage attempts, token usage, critic findings/correction, plus totals;
+the fingerprint (version 3) covers the request, all three prompt texts,
+and settings.
 
 Progress and aggregate reported tokens/wall time go to stderr; stdout uses
 existing table/JSON/CSV per-system output. Generation success is a transport/
@@ -291,7 +321,10 @@ more exact NASA hostnames are required; repeat `--hostname` to prepare
 several systems in one invocation. A per-system failure does not stop the
 remaining hostnames; errors are reported per row (stderr, or an `error` row
 in JSON) and the process exits nonzero when any preparation failed. No API,
-download, or generation metadata writes occur.
+download, or generation metadata writes occur. Preparation progress goes to
+stderr ("Preparing/Prepared {hostname}") with each diagnostic on its own
+indented line; table and CSV output show hostname, paths, and a diagnostics
+count, while JSON rows carry the full diagnostics array.
 
 Identifiers lowercase ASCII letters, replace whitespace with dashes, remove
 characters other than ASCII letters/digits/dashes, collapse dashes, and trim
@@ -330,8 +363,15 @@ are omitted from publishable fields and reported in diagnostics; their selected
 source rows remain in evidence.
 Missing-field diagnostics are retained in local evidence and CLI output, not
 appended to model instructions. Minimum-mass and transit guide entries are
-included only when relevant to the selected planets. Mass display wording
-explicitly distinguishes a `Mass` quantity from `Msini`.
+included only when relevant to the selected planets; the `spectral` entry
+appears only with a stellar spectral type and `planet_classes` only when at
+least one planet carries an estimate radius classification (Sub-Earth,
+Earth-like, Super-Earth, Neptune-like, or Jupiter-like from the shared
+`exo-core` radius classes; the per-planet `classification` field uses the
+same thresholds). Mass display wording explicitly distinguishes a `Mass`
+quantity from `Msini`. Planets with an estimate `Mass`-provenance mass and
+an estimate radius also carry a precalculated mean-density fact from
+ρ = M/R³ with Earth at 5.51 g/cm³; Msini planets and bounds are skipped.
 
 Comparisons cover stellar mass/radius against solar units, stellar
 temperature against the Sun's 5772 K, planetary radius and mass against
@@ -350,7 +390,9 @@ intervals suppress only baseline comparisons (against Earth, the Sun, or
 Jupiter), not extrema. No deeper ordinals or new interplanetary ratios are
 generated. Unknown mass provenance remains explicit.
 
-The writing target stays 300–600 words, permitting shorter supported text.
+The writing target is computed from fact richness: systems with fewer than
+ten approved comparisons or a single planet target 150-300 words, others
+300-600 words, always permitting shorter supported text.
 `content/stellarhost_prompt.txt` is the single editable system prompt passed
 to the existing generator with `--system-prompt`; preparation never copies it.
 The reusable guide in `content/prompts/stellarhost_guide.toml` is compiled into

@@ -5,24 +5,31 @@ publishable_comparisons = [
     "The star's reported temperature is cooler than the Sun's.",
     "TRAPPIST-1 b's reported radius estimate is larger than Earth's.",
     "TRAPPIST-1 b's reported mass estimate is larger than Earth's.",
+    "TRAPPIST-1 b's estimated mean density is about 5.45 g/cm³, about 0.989 times Earth's.",
     "TRAPPIST-1 b's year is shorter than Earth's roughly 365-day year.",
     "TRAPPIST-1 c's reported radius estimate is larger than Earth's.",
     "TRAPPIST-1 c's reported mass estimate is larger than Earth's.",
+    "TRAPPIST-1 c's estimated mean density is about 5.46 g/cm³, about 0.991 times Earth's.",
     "TRAPPIST-1 c's year is shorter than Earth's roughly 365-day year.",
     "TRAPPIST-1 d's reported radius estimate is smaller than Earth's.",
     "TRAPPIST-1 d's reported mass estimate is smaller than Earth's.",
+    "TRAPPIST-1 d's estimated mean density is about 4.37 g/cm³, about 0.793 times Earth's.",
     "TRAPPIST-1 d's year is shorter than Earth's roughly 365-day year.",
     "TRAPPIST-1 e's reported radius estimate is smaller than Earth's.",
     "TRAPPIST-1 e's reported mass estimate is smaller than Earth's.",
+    "TRAPPIST-1 e's estimated mean density is about 4.9 g/cm³, about 0.889 times Earth's.",
     "TRAPPIST-1 e's year is shorter than Earth's roughly 365-day year.",
     "TRAPPIST-1 f's reported radius estimate is larger than Earth's.",
     "TRAPPIST-1 f's reported mass estimate is larger than Earth's.",
+    "TRAPPIST-1 f's estimated mean density is about 5.02 g/cm³, about 0.91 times Earth's.",
     "TRAPPIST-1 f's year is shorter than Earth's roughly 365-day year.",
     "TRAPPIST-1 g's reported radius estimate is larger than Earth's.",
     "TRAPPIST-1 g's reported mass estimate is larger than Earth's.",
+    "TRAPPIST-1 g's estimated mean density is about 5.06 g/cm³, about 0.918 times Earth's.",
     "TRAPPIST-1 g's year is shorter than Earth's roughly 365-day year.",
     "TRAPPIST-1 h's reported radius estimate is smaller than Earth's.",
     "TRAPPIST-1 h's reported mass estimate is smaller than Earth's.",
+    "TRAPPIST-1 h's estimated mean density is about 4.17 g/cm³, about 0.757 times Earth's.",
     "TRAPPIST-1 h's year is shorter than Earth's roughly 365-day year.",
     "Among the listed planets, TRAPPIST-1 b has the shortest year by reported estimates (about 1.51 days).",
     "Among the listed planets, TRAPPIST-1 h has the longest year by reported estimates (about 18.8 days).",
@@ -53,6 +60,7 @@ task = "Describe this stellar host and its associated planets for curious genera
 
 [guide]
 limits = "Upper and lower limits are reported bounds, not exact values. An estimate is approximate."
+planet_classes = "Planet size classes compare radius with Earth's: a Sub-Earth is smaller than Earth, an Earth-like planet stays within about 1.5 times Earth's radius, a Super-Earth reaches about 2.5 times, a Neptune-like planet reaches about 4 times, and a Jupiter-like planet exceeds about 4 times Earth's radius."
 spectral = "A spectral type such as 'M4.5 V' or 'G5V' classifies a star: the leading letter and number give its temperature class (M coolest and reddest, then K, G, F, A hotter; the Sun is G-type), and a trailing 'V' marks a main-sequence dwarf. A supplied spectral type may be restated in words at class level, e.g. an M-type dwarf as a small, cool red dwarf, or a G-type dwarf as Sun-like; a range such as 'K1/K2' shares the letter class. Omit the wording when the label is unusual or its class is ambiguous."
 transit = "A transit occurs when a planet passes in front of its star from our viewpoint, causing a small dip in observed brightness. Repeated dips help establish orbital periods."
 units = "Earth radii compare radius, not volume; Earth masses compare mass. Solar masses and radii compare stellar mass and radius with the Sun. A Jupiter mass is about 317.8 Earth masses. A light-year is a unit of distance."
@@ -114,6 +122,7 @@ error_minus = -26.0
 
 [[planets]]
 name = "TRAPPIST-1 b"
+classification = "Earth-like"
 discovery_method = "Transit"
 discovery_year = 2016
 
@@ -147,6 +156,7 @@ error_minus = -0.012
 
 [[planets]]
 name = "TRAPPIST-1 c"
+classification = "Earth-like"
 discovery_method = "Transit"
 discovery_year = 2016
 
@@ -180,6 +190,7 @@ error_minus = -0.012
 
 [[planets]]
 name = "TRAPPIST-1 d"
+classification = "Sub-Earth"
 discovery_method = "Transit"
 discovery_year = 2016
 
@@ -213,6 +224,7 @@ error_minus = -0.01
 
 [[planets]]
 name = "TRAPPIST-1 e"
+classification = "Sub-Earth"
 discovery_method = "Transit"
 discovery_year = 2017
 
@@ -246,6 +258,7 @@ error_minus = -0.012
 
 [[planets]]
 name = "TRAPPIST-1 f"
+classification = "Earth-like"
 discovery_method = "Transit"
 discovery_year = 2017
 
@@ -279,6 +292,7 @@ error_minus = -0.012
 
 [[planets]]
 name = "TRAPPIST-1 g"
+classification = "Earth-like"
 discovery_method = "Transit"
 discovery_year = 2017
 
@@ -312,6 +326,7 @@ error_minus = -0.013
 
 [[planets]]
 name = "TRAPPIST-1 h"
+classification = "Sub-Earth"
 discovery_method = "Transit"
 discovery_year = 2017
 
