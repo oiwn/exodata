@@ -64,33 +64,46 @@ Optional repeated `--hostname` arguments limit the batch. The command consumes
 saved requests, preserving their edits. Run `prepare` explicitly after source
 data or preparation-guide changes. Shared-prompt changes are picked up directly.
 
-Generation is three-stage: the drafter produces a factual draft (kept as
-ignored `draft.md`), the editor polishes it with the draft plus the full
-evidence request, and a critic verifies the article against the source facts;
-nonempty critic findings trigger one correction pass. All stages pass the
-deterministic gates (title, paragraphs, bolded names and measurement
-phrases, no em dashes, numeric allowlist, banned-phrase list); the editor
-also passes strict fact preservation (identical numeric-token set, no planet
-dropped), with up to three attempts per stage. The editor and critic prompts
-are `content/stellarhost_editor_prompt.txt` and
-`content/stellarhost_critic_prompt.txt`. The default cap is 1,536 output tokens per
-call, thinking disabled, no transport retries, and a 60-second timeout. The
+Generation is draft-critic-edit: the drafter produces a factual draft (kept
+as ignored `draft.md`), a critic verifies the draft against the source facts
+in DeepSeek json mode (strict `{"findings":[...]}` with
+category/quote/problem/fix, violations only, empty when clean, one parse
+retry, fail-open), and the editor polishes draft plus findings plus full
+evidence. All article stages pass the deterministic gates (title,
+paragraphs, bolded names and measurement phrases, no em dashes, numeric
+allowlist, licensing-aware banned-phrase list); the editor also passes
+strict fact preservation (identical numeric-token set, no planet dropped),
+with up to three attempts per stage. The editor and critic prompts are
+`content/stellarhost_editor_prompt.txt` and
+`content/stellarhost_critic_prompt.txt`. The default cap is 1,536 output
+tokens per article call (768 for the critic), thinking disabled, no
+transport retries, and a 60-second timeout. Curated licensed facts
+(`circumbinary`, `host_kind`, `age_class`, "No orbital period is reported")
+plus their guide entries license otherwise-banned wording; do not widen
+these without updating `prepare.rs`, the guide, and the gates together. The
 word target is computed per system (150-300 for fact-poor systems, else
 300-600), always permitting shorter supported text. Keep the fixed baseline
 set during harness improvement; do not expand a requested baseline run to the
 full catalog.
 
 An unchanged successful fingerprint is skipped. `--force` requests a new result
-with unchanged inputs. Fingerprints (version 3) compare all three prompt texts,
+with unchanged inputs. Fingerprints (version 4) compare all three prompt texts,
 the canonical structured request, and generation settings; they do not inspect
 live Parquet data.
 
 Everything per-system lives in `content/systems/<system-id>/`: tracked
-`request.toml`, `description.md`, and compact `metadata.toml`; ignored
-`evidence.json` and latest `fail.toml`. Success updates prose and metadata
-together and clears old failure information. Failure keeps the previous success
-and records diagnostics and any available returned text/usage in `fail.toml`.
-Do not build Python orchestration, trial folders, or a root `tmp/` workflow.
+`description.md` and optional hand-edited `notes.toml` (`facts` merge
+into publishable comparisons, `guidance` into silent constraints; the
+fingerprint covers the merge, so edited notes regenerate); ignored
+`request.toml`, `metadata.toml`, `evidence.json`, `draft.md`, and latest
+`fail.toml`. Success updates prose and metadata together and clears old
+failure information. Failure keeps the previous success and records
+diagnostics and any available returned text/usage in `fail.toml`.
+Retry failed systems with `generate-batch --failed` (selects `fail.toml`
+systems and overrides the fingerprint skip); inspect catalog state with
+`dev descriptions status` (per-system state, usage totals, failure
+errors, aggregate summary). Do not build Python orchestration, trial
+folders, or a root `tmp/` workflow.
 Do not copy the shared prompt per system or create permanent response archives.
 
 Progress and aggregate usage go to stderr; stdout contains table/JSON/CSV

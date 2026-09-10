@@ -1,5 +1,5 @@
-# 51 Peg: one planet around a Sun-like star
+# 51 Peg: a single planet around a Sun-like star
 
-**51 Peg** is a G-type main-sequence dwarf about **about 50.4 light-years** away. Its mass is about **about 1.05 solar masses**, its radius is about **about 1.15 solar radii**, and its temperature of about **about 5790 K** is hotter than the Sun's. The star is about **about 6.76 billion years** old.
+**51 Peg** is a star of spectral type **G5V**, a G-type main-sequence dwarf. Its age is **about 6.76 billion years**, and it lies **about 50.4 light-years** away. With a mass of **about 1.05 solar masses**, the star is larger than the Sun, and its radius of **about 1.15 solar radii** is likewise larger than the Sun's. At **about 5790 K**, it is hotter than the Sun.
 
-The radial velocity method measures the wobble a planet's gravity induces in its star's motion; repeated wobbles reveal the planet and its orbital period. Using this method, astronomers found **51 Peg b**. The planet's mass of about **about 194 Earth masses** is larger than Earth's. Its year of about **about 4.23 days** is shorter than Earth's roughly 365-day year.
+One planet is associated with this host: **51 Peg b**, discovered in 1995. Its mass is **about 194 Earth masses**, larger than Earth's. **51 Peg b** was found using the radial velocity method, which measures the wobble a planet's gravity induces in its star's motion; repeated wobbles reveal the planet and its orbital period. That period is **about 4.23 days**, shorter than Earth's roughly 365-day year.

@@ -1,6 +1,88 @@
 # Current Task Context: Generated System Descriptions (#116)
 
-State: Three-stage pipeline (drafter, editor, critic with correction) plus measurement-bolding, numeric-allowlist, and banned-phrase gates implemented per specs/prose_harness.md; radial_velocity guide entry added; fingerprint v3. Awaiting user-run regeneration of the 15-system baseline.
+State: Notes/retry/status round (2026-09-10) implemented: all five review defects fixed, 15/15 baseline regenerated at fingerprint v4, `--failed` retry filter and `descriptions status` proven live, notes.toml manual channel in place, tracked set slimmed to description.md + notes.toml. Critic noise reduced but not eliminated - demote/sample decision pending before the catalog run. Awaiting user review and the git untrack commands below.
+
+Git untrack for the baseline (user-run): `git rm --cached content/systems/*/request.toml content/systems/*/metadata.toml`
+
+## Notes, Retry, and Status Round — 2026-09-10 (implemented)
+
+Fixes the external review's residual defects, adds per-system manual
+notes, a failed-only retry filter, a status subcommand, and slims the
+tracked file set for catalog scale.
+
+- Gates: articles now ban meta/preparation language ("the guide",
+  "supplied", "the request", "the evidence"); tests for each.
+- Prepare: `sy_snum > 1` adds a silent constraint attributing stellar
+  measurements to the selected host star only (fixed Kepler-16); with
+  exactly 3 ranked planets the second-place fact is emitted once, not
+  paired (fixed PSR); tests.
+- Prompts: critic requires verbatim draft quotes, forbids placeholder
+  findings, acknowledges licensed collectives/rankings explicitly;
+  drafter/editor forbid mentioning the guide/request/preparation.
+- Per-system manual notes: optional tracked
+  `content/systems/<id>/notes.toml` (`facts` → publishable_comparisons,
+  `guidance` → silent_constraints), merged in preflight; fingerprint
+  covers the merge so edited notes regenerate. Never machine-written.
+- `generate-batch --failed`: selects systems with `fail.toml` and
+  overrides the fingerprint skip (solves the force-trap). Proven live:
+  a 12/15 pass with 3 exhausted-retry failures retried cleanly.
+- New `dev descriptions status`: per-system state (failed > generated >
+  missing), fingerprint version, attempts, token totals, critic findings
+  count, timestamps, failure error; aggregate summary line.
+- Git layout: `request.toml`/`metadata.toml` now ignored under
+  `content/systems/*/`; tracked set is `description.md` + `notes.toml`.
+  Baseline 15 untracked via `git rm --cached` (user-run).
+- Live verification: two full regenerations; final state 15/15 generated
+  in one pass, all five named defects gone (Kepler-16 attribution,
+  Kepler-11 count, HR 8799/Proxima meta leaks, PSR double ordinal),
+  banned-phrase sweep clean.
+- Critic assessment (honest): noise dropped 29 → 9 findings after two
+  prompt iterations, but false positives persist (supplied counts,
+  licensed rankings, licensed collectives still get flagged). The editor
+  demonstrably resists wrong findings and the article floor is gate
+  protected, so damage is bounded to wasted critic tokens. Open decision
+  for the catalog run: keep as advisory, sample it, or demote to
+  recorder-only before spending ~4,735 critic calls.
+
+
+## Licensed-Facts Round — 2026-09-10 (implemented)
+
+- `prepare.rs` emits curated licensed facts with matching guide entries:
+  per-planet `circumbinary = true` (NASA `cb_flag` = 1 only, never inferred
+  from `sy_snum`; negative case HD 41004 A), star `host_kind = "pulsar"`
+  (any planet method Pulsar Timing), star `age_class = "very young"`
+  (age estimate < 0.1 Gyr), and the comparison fact "No orbital period is
+  reported for {planet}." when a planet lacks a period.
+- Gates: `ValidationContext.licensed_phrases` (built by
+  `batch.rs::licensed_phrases`); `banned_patterns` strips licensed phrases
+  before matching and bans `circumbinary`, `sun-like`, `about about`
+  unconditionally. "pulsar timing" (method label) and "very young"/"pulsar"
+  (fact-gated) lift only with their facts; "sun-like" requires a G-type
+  supplied spectral label (fixes Kepler-11's leak).
+- Pipeline reordered to draft → critic(draft, json mode 768-token cap,
+  violations-only strict JSON, 1 parse retry, fail-open) → editor(draft +
+  findings + full evidence, gates + preserves_facts vs draft). Editor
+  failure names "editor" and preserves the previous description; the
+  "critic" failure stage and `corrected` metadata field are gone.
+  Fingerprint version 4. DeepSeek alias `deepseek-v4-flash` now serves
+  `deepseek-flash` (V4.1 Flash rollout); metadata records the served name.
+- Verification: 56 lib tests (licensed-phrase gates, new prepare facts,
+  reworked critic tests: notes-reach-editor, editor-failure-preserves,
+  fail-open), integration suites, `cargo fmt` clean.
+- Live run (15 systems): all generated; ~164k tokens total (~11k/system;
+  HR 8799 worst at 27k across two batch passes). Critic findings on 8
+  systems, mostly real (Proxima star-vs-system distance, LHS 1140 "quiet",
+  HD 189733 aggregation wording); 1 self-cancelling noise entry (K2-18).
+  "Sun-like" now absent without a G label, no "about about", no hype, and
+  the three prior failures (HR 8799, PSR, OGLE) all generate with licensed
+  wording ("very young star", "is a pulsar" + guide decode, no-period fact).
+- Residual warts (minor, none blocked): Kepler-16 attributes the single
+  supplied stellar mass/radius to "its two stars" and calls a star
+  temperature "the system's" (critic missed both); HR 8799 says "the 0.1
+  billion years mark that the guide uses" (meta leak); Proxima says
+  "supplied spectral type" (prep-language leak); Kepler-11 closes with
+  "each of the five with a radius estimate" (six have radii); PSR pairs
+  "second-shortest" with "second-longest" year for the middle planet.
 
 ## Gate and Critic Round — 2026-09-09 (implemented)
 
@@ -205,9 +287,10 @@ per `descriptions scan`).
 - No trial directories, Python orchestration, editorial states, or root
   `tmp/` workflow. Evidence: current NASA dataset plus the curated guide; no
   per-system web research. Metadata never stores credentials.
-- Articles and requests live in Git under `content/systems/<system-id>/`;
-  `evidence.json` and `fail.toml` stay ignored. Input refresh is explicit
-  through `prepare`; batch consumes saved requests.
+- Articles (`description.md`) and manual `notes.toml` live in Git under
+  `content/systems/<system-id>/`; `evidence.json`, `fail.toml`,
+  `draft.md`, `request.toml`, and `metadata.toml` stay ignored. Input
+  refresh is explicit through `prepare`; batch consumes saved requests.
 - NASA dates are not a complete change feed (independent stellar-host
   updates and removed rows are invisible to the scan); date-based selection
   is best-effort, explicit regeneration covers the rest.
@@ -242,13 +325,17 @@ per `descriptions scan`).
 
 ## Open Decisions
 
-- Missing-field commentary (HR 8799 e, OGLE): accept, or license an explicit
-  "no supplied period" fact.
-- PSR-style decode of the "Pulsar Timing" method name into "a pulsar":
-  accept as licensed decode (spectral precedent) or forbid.
+- Resolved 2026-09-10: missing-field commentary (licensed "No orbital
+  period is reported" fact), PSR pulsar decode (`host_kind` fact + method
+  label licensing), and age labels (`age_class` fact below 0.1 Gyr);
+  resolved same day: Kepler-16 attribution, meta-language leaks, PSR
+  double ordinal (prepare fixes + bans).
+- Critic role at catalog scale: false-positive rate remains (~9 findings
+  on the baseline, mostly licensed restatements); keep advisory, sample,
+  or demote to recorder-only before ~4,735 paid critic calls.
 - Mixed-provenance ranking (55 Cnc): accept unlicensed, or allow hedged
-  uniform-provenance ranking.
-- Length: outputs run 150–250 words versus the 300–600 target with
+  uniform-provenance ranking. Current output avoids it.
+- Length: outputs run 150-250 words versus the 300-600 target with
   permission to be shorter; decide whether to lower the target.
 - Serving integration, deployment packaging, and initial language coverage
   remain unspecified.

@@ -190,6 +190,9 @@ enum DescriptionCommands {
         /// Regenerate even when successful input fingerprints match
         #[arg(long)]
         force: bool,
+        /// Retry only systems whose latest attempt failed (fail.toml present)
+        #[arg(long)]
+        failed: bool,
     },
     /// Prepare offline stellar-host evidence and a writing request
     Prepare {
@@ -220,6 +223,11 @@ enum DescriptionCommands {
     Scan {
         #[arg(long)]
         all: bool,
+        #[arg(long, default_value = "content/systems")]
+        content_dir: String,
+    },
+    /// Summarize per-system generation state, usage, and failures
+    Status {
         #[arg(long, default_value = "content/systems")]
         content_dir: String,
     },
@@ -308,6 +316,7 @@ fn main() -> Result<()> {
                     concurrency,
                     max_tokens,
                     force,
+                    failed,
                 } => {
                     let rows = descriptions::batch::run(
                         &descriptions::batch::Options {
@@ -319,6 +328,7 @@ fn main() -> Result<()> {
                             concurrency: concurrency as usize,
                             max_tokens,
                             force,
+                            failed,
                         },
                     )?;
                     output::render_rows(
@@ -443,6 +453,15 @@ fn main() -> Result<()> {
                         all,
                     )?;
                     output::render_rows(&rows, &descriptions::columns(), format)?;
+                }
+                DescriptionCommands::Status { content_dir } => {
+                    let rows =
+                        descriptions::status::run(Path::new(&content_dir))?;
+                    output::render_rows(
+                        &rows,
+                        &descriptions::status::columns(),
+                        format,
+                    )?;
                 }
             },
             DevCommands::ViewFields { path } => {

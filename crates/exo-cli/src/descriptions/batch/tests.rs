@@ -55,6 +55,7 @@ impl Fixture {
             concurrency: 4,
             max_tokens: 1536,
             force: false,
+            failed: false,
         }
     }
 }
@@ -95,8 +96,9 @@ async fn handle(
         tokio::time::sleep(Duration::from_millis(10)).await;
         let content = match action_for(&state, &content_str).as_deref() {
             Some("critic") | Some("criticfail") => json!({"findings": [
-                {"code": "editorial_hype", "quote": "most notable",
-                 "reason": "significance claim"}]})
+                {"category": "editorial_hype", "quote": "most notable",
+                 "problem": "significance claim",
+                 "fix": "delete the claim"}]})
             .to_string(),
             Some("criticbad") => "garbage not json".to_owned(),
             _ => json!({"findings": []}).to_string(),
@@ -106,8 +108,8 @@ async fn handle(
             "usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}))
             .into_response();
     }
-    let correction = content_str.contains("# Verifier findings");
-    let (name, action) = if correction {
+    let findings = content_str.contains("# Verifier findings");
+    let (name, action) = if findings {
         let name = content_str
             .strip_prefix("# ")
             .and_then(|rest| rest.lines().next())
@@ -165,7 +167,7 @@ async fn handle(
     if action == "invalid" {
         return (StatusCode::OK, "not JSON").into_response();
     }
-    let content = if correction {
+    let content = if findings {
         if action == "criticfail" {
             json!(format!("# {name}\nBad — dash."))
         } else {
@@ -229,6 +231,71 @@ async fn server(
         state,
         task,
     )
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn failed_filter_retries_failed_systems_over_matching_fingerprints() {
+    let fixture = Fixture::new(&["A", "B"]);
+    let options = fixture.options();
+    let prompt = "prompt";
+    let (client, _state, task) = server(&fixture, Duration::from_secs(5)).await;
+    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
+    execute(
+        jobs,
+        rows,
+        client,
+        prompt.into(),
+        "editor".into(),
+        "critic".into(),
+        1,
+        1536,
+    )
+    .await
+    .unwrap();
+    // Simulate a failed forced rerun with unchanged inputs: the success
+    // metadata still matches the current fingerprint, but a fail.toml
+    // records the latest, failed attempt.
+    fs::write(
+        fixture.0.join("A/fail.toml"),
+        "hostname = 'A'\nerror = 'forced rerun failed'\n",
+    )
+    .unwrap();
+    let plain = fixture.options();
+    assert!(
+        preflight(&plain, prompt, "editor", "critic")
+            .unwrap()
+            .0
+            .is_empty()
+    );
+    let mut retry = fixture.options();
+    retry.failed = true;
+    let (jobs, _rows) = preflight(&retry, prompt, "editor", "critic").unwrap();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].hostname, "A");
+    let mut missing = retry.clone();
+    missing.hostnames = vec!["B".into()];
+    assert!(preflight(&missing, prompt, "editor", "critic").is_err());
+    task.abort();
+}
+
+#[test]
+fn notes_merge_into_wire_input_and_change_the_fingerprint() {
+    let fixture = Fixture::new(&["A"]);
+    let options = fixture.options();
+    let (jobs, _) = preflight(&options, "prompt", "editor", "critic").unwrap();
+    let plain = jobs[0].fingerprint.clone();
+    let input = jobs[0].input.clone();
+    fs::write(
+        fixture.0.join("A/notes.toml"),
+        "facts = ['The planet glows faintly in X-ray.']\n\
+         guidance = ['Mention the X-ray fact last.']\n",
+    )
+    .unwrap();
+    let (jobs, _) = preflight(&options, "prompt", "editor", "critic").unwrap();
+    assert_ne!(jobs[0].fingerprint, plain);
+    assert!(jobs[0].input.contains("The planet glows faintly in X-ray."));
+    assert!(jobs[0].input.contains("Mention the X-ray fact last."));
+    assert!(!input.contains("X-ray"));
 }
 
 #[test]
@@ -310,10 +377,15 @@ async fn concurrency_capture_skip_and_force() {
         let system = body["messages"][0]["content"].as_str().unwrap();
         assert_eq!(
             body["max_tokens"],
-            if system == "critic" { 512 } else { 1536 }
+            if system == "critic" { 768 } else { 1536 }
         );
         assert_eq!(body["thinking"]["type"], "disabled");
         assert_eq!(body["stream"], false);
+        if system == "critic" {
+            assert_eq!(body["response_format"]["type"], "json_object");
+        } else {
+            assert!(body.get("response_format").is_none());
+        }
         assert!(system == prompt || system == "editor" || system == "critic");
     }
     let (jobs, rows) = preflight(&options, &prompt, "editor", "critic").unwrap();
@@ -488,7 +560,7 @@ async fn validation_retry_recovers_and_records_attempts() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn critic_findings_trigger_correction_and_metadata() {
+async fn critic_findings_reach_editor_and_record_metadata() {
     let fixture = Fixture::new(&["A"]);
     fixture.request("A", "critic");
     let options = fixture.options();
@@ -508,18 +580,18 @@ async fn critic_findings_trigger_correction_and_metadata() {
     .await
     .unwrap();
     assert_eq!(rows[0]["status"], "generated");
-    assert_eq!(state.calls.load(Ordering::SeqCst), 4);
+    assert_eq!(state.calls.load(Ordering::SeqCst), 3);
     let description =
         fs::read_to_string(fixture.0.join("A/description.md")).unwrap();
     assert!(description.contains("Corrected prose."));
     let metadata = read_toml(&fixture.0.join("A/metadata.toml")).unwrap();
-    assert_eq!(metadata["critic"]["corrected"], true);
     assert_eq!(metadata["critic"]["findings"].as_array().unwrap().len(), 1);
+    assert!(metadata["critic"].get("corrected").is_none());
     task.abort();
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn unfixable_critic_findings_fail_and_preserve_previous() {
+async fn editor_failure_after_findings_fails_and_preserves_previous() {
     let fixture = Fixture::new(&["A"]);
     let options = fixture.options();
     let prompt = "prompt";
@@ -557,9 +629,9 @@ async fn unfixable_critic_findings_fail_and_preserve_previous() {
         rows[0]["reason"]
             .as_str()
             .unwrap()
-            .contains("critic validation failed")
+            .contains("editor validation failed")
     );
-    assert_eq!(state.calls.load(Ordering::SeqCst), 9);
+    assert_eq!(state.calls.load(Ordering::SeqCst), 8);
     assert_eq!(fs::read(fixture.0.join("A/description.md")).unwrap(), old);
     let failure = read_toml(&fixture.0.join("A/fail.toml")).unwrap();
     assert_eq!(failure["critic"]["findings"].as_array().unwrap().len(), 1);

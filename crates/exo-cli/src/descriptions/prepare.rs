@@ -21,6 +21,7 @@ const EARTH_DAYS_PER_YEAR: f64 = 365.0;
 const EARTH_MASSES_PER_JUPITER: f64 = 317.8;
 const SUN_EFFECTIVE_TEMPERATURE_K: f64 = 5772.0;
 const EARTH_DENSITY_G_CM3: f64 = 5.51;
+const VERY_YOUNG_AGE_GYR: f64 = 0.1;
 
 #[derive(Serialize)]
 struct Measurement {
@@ -62,6 +63,8 @@ struct Planet {
     #[serde(skip_serializing_if = "Option::is_none")]
     classification: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    circumbinary: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     discovery_method: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     discovery_year: Option<i64>,
@@ -82,6 +85,10 @@ struct System {
 
 #[derive(Serialize)]
 struct Star {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    host_kind: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    age_class: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     spectral_type: Option<String>,
     measurements: BTreeMap<&'static str, Measurement>,
@@ -460,12 +467,20 @@ fn prepare(
                 .get("radius")
                 .filter(|m| m.interval().is_some())
                 .map(|m| planet_size_class(m.value)),
+            circumbinary: (row["cb_flag"].as_i64() == Some(1)).then_some(true),
             discovery_method: string(row, "discoverymethod"),
             discovery_year: row["disc_year"].as_i64(),
             measurements,
         });
     }
+    let host_kind = (!planets.is_empty()
+        && planets
+            .iter()
+            .any(|p| p.discovery_method.as_deref() == Some("Pulsar Timing")))
+    .then_some("pulsar");
     let mut star = Star {
+        host_kind,
+        age_class: None,
         spectral_type: string(host, "st_spectype"),
         measurements: BTreeMap::new(),
     };
@@ -494,6 +509,12 @@ fn prepare(
             star.measurements.insert(key, m);
         }
     }
+    star.age_class = star
+        .measurements
+        .get("age")
+        .filter(|m| m.qualifier == "estimate")
+        .filter(|m| m.value < VERY_YOUNG_AGE_GYR)
+        .map(|_| "very young");
     let mut distance =
         measurement(host, "sy_dist", "parsecs", hostname, &mut diagnostics);
     if let Some(m) = distance.as_mut() {
@@ -544,25 +565,54 @@ fn prepare(
     if !planets.iter().any(|p| p.classification.is_some()) {
         guide.remove("planet_classes");
     }
+    if !planets.iter().any(|p| p.circumbinary == Some(true)) {
+        guide.remove("circumbinary");
+    }
+    if star.host_kind.is_none() {
+        guide.remove("pulsar_timing");
+    }
+    if star.age_class.is_none() {
+        guide.remove("stellar_age");
+    }
     if star.spectral_type.is_none() {
         guide.remove("spectral");
     }
-    let request = Request { schema_version: 1,
+    let mut silent_constraints = vec![
+        "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.".into(),
+        "These constraints and diagnostics are silent instructions, never reader-facing prose.".into(),
+        "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.".into(),
+        "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.".into(),
+        "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.".into(),
+    ];
+    if system.catalog_system_star_count.is_some_and(|n| n > 1) {
+        silent_constraints.push(
+            "The stellar measurements describe the selected host star only; never attribute them to the companion star or stars, and never call them system-wide values.".into(),
+        );
+    }
+    let request = Request {
+        schema_version: 1,
         request: BTreeMap::from([
-            ("task", "Describe this stellar host and its associated planets for curious general readers."),
+            (
+                "task",
+                "Describe this stellar host and its associated planets for curious general readers.",
+            ),
             ("target_words", target_words),
-            ("format", "A factual Markdown title and connected paragraphs; no tables or bullet lists"),
-            ("coverage", "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending."),
+            (
+                "format",
+                "A factual Markdown title and connected paragraphs; no tables or bullet lists",
+            ),
+            (
+                "coverage",
+                "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending.",
+            ),
         ]),
-        guide, source, system, star, planets,
+        guide,
+        source,
+        system,
+        star,
+        planets,
         publishable_comparisons: comparisons,
-        silent_constraints: vec![
-            "Only system, star, planets, publishable_comparisons, and guide supply article content; source is audit context.".into(),
-            "These constraints and diagnostics are silent instructions, never reader-facing prose.".into(),
-            "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.".into(),
-            "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.".into(),
-            "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.".into(),
-        ],
+        silent_constraints,
     };
     Ok((request, evidence, diagnostics))
 }
@@ -621,6 +671,12 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
         ));
     }
     for planet in planets {
+        if planet.measurements.get("orbital_period").is_none() {
+            result.push(format!(
+                "No orbital period is reported for {}.",
+                planet.name
+            ));
+        }
         if let Some(direction) = planet
             .measurements
             .get("radius")
@@ -715,7 +771,9 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
             if distinct_from_all(&values, 1) {
                 result.push(format!("Among the listed planets, {} has the second-{low_label} by reported estimates ({}).", values[1].0, values[1].1.display));
             }
-            if distinct_from_all(&values, last - 1) {
+            // With exactly three ranked planets the second-lowest and
+            // second-highest are the same planet; emit it once.
+            if values.len() > 3 && distinct_from_all(&values, last - 1) {
                 result.push(format!("Among the listed planets, {} has the second-{high_label} by reported estimates ({}).", values[last - 1].0, values[last - 1].1.display));
             }
         }
@@ -772,7 +830,9 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
                         amount(1)
                     ));
                 }
-                if distinct_from_all(&masses, last - 1) {
+                // With exactly three ranked planets the second-smallest and
+                // second-largest are the same planet; emit it once.
+                if masses.len() > 3 && distinct_from_all(&masses, last - 1) {
                     result.push(format!(
                         "Among the listed planets, {} has the second-largest {label} ({}).",
                         masses[last - 1].0,
@@ -1190,18 +1250,35 @@ mod tests {
             "Test c has the second-shortest year by reported estimates (about 20 days)."
         )));
         assert!(facts.iter().any(|s| s.contains(
-            "Test c has the second-longest year by reported estimates (about 20 days)."
-        )));
-        assert!(facts.iter().any(|s| s.contains(
             "Test c has the second-smallest radius by reported estimates (about 2.5 Earth radii)."
         )));
         assert!(facts.iter().any(|s| s.contains(
-            "Test c has the second-largest reported mass (about 4.5 Earth masses)."
+            "Test c has the second-smallest reported mass (about 4.5 Earth masses)."
         )));
+        // With exactly three ranked planets the middle one must not receive
+        // paired second-place labels.
+        assert!(!facts.iter().any(|s| s.contains("second-longest year")
+            || s.contains("second-largest reported mass")));
+        let mut fourth = planet("Test h", 60.0);
+        fourth["pl_rade"] = json!(4.5);
+        fourth["pl_radelim"] = json!(0);
+        fourth["pl_bmasse"] = json!(3000.0);
+        fourth["pl_bmasselim"] = json!(0);
+        let (request, _, _) =
+            prepare("Test", &[host()], &[b.clone(), c, d.clone(), fourth])
+                .unwrap();
+        let facts = &request.publishable_comparisons;
+        assert!(facts.iter().any(|s| s.contains("second-longest year")));
+        assert!(
+            facts
+                .iter()
+                .any(|s| s.contains("second-smallest reported mass"))
+        );
         let mut tied = planet("Test g", 25.0);
         tied["pl_rade"] = json!(1.5049);
         tied["pl_radelim"] = json!(0);
-        let (request, _, _) = prepare("Test", &[host()], &[b, tied, d]).unwrap();
+        let (request, _, _) =
+            prepare("Test", &[host()], &[b.clone(), tied, d.clone()]).unwrap();
         let facts = &request.publishable_comparisons;
         assert!(facts.iter().any(|s| s.contains(
             "Test d has the largest radius by reported estimates (about 3.5 Earth radii)."
@@ -1257,6 +1334,79 @@ mod tests {
             prepare("Test", &[host()], &[planet("Test b", 10.0)]).unwrap();
         assert_eq!(request.planets[0].classification, None);
         assert!(!request.guide.contains_key("planet_classes"));
+    }
+
+    #[test]
+    fn cb_flag_host_kind_age_class_and_missing_period_license_facts() {
+        let mut young = host();
+        young["st_age"] = json!(0.03);
+        young["st_agelim"] = json!(0);
+        let mut b = planet("Test b", 10.0);
+        b["cb_flag"] = json!(1);
+        b["discoverymethod"] = json!("Pulsar Timing");
+        let mut c = planet("Test c", 20.0);
+        c["cb_flag"] = json!(0);
+        c["discoverymethod"] = json!("Pulsar Timing");
+        let (request, _, _) = prepare("Test", &[young], &[b, c.clone()]).unwrap();
+        assert_eq!(request.planets[0].circumbinary, Some(true));
+        assert_eq!(request.planets[1].circumbinary, None);
+        assert_eq!(request.star.host_kind.as_deref(), Some("pulsar"));
+        assert_eq!(request.star.age_class.as_deref(), Some("very young"));
+        assert!(request.guide.contains_key("circumbinary"));
+        assert!(request.guide.contains_key("pulsar_timing"));
+        assert!(request.guide.contains_key("stellar_age"));
+
+        let mut binary = host();
+        binary["sy_snum"] = json!(2);
+        let mut no_flag = planet("Test b", 10.0);
+        no_flag["discoverymethod"] = json!("Transit");
+        let (request, _, _) =
+            prepare("Test", &[binary], &[no_flag.clone()]).unwrap();
+        assert_eq!(request.planets[0].circumbinary, None);
+        assert_eq!(request.star.host_kind, None);
+        assert_eq!(request.star.age_class, None);
+        assert!(!request.guide.contains_key("circumbinary"));
+        assert!(!request.guide.contains_key("pulsar_timing"));
+        assert!(!request.guide.contains_key("stellar_age"));
+
+        let mut no_period = no_flag;
+        no_period["pl_orbper"] = Value::Null;
+        let (request, _, _) = prepare("Test", &[host()], &[no_period]).unwrap();
+        assert!(
+            request
+                .publishable_comparisons
+                .iter()
+                .any(|s| s == "No orbital period is reported for Test b.")
+        );
+        let (request, _, _) = prepare("Test", &[host()], &[c]).unwrap();
+        assert!(
+            !request
+                .publishable_comparisons
+                .iter()
+                .any(|s| s.contains("No orbital period"))
+        );
+    }
+
+    #[test]
+    fn multi_star_systems_constrain_stellar_attribution() {
+        let mut binary = host();
+        binary["sy_snum"] = json!(2);
+        let (request, _, _) =
+            prepare("Test", &[binary], &[planet("Test b", 10.0)]).unwrap();
+        assert!(
+            request
+                .silent_constraints
+                .iter()
+                .any(|s| s.contains("describe the selected host star only"))
+        );
+        let (request, _, _) =
+            prepare("Test", &[host()], &[planet("Test b", 10.0)]).unwrap();
+        assert!(
+            !request
+                .silent_constraints
+                .iter()
+                .any(|s| s.contains("selected host star"))
+        );
     }
 
     #[test]

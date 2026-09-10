@@ -274,33 +274,54 @@ bodies; incomplete/invalid successful HTTP bodies are retained in the failure
 record. Credentials are never persisted. No trial archive or root `tmp/`
 workflow is used.
 
-Generation is three-stage. Stage one (drafter) uses the shared system prompt
-to turn the saved request into a factual draft, which is stored per system
-as ignored `draft.md` once it validates. Stage two (editor) uses
-`content/stellarhost_editor_prompt.txt` (override with `--editor-prompt`)
-and receives the draft plus the full evidence request; it polishes prose
-while preserving the science. Stage three (critic) uses
+Generation is draft-critic-edit. Stage one (drafter) uses the shared system
+prompt to turn the saved request into a factual draft, which is stored per
+system as ignored `draft.md` once it validates. Stage two (critic) uses
 `content/stellarhost_critic_prompt.txt` (override with `--critic-prompt`)
-to verify the finished article against the source facts, returning strict
-JSON findings; nonempty findings trigger one correction pass through the
-editor-stage gates, and a failed correction fails the system naming the
-critic stage. Unparseable or transport-failed critic responses fail open
-with a metadata note. Every response passes deterministic gates before
-installation: one leading level-one title, paragraphs only (no links,
-lists, tables, code, or extra headings), no em dashes or double hyphens,
-every planet-name occurrence bolded, every used measurement phrase
+to verify the draft against the source facts; the call runs in DeepSeek
+json mode (`response_format: json_object`) with a 768-token cap, returns
+strict JSON findings (category/quote/problem/fix), gets one parse retry,
+and fails open when unparseable or transport-failed, with a metadata note.
+Stage three (editor) uses `content/stellarhost_editor_prompt.txt`
+(override with `--editor-prompt`) and receives the draft, any critic
+findings as defects to resolve, plus the full evidence request; it polishes
+prose while preserving the science. Every response passes deterministic
+gates before installation: one leading level-one title, paragraphs only
+(no links, lists, tables, code, or extra headings), no em dashes or double
+hyphens, every planet-name occurrence bolded, every used measurement phrase
 (number plus unit, and the spectral label) bolded, output numeric tokens
 within the request-licensed set (display strings, comparisons, guide
 values, years, counts, object names - never raw audit values or errors),
 and no banned phrasings (orbital position/speed, significance/hype,
-missing-field commentary, raw-uncertainty derivation, unlicensed labels).
-Each drafter/editor/correction stage retries with violations appended as
-formatting feedback, at most three attempts per stage; transport/HTTP
-failures are never retried. Exhausted retries fail the system naming the
-failed stage while preserving the previous description. Metadata records
-per-stage attempts, token usage, critic findings/correction, plus totals;
-the fingerprint (version 3) covers the request, all three prompt texts,
-and settings.
+missing-field commentary, raw-uncertainty derivation, the doubled hedge
+"about about", meta/preparation language such as "the guide", "supplied",
+"the request", or "the evidence", and unlicensed labels). Label bans are
+licensing-aware: phrases licensed by prepared facts (a per-planet
+`circumbinary` flag, star `host_kind = "pulsar"` and the `Pulsar Timing`
+method label, star `age_class = "very young"`, and "sun-like" only for a
+supplied G-type spectral label) are stripped before the ban list runs.
+Each drafter/editor stage retries with violations appended as formatting
+feedback, at most three attempts per stage; transport/HTTP failures are
+never retried. Exhausted retries fail the system naming the failed stage
+while preserving the previous description. Metadata records per-stage
+attempts, token usage, critic findings, plus totals; the fingerprint
+(version 4) covers the request, all three prompt texts, and settings.
+
+An optional hand-edited `notes.toml` may live beside the request:
+`facts` entries merge into `publishable_comparisons` (their numbers
+license reader-facing use) and `guidance` entries merge into
+`silent_constraints`. The merge happens in memory at preflight and is
+covered by the fingerprint, so edited notes regenerate the system.
+Prepare and batch never write this file. `--failed` limits the batch to
+systems with a `fail.toml` and retries them even when a matching
+fingerprint would otherwise skip (recovering forced-rerun failures).
+
+`dev descriptions status` summarizes a content directory without model
+calls: per-system state (`failed` when a `fail.toml` records the latest
+failed attempt, else `generated` for a nonempty description, else
+`missing`), fingerprint version, attempts, token totals, critic findings
+count, generated timestamp, and the failure error, with an aggregate
+summary on stderr.
 
 Progress and aggregate reported tokens/wall time go to stderr; stdout uses
 existing table/JSON/CSV per-system output. Generation success is a transport/

@@ -1,9 +1,9 @@
-# K2-18: two planets around a small, cool red dwarf
+# K2-18 and its planets
 
-**K2-18** is a cool, red M-type dwarf star about **124 light-years** away. Its mass is **about 0.359 solar masses**, its radius is **about 0.411 solar radii**, and its temperature is **about 3460 K**. Each of these values is smaller and cooler than the Sun's corresponding ones.
+**K2-18** is an M-type dwarf, a small, cool red dwarf with a spectral type of **M2.5 V**, located about **124 light-years** away. Its mass of about **0.359 solar masses** is smaller than the Sun's, its radius of about **0.411 solar radii** is likewise smaller, and its temperature of about **3460 K** is cooler than the Sun's.
 
-Two planets orbit this host. **K2-18 b**, discovered in 2015, is a Super-Earth with a radius of **about 2.37 Earth radii**, which is larger than Earth's. Its mass is **about 8.92 Earth masses**, also larger than Earth's. The planet's mean density is **about 3.69 g/cm³**, roughly **0.67 times Earth's** density. Its year lasts **about 32.9 days**, which is shorter than Earth's roughly 365-day year.
+Two planets are associated with this host. **K2-18 b** was found via the transit method, which detects the small dip in a star's brightness when a planet passes in front of it. **K2-18 c** was found via the radial velocity method, which measures the wobble a planet's gravity induces in its star's motion.
 
-**K2-18 c**, discovered in 2017 through the radial velocity method, has a minimum-mass quantity (M sin i) of **about 7.51 Earth masses**. This quantity is a lower bound on the planet's true mass, since the orbit's tilt is unknown; the measurable gravitational pull gives at least this value. Its year is **about 8.96 days**, also shorter than Earth's roughly 365-day year.
+**K2-18 b** has a radius of about **2.37 Earth radii**, a planet mass (not a minimum-mass quantity) of about **8.92 Earth masses**, and a mean density of about **3.69 g/cm³**, about **0.67 times Earth's**. Both its radius and its mass are larger than Earth's. Its year lasts about **32.9 days**, shorter than Earth's roughly 365-day year; among the listed planets, it has the longest year.
 
-Among the two planets, **K2-18 c** has the shortest year, at **about 8.96 days**, while **K2-18 b** has the longest, at **about 32.9 days**.
+**K2-18 c** carries a minimum-mass quantity (M sin i) of about **7.51 Earth masses**, a lower bound on its true mass rather than an estimate of it, and this quantity is larger than Earth's mass. Its year is about **8.96 days**, shorter than Earth's roughly 365-day year, and among the listed planets it has the shortest year.

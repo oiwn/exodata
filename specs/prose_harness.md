@@ -10,11 +10,12 @@ measurements or request ordering into new scientific conclusions.
 ## Baseline Editorial Audit
 
 The fixed 15-system baseline was reviewed against its saved `request.toml`
-files and the shared drafter/editor prompts. The generated artifacts are
-two-stage, fingerprint-version-2 outputs dated 2026-09-09. Numeric facts are
-generally retained, but prompt compliance alone does not prevent unsupported
-semantic additions. In particular, the editor's request to vary sentence
-openings and smooth transitions introduced several violations.
+files and the shared drafter/editor prompts. The audit table below refers to
+the earlier two-stage, fingerprint-version-2 outputs dated 2026-09-09; the
+current artifacts are draft-critic-edit, fingerprint-version-4 outputs. Numeric
+facts are generally retained, but prompt compliance alone does not prevent
+unsupported semantic additions. In particular, the editor's request to vary
+sentence openings and smooth transitions introduced several violations.
 
 | System | Finding | Required repair |
 |---|---|---|
@@ -48,13 +49,18 @@ unbolded-measurements case (TRAPPIST-1's values were bolded).
 - A period permits its stated duration and an approved year comparison. It
   does not permit orbital position, speed, distance, or ordering claims.
 - Missing measurements are omitted. The article must not state that a value
-  is unavailable, unreported, unlisted, or unmeasured.
+  is unavailable, unreported, unlisted, or unmeasured. The one licensed
+  exception is the prepared comparison fact "No orbital period is reported
+  for {planet}.", which may be restated plainly.
 - Raw `value`, `error_plus`, and `error_minus` fields are audit data. Their
   values must not be rendered unless they also appear in reader-facing
   display text or an approved comparison.
 - Class, history, age-label, significance, and host-type language must be
-  explicitly licensed. Discovery-method labels do not implicitly license
-  host-type decoding.
+  explicitly licensed. Curated licensed facts: a per-planet `circumbinary`
+  flag (from NASA `cb_flag`), a `host_kind = "pulsar"` star fact plus the
+  `Pulsar Timing` method label, an `age_class = "very young"` star fact for
+  age estimates under 0.1 billion years, and "Sun-like" wording only when a
+  G-type spectral label is supplied. Without the fact, the wording is banned.
 
 ### Editorial stage
 
@@ -97,8 +103,15 @@ specific retry feedback and does not replace an existing successful article.
    serialized in the request.
 5. Existing draft-to-editor numeric equality and planet-name-retention gate.
 6. Policy-pattern gate for missing-data commentary, raw-uncertainty language,
-   orbital position/speed wording, significance/hype, and per-request
-   unlicensed labels. Pattern matches return the matched phrase and rule.
+   orbital position/speed wording, significance/hype, unlicensed labels
+   (`pulsar`, `hot jupiter`, `circumbinary`, `sun-like`, `young`), the
+   doubled hedge `about about`, meta/preparation language ("the guide",
+   "supplied", "the request", "the evidence"), and per-request unlicensed
+   labels. Pattern matches return the matched phrase and rule.
+   Licensing-aware: phrases licensed by prepared facts (for example
+   "pulsar timing" from a supplied method, "very young" from `age_class`,
+   "sun-like" from a G-type spectral label) are removed from the text
+   before the pattern list runs.
 
 The numeric equality gate alone is insufficient: it detects an editor
 altering a draft but cannot catch numbers first invented by the drafter, such
@@ -106,10 +119,11 @@ as OGLE's unlicensed uncertainty endpoints.
 
 ## Semantic Critic
 
-After deterministic validation, use a compact verifier response only for
-residual semantic risks. It receives the completed article plus normalized,
-reader-facing allowed facts and returns structured sentence findings with one
-of these codes:
+Between the drafter and the editor, use a compact verifier call only for
+residual semantic risks. It receives the draft plus normalized,
+reader-facing allowed facts and returns strict JSON (json mode,
+`response_format: json_object`, 768-token cap) with `findings` entries of
+`category`, `quote`, `problem`, and `fix`, using one of these categories:
 
 - `unsupported_fact`
 - `position_or_speed_inference`
@@ -118,9 +132,29 @@ of these codes:
 - `unlicensed_classification`
 - `editorial_hype`
 
-The verifier does not rewrite prose. Findings are retry feedback for the
-stage that introduced the violation. If retries are exhausted, preserve the
-previous successful description and report the failure.
+The contract is violations-only: an empty `findings` array when nothing
+violates, and never a list of checks considered and cleared. One parse
+retry; unparseable or transport-failed responses fail open. The verifier
+does not rewrite prose; its findings are appended to the editor's input as
+defects to resolve while polishing. The editor's output passes the same
+deterministic gates plus fact preservation against the draft, so a finding
+that would require dropping a number cannot be obeyed. The critic
+contract: quotes verbatim from the draft, no placeholder findings,
+licensed collectives and rankings are correct, and findings never mention
+the guide/request/evidence/preparation. Known limitation (2026-09-10):
+the flash model still produces false positives on licensed restatements;
+the editor resists them and the gates bound the damage, but the
+per-call hit rate is low.
+
+## Manual Notes
+
+An optional hand-edited tracked `notes.toml` beside the request carries
+per-system intent: `facts` (merged into `publishable_comparisons`, so
+their numbers license prose and the critic sees them as source) and
+`guidance` (merged into `silent_constraints`). Merged in memory at
+preflight; the fingerprint covers the merge, so edited notes regenerate
+the system. Prepare and batch never write it. Hand-editing
+`request.toml` remains ephemeral: `prepare --force` clobbers it.
 
 ## Regression Cases
 
@@ -140,14 +174,17 @@ Tests must reject these known baseline failures:
 Tests must also accept neutral replacements that preserve the exact displayed
 numbers, units, provenance, bounds, planet names, and approved comparisons.
 
-## Implementation Notes (2026-09-09)
+## Implementation Notes (2026-09-10)
 
-Gates 1-6 are implemented in `crates/exo-cli/src/descriptions/validate.rs`
-and run after both the drafter and editor stages; the licensed numeric set
-is collected per system in `batch.rs::collect_licensed`. The semantic
-critic is a third bounded stage: one verifier call (plus one parse retry,
-failing open when unparseable) after the editor, and when it reports
-findings a single correction pass re-enters the editor-stage gates with the
-findings as feedback; a failed correction fails the system while preserving
-the previous description. A `radial_velocity` guide entry licenses
-radial-velocity explanations.
+The pipeline is draft-critic-edit (`batch.rs::generate_system`): the drafter
+passes the deterministic gates, the saved `draft.md` goes to one critic call
+(json mode, 768-token cap, one parse retry, fail-open), and the editor
+receives the draft plus any findings plus the full evidence, passing the
+gates plus `preserves_facts` against the draft. Editor failure fails the
+system as `"editor"` while preserving the previous description. Gates 1-6
+are implemented in `crates/exo-cli/src/descriptions/validate.rs`; the
+licensed numeric set is collected in `batch.rs::collect_licensed` and
+licensed phrases in `batch.rs::licensed_phrases`. Curated licensed facts
+(`circumbinary` from `cb_flag`, `host_kind`, `age_class`, the no-period
+fact) are emitted by `prepare.rs` with matching guide entries. A
+`radial_velocity` guide entry licenses radial-velocity explanations.

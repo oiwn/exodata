@@ -9,6 +9,10 @@ pub(super) struct ValidationContext {
     pub planet_names: Vec<String>,
     pub spectral_label: Option<String>,
     pub licensed_tokens: BTreeSet<String>,
+    /// Lowercase phrases (for example "circumbinary", "pulsar timing")
+    /// licensed by prepared facts; they are removed before the banned
+    /// pattern list runs.
+    pub licensed_phrases: BTreeSet<String>,
 }
 
 /// Full deterministic gate chain: Markdown structure, bolded names and
@@ -26,7 +30,7 @@ pub(super) fn validate_article(
     {
         violations.extend(errors);
     }
-    if let Err(errors) = banned_patterns(markdown) {
+    if let Err(errors) = banned_patterns(markdown, &ctx.licensed_phrases) {
         violations.extend(errors);
     }
     if let Err(errors) = numeric_allowlist(markdown, &ctx.licensed_tokens) {
@@ -183,9 +187,16 @@ const BANNED_PATTERNS: &[(&str, &str)] = &[
     ("iconic", "significance or hype wording"),
     ("tight orbit", "orbit characterization"),
     ("hot jupiter", "unlicensed classification"),
+    ("circumbinary", "unlicensed orbit classification"),
+    ("sun-like", "unlicensed host classification"),
     ("pulsar", "unlicensed host-type label"),
     ("young", "interpretive age label"),
     ("modest", "evaluative wording"),
+    ("about about", "doubled hedge wording"),
+    ("the guide", "meta commentary"),
+    ("the request", "meta commentary"),
+    ("the evidence", "meta commentary"),
+    ("supplied", "preparation language"),
     ("recognized second", "ordering wording"),
     ("confirmed", "unsourced status claim"),
     ("not reported", "missing-field commentary"),
@@ -205,8 +216,17 @@ const BANNED_PATTERNS: &[(&str, &str)] = &[
 
 const BANNED_WORDS: &[&str] = &["inner", "outer"];
 
-pub(super) fn banned_patterns(markdown: &str) -> Result<(), Vec<String>> {
-    let text = markdown.replace("**", "").to_lowercase();
+pub(super) fn banned_patterns(
+    markdown: &str,
+    licensed: &BTreeSet<String>,
+) -> Result<(), Vec<String>> {
+    let mut text = markdown.replace("**", "").to_lowercase();
+    for phrase in licensed {
+        let phrase = phrase.to_lowercase();
+        if !phrase.is_empty() {
+            text = text.replace(&phrase, " ");
+        }
+    }
     let mut violations = Vec::new();
     for (pattern, rule) in BANNED_PATTERNS {
         if text.contains(pattern) {
@@ -511,6 +531,7 @@ follows.";
 
     #[test]
     fn banned_patterns_reject_known_regressions() {
+        let unlicensed = BTreeSet::new();
         for text in [
             "Moving outward, X",
             "Farther out, X",
@@ -521,22 +542,56 @@ follows.";
             "a pioneering hot jupiter",
             "a massive pulsar",
             "a young star",
+            "a circumbinary planet",
+            "a Sun-like star",
+            "about **about 4 days**",
+            "the threshold that the guide uses",
+            "with a supplied spectral type",
+            "the request states",
+            "according to the evidence",
             "no orbital period has been measured",
             "uncertainty spanning about 1.11 to 1.88",
             "planets have been confirmed",
         ] {
             assert!(
-                banned_patterns(&format!("# T\n\n{text}")).is_err(),
+                banned_patterns(&format!("# T\n\n{text}"), &unlicensed).is_err(),
                 "{text}"
             );
         }
         assert!(
             banned_patterns(
                 "# T\n\nA star with a short year; a dense planet; the far edge \
-             of the dataset is unknown here."
+             of the dataset is unknown here.",
+                &unlicensed
             )
             .is_ok()
         );
+    }
+
+    #[test]
+    fn licensed_phrases_lift_only_their_own_bans() {
+        let unlicensed = BTreeSet::new();
+        let mut licensed = BTreeSet::from(["circumbinary".to_owned()]);
+        assert!(
+            banned_patterns("# T\n\na circumbinary planet", &licensed).is_ok()
+        );
+        assert!(
+            banned_patterns("# T\n\na circumbinary planet", &unlicensed).is_err()
+        );
+        licensed.insert("sun-like".to_owned());
+        assert!(banned_patterns("# T\n\na Sun-like star", &licensed).is_ok());
+        assert!(banned_patterns("# T\n\na Sun-like star", &unlicensed).is_err());
+        let licensed = BTreeSet::from(["very young".to_owned()]);
+        assert!(banned_patterns("# T\n\na very young star", &licensed).is_ok());
+        assert!(banned_patterns("# T\n\na young star", &licensed).is_err());
+        let licensed = BTreeSet::from(["pulsar timing".to_owned()]);
+        assert!(
+            banned_patterns("# T\n\ndetected by pulsar timing", &licensed)
+                .is_ok()
+        );
+        assert!(banned_patterns("# T\n\na massive pulsar", &licensed).is_err());
+        let licensed = BTreeSet::from(["pulsar".to_owned()]);
+        assert!(banned_patterns("# T\n\na massive pulsar", &licensed).is_ok());
     }
 
     #[test]

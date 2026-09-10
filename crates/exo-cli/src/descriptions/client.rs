@@ -59,6 +59,7 @@ impl Client {
         input: &str,
         prompt: Option<&str>,
         max_tokens: u32,
+        json_mode: bool,
     ) -> Outcome {
         let started = Instant::now();
         let mut outcome = Outcome {
@@ -73,7 +74,9 @@ impl Client {
             .http
             .post(&self.endpoint)
             .bearer_auth(&self.key)
-            .json(&super::probe::request_body(input, prompt, max_tokens))
+            .json(&super::probe::request_body(
+                input, prompt, max_tokens, json_mode,
+            ))
             .send()
             .await;
         match response {

@@ -21,19 +21,24 @@ pub(super) fn request_body(
     input: &str,
     system_prompt: Option<&str>,
     max_tokens: u32,
+    json_mode: bool,
 ) -> Value {
     let mut messages = Vec::new();
     if let Some(prompt) = system_prompt {
         messages.push(json!({"role": "system", "content": prompt}));
     }
     messages.push(json!({"role": "user", "content": input}));
-    json!({
+    let mut body = json!({
         "model": super::client::MODEL,
         "messages": messages,
         "max_tokens": max_tokens,
         "thinking": {"type": "disabled"},
         "stream": false
-    })
+    });
+    if json_mode {
+        body["response_format"] = json!({"type": "json_object"});
+    }
+    body
 }
 
 pub fn run() -> Result<Value> {
@@ -63,7 +68,7 @@ pub fn generate_with_system(
         .build()?;
     runtime.block_on(async {
         let outcome = super::client::Client::from_env()?
-            .generate(input, system_prompt, max_tokens)
+            .generate(input, system_prompt, max_tokens, false)
             .await;
         outcome.report.ok_or_else(|| {
             anyhow::anyhow!(
@@ -133,11 +138,16 @@ mod tests {
     #[test]
     fn preserves_arbitrary_input_and_requested_budget() {
         let input = "[instructions]\ntask = \"Write a paragraph.\"\n";
-        let body = request_body(input, None, 256);
+        let body = request_body(input, None, 256, false);
         assert_eq!(body["messages"][0]["content"], input);
         assert_eq!(body["max_tokens"], 256);
         assert_eq!(body["thinking"]["type"], "disabled");
         assert_eq!(body["stream"], false);
+        assert!(body.get("response_format").is_none());
+        assert_eq!(
+            request_body(input, None, 256, true)["response_format"]["type"],
+            "json_object"
+        );
     }
 
     #[test]
@@ -146,6 +156,7 @@ mod tests {
             "[system]\nname = 'example'",
             Some("Use only evidence.\n"),
             512,
+            false,
         );
         assert_eq!(
             body["messages"],

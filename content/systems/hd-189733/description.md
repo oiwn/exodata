@@ -1,5 +1,7 @@
-# HD 189733: A Sun-like star with one known planet
+# HD 189733: a cool dwarf and its close-orbiting planet
 
-**HD 189733** is a G-type dwarf star located about **64.5 light-years** away. Its reported mass is about **0.85 solar masses**, its radius about **0.68 solar radii**, and its temperature about **5200 K**; all three values are smaller and cooler than the Sun's corresponding ones. The star's age carries a reported upper limit of **1 billion years**.
+**HD 189733** is a **G5** star about **64.5 light-years** away. Its mass is **about 0.85 solar masses**, smaller than the Sun's, and its radius is **about 0.68 solar radii**, also smaller than the Sun's. At **about 5200 K**, the star is cooler than the Sun. A reported age upper limit of **1 billion years** applies to the star.
 
-Radial velocity measurements in 2005 revealed the system's single known planet, **HD 189733 b**, by detecting the gravitational wobble the planet induces in its host star's motion. Repeated wobbles disclosed the planet and its orbital period. Classified as Jupiter-like, **HD 189733 b** has a radius of about **12.7 Earth radii** and a mass of about **359 Earth masses**, both larger than Earth's. Its mass is roughly **1.13 times Jupiter's mass**, and its mean density is about **0.974 g/cm³**, about **0.177 times Earth's** density. The planet completes its year in about **2.22 days**, far shorter than Earth's roughly 365-day year.
+One planet is associated with this host: **HD 189733 b**, classified as Jupiter-like and discovered in 2005 by the radial velocity method, which measures the wobble a planet's gravity induces in its star's motion. Its year lasts **about 2.22 days**, shorter than Earth's roughly 365-day year.
+
+**HD 189733 b** has a radius of **about 12.7 Earth radii**, larger than Earth's. Its planet mass, not a minimum-mass quantity, is **about 359 Earth masses**, larger than Earth's and roughly **1.13 times Jupiter's mass**. The planet's mean density is **about 0.974 g/cm³**, about **0.177 times Earth's**.

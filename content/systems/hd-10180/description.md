@@ -1,9 +1,17 @@
-# HD 10180: Six planets around a Sun-like star
+# HD 10180: six planets around a Sun-like star
 
-**HD 10180** is a G-type dwarf star about **127 light-years** away. Its mass of **about 1.06 solar masses** exceeds the Sun's mass, and its temperature of **about 5910 K** is hotter than the Sun's. The star is about **4.3 billion years** old. Six known planets orbit it, all found in 2010 with the radial velocity method, which detects the wobble a planet's gravity causes in its star's motion.
+**HD 10180** is a **G1 V** star, which makes it a Sun-like dwarf. It lies at a distance of **about 127 light-years** from us and is **about 4.3 billion years** old. Its mass of **about 1.06 solar masses** is larger than the Sun's, and its temperature of **about 5910 K** is hotter than the Sun's.
 
-**HD 10180 c** has the shortest year of the six, about **5.76 days**, shorter than Earth's roughly 365-day year. Its minimum-mass quantity is **about 13.2 Earth masses**, larger than Earth's mass. The radial velocity method also uncovered **HD 10180 d**, whose year of about **16.4 days** is the second-shortest among the listed planets. Its minimum-mass quantity, **about 12 Earth masses**, is the smallest in the group yet still exceeds Earth's mass, and its year remains shorter than Earth's.
+Six planets are associated with this host, all of them found in 2010 by the radial velocity method, which measures the wobble a planet's gravity induces in its star's motion and uses repeated wobbles to reveal the planet and its orbital period. Each has a minimum-mass quantity, a lower bound on its true mass derived from the measurable gravitational pull when the orbit's tilt is unknown. Each also has an orbital period, its year.
 
-**HD 10180 e** carries the second-largest minimum-mass quantity among the listed planets, **about 25.6 Earth masses**, exceeding Earth's mass. Its year of **about 49.7 days** is shorter than Earth's roughly 365-day year. **HD 10180 f** has a minimum-mass quantity of **about 22.9 Earth masses**, also larger than Earth's mass, with a year of **about 123 days** that is again shorter than Earth's.
+**HD 10180 c** has a minimum-mass quantity of **about 13.2 Earth masses**, larger than Earth's, and a period of **about 5.76 days**, shorter than Earth's roughly 365-day year. Among the listed planets it has the shortest year and the second-smallest minimum-mass quantity, below **HD 10180 d**'s.
 
-The longest years belong to **HD 10180 g** and **HD 10180 h**. **HD 10180 g** completes an orbit in **about 605 days**, ranking as the second-longest year among the listed planets, while its minimum-mass quantity of **about 23.3 Earth masses** exceeds Earth's mass. **HD 10180 h** has the longest year of all, about **2210 days**, longer than Earth's roughly 365-day year. Its minimum-mass quantity of **about 65.7 Earth masses** is the largest of the listed planets.
+**HD 10180 d** has a minimum-mass quantity of **about 12 Earth masses**, which is larger than Earth's, and a period of **about 16.4 days**, shorter than Earth's roughly 365-day year. It has the second-shortest year among the listed planets and the smallest minimum-mass quantity.
+
+**HD 10180 e** carries a minimum-mass quantity of **about 25.6 Earth masses**, larger than Earth's, with a period of **about 49.7 days**, shorter than Earth's roughly 365-day year. Its minimum-mass quantity is the second-largest among the listed planets.
+
+**HD 10180 f** has a minimum-mass quantity of **about 22.9 Earth masses**, larger than Earth's, and a period of **about 123 days**, also shorter than Earth's roughly 365-day year.
+
+**HD 10180 g** has a minimum-mass quantity of **about 23.3 Earth masses**, larger than Earth's, and a period of **about 605 days**, longer than Earth's roughly 365-day year. That gives it the second-longest year among the listed planets.
+
+**HD 10180 h** has a minimum-mass quantity of **about 65.7 Earth masses**, larger than Earth's, the largest among the listed planets. Its period of **about 2210 days** is longer than Earth's roughly 365-day year and is the longest year among the listed planets.

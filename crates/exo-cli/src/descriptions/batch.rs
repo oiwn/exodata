@@ -12,11 +12,12 @@ use std::{
     time::{Instant, SystemTime},
 };
 
-const FINGERPRINT_VERSION: u32 = 3;
+const FINGERPRINT_VERSION: u32 = 4;
 
 #[cfg(test)]
 mod tests;
 
+#[derive(Clone)]
 pub struct Options {
     pub input_dir: PathBuf,
     pub hostnames: Vec<String>,
@@ -26,6 +27,9 @@ pub struct Options {
     pub concurrency: usize,
     pub max_tokens: u32,
     pub force: bool,
+    /// Select only systems whose latest attempt failed (fail.toml present)
+    /// and retry them even when a matching fingerprint would otherwise skip.
+    pub failed: bool,
 }
 
 struct Job {
@@ -37,7 +41,7 @@ struct Job {
     validation: validate::ValidationContext,
 }
 
-/// Result of one system's draft-edit-critic cycle.
+/// Result of one system's draft-critic-edit cycle.
 struct AttemptOutcome {
     outcome: Outcome,
     attempts: u32,
@@ -46,7 +50,6 @@ struct AttemptOutcome {
     draft_usage: (u64, u64, u64),
     edit_usage: (u64, u64, u64),
     critic_findings: Vec<String>,
-    critic_corrected: bool,
     critic_unparseable: bool,
     critic_usage: (u64, u64, u64),
     /// Stage that failed validation, when validation never passed.
@@ -115,7 +118,9 @@ async fn run_stage(
                  corrected article."
             )
         };
-        let result = client.generate(&input, Some(prompt), max_tokens).await;
+        let result = client
+            .generate(&input, Some(prompt), max_tokens, false)
+            .await;
         elapsed += result.elapsed_ms;
         if let Some(report) = &result.report {
             usage.0 += report["prompt_tokens"].as_u64().unwrap_or(0);
@@ -169,7 +174,7 @@ async fn run_stage(
     }
 }
 
-async fn generate_two_stage(
+async fn generate_system(
     client: &Client,
     job: &Job,
     drafter_prompt: &str,
@@ -196,7 +201,6 @@ async fn generate_two_stage(
             draft_usage: draft.usage,
             edit_usage: (0, 0, 0),
             critic_findings: Vec::new(),
-            critic_corrected: false,
             critic_unparseable: false,
             critic_usage: (0, 0, 0),
             recovered: draft.recovered,
@@ -205,11 +209,30 @@ async fn generate_two_stage(
     }
     fs::write(job.directory.join("draft.md"), &draft.text)
         .with_context(|| format!("Cannot save draft for {}", job.hostname))?;
+    let critic = run_critic(
+        client,
+        critic_prompt,
+        &draft.text,
+        &job.input,
+        max_tokens.min(768),
+    )
+    .await;
     let draft_text = draft.text.clone();
-    let editor_input = format!(
-        "{}\n\n# Source evidence and instructions\n\n{}",
-        draft.text, job.input
-    );
+    let editor_input = if critic.findings.is_empty() {
+        format!(
+            "{}\n\n# Source evidence and instructions\n\n{}",
+            draft.text, job.input
+        )
+    } else {
+        format!(
+            "{}\n\n# Verifier findings\n\nA verifier checked this \
+             draft against the source facts and found these \
+             violations:\n{}\n\n# Source evidence and instructions\n\n{}",
+            draft.text,
+            critic.findings.join("\n"),
+            job.input
+        )
+    };
     let editor = run_stage(
         client,
         editor_prompt,
@@ -234,123 +257,42 @@ async fn generate_two_stage(
             edit_attempts: editor.attempts,
             draft_usage: draft.usage,
             edit_usage: editor.usage,
-            critic_findings: Vec::new(),
-            critic_corrected: false,
-            critic_unparseable: false,
-            critic_usage: (0, 0, 0),
+            critic_findings: critic.findings,
+            critic_unparseable: critic.unparseable,
+            critic_usage: critic.usage,
             recovered: [draft.recovered, editor.recovered].concat(),
             outcome: editor.outcome,
         });
     }
-    let editor_attempts = editor.attempts;
-    let editor_usage = editor.usage;
-    let editor_recovered = editor.recovered.clone();
-    let article = editor.text.clone();
-    let critic = run_critic(
-        client,
-        critic_prompt,
-        &article,
-        &job.input,
-        max_tokens.min(512),
-    )
-    .await;
-    let mut critic_corrected = false;
-    let final_stage = if !critic.findings.is_empty() {
-        let correction_input = format!(
-            "{article}\n\n# Verifier findings\n\nThe article contains \
-             these violations:\n{}\nReturn the complete corrected article. \
-             Delete or rephrase the offending passages without changing any \
-             numbers.",
-            critic.findings.join("\n")
-        );
-        let article_text = article.clone();
-        let correction = run_stage(
-            client,
-            editor_prompt,
-            &correction_input,
-            &job.validation,
-            max_tokens,
-            Some(&|edited| {
-                validate::preserves_facts(
-                    &article_text,
-                    edited,
-                    &job.validation.planet_names,
-                )
-            }),
-        )
-        .await;
-        if !correction.passed {
-            return Ok(AttemptOutcome {
-                failed_stage: Some("critic"),
-                final_errors: Some(critic.findings.clone()),
-                attempts: draft.attempts + editor_attempts + correction.attempts,
-                draft_attempts: draft.attempts,
-                edit_attempts: editor_attempts + correction.attempts,
-                draft_usage: draft.usage,
-                edit_usage: editor_usage,
-                critic_findings: critic.findings,
-                critic_corrected: false,
-                critic_unparseable: critic.unparseable,
-                critic_usage: critic.usage,
-                recovered: [
-                    draft.recovered,
-                    editor_recovered,
-                    correction.recovered,
-                ]
-                .concat(),
-                outcome: correction.outcome,
-            });
-        }
-        critic_corrected = true;
-        correction
-    } else {
-        editor
-    };
-    let mut final_stage = final_stage;
-    // final_stage.usage is the editor's (or the correction's) usage alone,
-    // so the totals add each stage exactly once.
+    let mut outcome = editor.outcome;
+    // Each stage's usage covers its own attempts, so the totals add every
+    // stage exactly once.
     let totals = (
-        draft.usage.0 + critic.usage.0 + final_stage.usage.0,
-        draft.usage.1 + critic.usage.1 + final_stage.usage.1,
-        draft.usage.2 + critic.usage.2 + final_stage.usage.2,
+        draft.usage.0 + critic.usage.0 + editor.usage.0,
+        draft.usage.1 + critic.usage.1 + editor.usage.1,
+        draft.usage.2 + critic.usage.2 + editor.usage.2,
     );
-    set_usage(&mut final_stage.outcome, totals.0, totals.1, totals.2);
-    final_stage.outcome.elapsed_ms +=
-        draft.outcome.elapsed_ms + critic.elapsed_ms;
+    set_usage(&mut outcome, totals.0, totals.1, totals.2);
+    outcome.elapsed_ms += draft.outcome.elapsed_ms + critic.elapsed_ms;
     Ok(AttemptOutcome {
         failed_stage: None,
         final_errors: None,
-        attempts: draft.attempts
-            + editor_attempts
-            + if critic_corrected {
-                final_stage.attempts
-            } else {
-                0
-            },
+        attempts: draft.attempts + editor.attempts,
         draft_attempts: draft.attempts,
-        edit_attempts: editor_attempts
-            + if critic_corrected {
-                final_stage.attempts
-            } else {
-                0
-            },
+        edit_attempts: editor.attempts,
         draft_usage: draft.usage,
-        edit_usage: final_stage.usage,
+        edit_usage: editor.usage,
         critic_findings: critic.findings,
-        critic_corrected,
         critic_unparseable: critic.unparseable,
         critic_usage: critic.usage,
-        recovered: if critic_corrected {
-            [draft.recovered, editor_recovered, final_stage.recovered].concat()
-        } else {
-            [draft.recovered, editor_recovered].concat()
-        },
-        outcome: final_stage.outcome,
+        recovered: [draft.recovered, editor.recovered].concat(),
+        outcome,
     })
 }
 
-/// One verifier call (plus a single parse retry). Unparseable responses
-/// fail open: the article stands and the outcome records the problem.
+/// One verifier call in json mode (plus a single parse retry).
+/// Unparseable responses fail open: the draft stands and the outcome
+/// records the problem.
 struct CriticOutcome {
     findings: Vec<String>,
     unparseable: bool,
@@ -370,9 +312,9 @@ async fn run_critic(
     let mut elapsed = 0u128;
     let mut findings = Vec::new();
     let mut unparseable = false;
-    for attempt in 0..2 {
+    for _ in 0..2 {
         let result = client
-            .generate(&input, Some(critic_prompt), max_tokens)
+            .generate(&input, Some(critic_prompt), max_tokens, true)
             .await;
         elapsed += result.elapsed_ms;
         if let Some(report) = &result.report {
@@ -413,10 +355,11 @@ fn parse_findings(text: &str) -> Option<Vec<String>> {
     Some(
         list.iter()
             .filter_map(|finding| {
-                let code = finding["code"].as_str()?;
+                let category = finding["category"].as_str()?;
                 let quote = finding["quote"].as_str().unwrap_or_default();
-                let reason = finding["reason"].as_str().unwrap_or_default();
-                Some(format!("- [{code}] \"{quote}\" {reason}"))
+                let problem = finding["problem"].as_str().unwrap_or_default();
+                let fix = finding["fix"].as_str().unwrap_or_default();
+                Some(format!("- [{category}] \"{quote}\" {problem} Fix: {fix}"))
             })
             .collect(),
     )
@@ -484,6 +427,45 @@ fn settings(max_tokens: u32) -> Value {
         "request_timeout_seconds": 60, "retries": 0})
 }
 
+/// Phrases whose reader-facing use is licensed by prepared facts: the
+/// circumbinary planet flag, a pulsar host kind plus the Pulsar Timing
+/// method name, a very-young age class, and Sun-like wording only for a
+/// supplied G-type spectral label.
+fn licensed_phrases(
+    request: &Value,
+    spectral_label: &Option<String>,
+) -> BTreeSet<String> {
+    let mut phrases = BTreeSet::new();
+    let planets = request["planets"].as_array();
+    if request["star"]["host_kind"].as_str() == Some("pulsar") {
+        phrases.insert("pulsar".to_owned());
+    }
+    if planets.is_some_and(|planets| {
+        planets
+            .iter()
+            .any(|p| p["circumbinary"].as_bool() == Some(true))
+    }) {
+        phrases.insert("circumbinary".to_owned());
+    }
+    if planets.is_some_and(|planets| {
+        planets
+            .iter()
+            .any(|p| p["discovery_method"].as_str() == Some("Pulsar Timing"))
+    }) {
+        phrases.insert("pulsar timing".to_owned());
+    }
+    if request["star"]["age_class"].as_str() == Some("very young") {
+        phrases.insert("very young".to_owned());
+    }
+    if spectral_label
+        .as_deref()
+        .is_some_and(|label| label.trim_start().to_uppercase().starts_with('G'))
+    {
+        phrases.insert("sun-like".to_owned());
+    }
+    phrases
+}
+
 fn canonical(value: &Value) -> Value {
     match value {
         Value::Object(map) => {
@@ -527,6 +509,40 @@ fn read_toml(path: &Path) -> Result<Value> {
     )?)
 }
 
+/// Merge optional hand-edited `notes.toml` into the request in memory:
+/// `facts` entries become publishable comparisons (their numbers license
+/// reader-facing use and the critic sees them as source facts) and
+/// `guidance` entries become silent constraints. The merged request feeds
+/// the fingerprint and the wire input, so edited notes regenerate the
+/// system. Prepare and batch never write this file.
+fn merge_notes(directory: &Path, request: &mut Value) -> Result<()> {
+    let path = directory.join("notes.toml");
+    if !path.try_exists()? {
+        return Ok(());
+    }
+    let notes = read_toml(&path)?;
+    for (key, target) in [
+        ("facts", "publishable_comparisons"),
+        ("guidance", "silent_constraints"),
+    ] {
+        if let Some(items) = notes[key].as_array() {
+            if !request[target].is_array() {
+                request[target] = json!([]);
+            }
+            let list = request[target].as_array_mut().with_context(|| {
+                format!("notes.toml: request {target} is not a list")
+            })?;
+            for item in items {
+                let text = item.as_str().with_context(|| {
+                    format!("notes.toml: {key} entries must be strings")
+                })?;
+                list.push(Value::String(text.to_owned()));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn row(
     hostname: &str,
     status: &str,
@@ -568,7 +584,7 @@ fn preflight(
         if !request_path.try_exists()? {
             continue;
         }
-        let request = read_toml(&request_path)?;
+        let mut request = read_toml(&request_path)?;
         let hostname = request["system"]["hostname"]
             .as_str()
             .filter(|s| !s.trim().is_empty())
@@ -584,6 +600,10 @@ fn preflight(
         {
             bail!("Unsupported prepared request schema for {hostname}");
         }
+        if options.failed && !directory.join("fail.toml").try_exists()? {
+            continue;
+        }
+        merge_notes(&directory, &mut request)?;
         let evidence_path = directory.join("evidence.json");
         let evidence: Value = serde_json::from_str(&fs::read_to_string(&evidence_path)
             .with_context(||format!("Missing evidence for {hostname}; run descriptions prepare first"))?)?;
@@ -631,10 +651,12 @@ fn preflight(
             licensed_tokens.extend(validate::numeric_tokens(label));
         }
         collect_licensed(&request, &mut licensed_tokens);
+        let licensed_phrases = licensed_phrases(&request, &spectral_label);
         let validation = validate::ValidationContext {
             planet_names,
             spectral_label,
             licensed_tokens,
+            licensed_phrases,
         };
         if selected
             .insert(
@@ -655,6 +677,9 @@ fn preflight(
     }
     for name in &filters {
         if !selected.contains_key(*name) {
+            if options.failed {
+                bail!("No failed system for {name}");
+            }
             bail!("No prepared request for {name}");
         }
     }
@@ -687,7 +712,12 @@ fn preflight(
                 && m["fingerprint_version"].as_u64()
                     == Some(FINGERPRINT_VERSION as u64)
         });
-        if !options.force && matches && !description.trim().is_empty() {
+        let has_failure = job.directory.join("fail.toml").try_exists()?;
+        if !options.force
+            && !(options.failed && has_failure)
+            && matches
+            && !description.trim().is_empty()
+        {
             rows.push(row(
                 &job.hostname,
                 "skipped",
@@ -726,7 +756,6 @@ fn record(job: &Job, max_tokens: u32, result: &AttemptOutcome) -> Value {
         draft_usage,
         edit_usage,
         critic_findings,
-        critic_corrected,
         critic_unparseable,
         critic_usage,
         recovered,
@@ -739,9 +768,9 @@ fn record(job: &Job, max_tokens: u32, result: &AttemptOutcome) -> Value {
             "prompt_tokens": draft_usage.0, "completion_tokens": draft_usage.1},
             "edit": {"attempts": edit_attempts,
             "prompt_tokens": edit_usage.0, "completion_tokens": edit_usage.1}}});
-    if !critic_findings.is_empty() || *critic_corrected || *critic_unparseable {
+    if !critic_findings.is_empty() || *critic_unparseable {
         doc["critic"] = json!({"findings": critic_findings,
-            "corrected": critic_corrected, "unparseable": critic_unparseable,
+            "unparseable": critic_unparseable,
             "prompt_tokens": critic_usage.0,
             "completion_tokens": critic_usage.1});
     }
@@ -853,7 +882,7 @@ async fn execute(
             let critic_prompt = critic_prompt.clone();
             eprintln!("Generating {}", job.hostname);
             tasks.spawn(async move {
-                let result = generate_two_stage(
+                let result = generate_system(
                     &client,
                     &job,
                     &prompt,
