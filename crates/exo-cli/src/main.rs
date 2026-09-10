@@ -197,13 +197,23 @@ enum DescriptionCommands {
     /// Prepare offline stellar-host evidence and a writing request
     Prepare {
         /// Exact NASA hostnames; repeat to prepare several systems in one run
-        #[arg(long = "hostname", required = true)]
+        #[arg(
+            long = "hostname",
+            required_unless_present = "all",
+            conflicts_with = "all"
+        )]
         hostnames: Vec<String>,
         #[arg(long, default_value = "content/systems")]
         output_dir: std::path::PathBuf,
         /// Replace preparation files, preserving articles and generation metadata
         #[arg(long)]
         force: bool,
+        /// Prepare every hostname that has planet rows in the local dataset
+        #[arg(long)]
+        all: bool,
+        /// Select and validate every system without writing files
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Probe DeepSeek with one request capped at 32 output tokens
     Probe,
@@ -349,16 +359,26 @@ fn main() -> Result<()> {
                     hostnames,
                     output_dir,
                     force,
+                    all,
+                    dry_run,
                 } => {
+                    let catalog = descriptions::prepare::Catalog::load(
+                        Path::new(cli.data_dir.as_deref().unwrap_or("data")),
+                    )?;
+                    let hostnames = if all {
+                        catalog.all_hostnames()?
+                    } else {
+                        hostnames
+                    };
                     let mut rows = Vec::new();
                     let mut failed = false;
                     for hostname in &hostnames {
                         eprintln!("Preparing {hostname}");
-                        match descriptions::prepare::run(
-                            Path::new(cli.data_dir.as_deref().unwrap_or("data")),
+                        match catalog.prepare(
                             &output_dir,
                             hostname,
                             force,
+                            dry_run,
                         ) {
                             Ok(row) => {
                                 if let Some(list) = row["diagnostics"].as_array()

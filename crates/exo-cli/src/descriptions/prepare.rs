@@ -2,7 +2,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use anyhow::{Context, Result, bail};
@@ -125,6 +125,111 @@ pub fn system_id(hostname: &str) -> Result<String> {
     })
 }
 
+/// Source tables loaded once and shared across many per-hostname
+/// preparations, with a precomputed identifier-collision index.
+pub struct Catalog {
+    data_dir: PathBuf,
+    hosts: DataFrame,
+    planets: DataFrame,
+    collisions: BTreeMap<String, Vec<String>>,
+}
+
+impl Catalog {
+    pub fn load(data_dir: &Path) -> Result<Self> {
+        let host_path = data_dir.join("stellarhosts.parquet");
+        let planet_path = data_dir.join("exoplanets.parquet");
+        let load = |path: &Path| -> Result<DataFrame> {
+            ParquetReader::new(fs::File::open(path)?)
+                .finish()
+                .with_context(|| format!("Cannot read {}", path.display()))
+        };
+        let hosts = load(&host_path)?;
+        let planets = load(&planet_path)?;
+        let mut collisions: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        for frame in [&hosts, &planets] {
+            let column = frame.column("hostname")?.str()?;
+            for name in (0..column.len()).filter_map(|i| column.get(i)) {
+                if let Ok(id) = system_id(name) {
+                    let entry = collisions.entry(id).or_default();
+                    if !entry.iter().any(|stored| stored == name) {
+                        entry.push(name.to_owned());
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            data_dir: data_dir.to_owned(),
+            hosts,
+            planets,
+            collisions,
+        })
+    }
+
+    /// Distinct hostnames with at least one planet row, sorted.
+    pub fn all_hostnames(&self) -> Result<Vec<String>> {
+        let column = self.planets.column("hostname")?.str()?;
+        let names: BTreeSet<String> = (0..column.len())
+            .filter_map(|i| column.get(i))
+            .filter(|name| !name.trim().is_empty())
+            .map(str::to_owned)
+            .collect();
+        Ok(names.into_iter().collect())
+    }
+
+    pub fn prepare(
+        &self,
+        output_dir: &Path,
+        hostname: &str,
+        force: bool,
+        dry_run: bool,
+    ) -> Result<Value> {
+        let id = system_id(hostname)?;
+        if let Some(other) = self
+            .collisions
+            .get(&id)
+            .filter(|list| list.len() > 1)
+            .and_then(|list| list.iter().find(|stored| stored != &hostname))
+        {
+            bail!(
+                "System identifier {id:?} collides for {hostname:?} and {other:?}"
+            );
+        }
+        let host_rows = selected_rows(&self.hosts, hostname)?;
+        let planet_rows = selected_rows(&self.planets, hostname)?;
+        let (mut request, mut evidence, diagnostics) =
+            prepare(hostname, &host_rows, &planet_rows)?;
+        let directory = output_dir.join(id);
+        if dry_run {
+            return Ok(json!({"hostname": hostname,
+                "evidence_path": directory.join("evidence.json"),
+                "request_path": directory.join("request.toml"),
+                "diagnostics": diagnostics,
+                "diagnostics_count": diagnostics.len(),
+                "dry_run": true}));
+        }
+        let paths = json!({"stellarhosts": self.data_dir.join("stellarhosts.parquet"),
+            "exoplanets": self.data_dir.join("exoplanets.parquet")});
+        request.source["files"] = paths.clone();
+        evidence["files"] = paths;
+        let request_text = toml::to_string_pretty(&request)?;
+        let evidence_text = serde_json::to_string_pretty(&evidence)? + "\n";
+        fs::create_dir_all(&directory)?;
+        write_pair(
+            &directory,
+            hostname,
+            force,
+            &evidence_text,
+            &request_text,
+            |from, to| fs::rename(from, to),
+        )?;
+        Ok(
+            json!({"hostname": hostname, "evidence_path": directory.join("evidence.json"),
+            "request_path": directory.join("request.toml"), "diagnostics": diagnostics,
+            "diagnostics_count": diagnostics.len()}),
+        )
+    }
+}
+
 fn selected_rows(frame: &DataFrame, hostname: &str) -> Result<Vec<Value>> {
     let mask = frame.column("hostname")?.str()?.equal(hostname);
     crate::output::dataframe_to_json(&frame.filter(&mask)?)
@@ -136,53 +241,7 @@ pub fn run(
     hostname: &str,
     force: bool,
 ) -> Result<Value> {
-    let id = system_id(hostname)?;
-    let host_path = data_dir.join("stellarhosts.parquet");
-    let planet_path = data_dir.join("exoplanets.parquet");
-    let load = |path: &Path| -> Result<DataFrame> {
-        ParquetReader::new(fs::File::open(path)?)
-            .finish()
-            .with_context(|| format!("Cannot read {}", path.display()))
-    };
-    let hosts = load(&host_path)?;
-    let planets = load(&planet_path)?;
-    for frame in [&hosts, &planets] {
-        let column = frame.column("hostname")?.str()?;
-        let names: BTreeSet<_> =
-            (0..column.len()).filter_map(|i| column.get(i)).collect();
-        for other in names {
-            if other != hostname && system_id(other).ok().as_deref() == Some(&id)
-            {
-                bail!(
-                    "System identifier {id:?} collides for {hostname:?} and {other:?}"
-                );
-            }
-        }
-    }
-    let host_rows = selected_rows(&hosts, hostname)?;
-    let planet_rows = selected_rows(&planets, hostname)?;
-    let (mut request, mut evidence, diagnostics) =
-        prepare(hostname, &host_rows, &planet_rows)?;
-    let paths = json!({"stellarhosts": host_path, "exoplanets": planet_path});
-    request.source["files"] = paths.clone();
-    evidence["files"] = paths;
-    let request_text = toml::to_string_pretty(&request)?;
-    let evidence_text = serde_json::to_string_pretty(&evidence)? + "\n";
-    let directory = output_dir.join(id);
-    fs::create_dir_all(&directory)?;
-    write_pair(
-        &directory,
-        hostname,
-        force,
-        &evidence_text,
-        &request_text,
-        |from, to| fs::rename(from, to),
-    )?;
-    Ok(
-        json!({"hostname": hostname, "evidence_path": directory.join("evidence.json"),
-        "request_path": directory.join("request.toml"), "diagnostics": diagnostics,
-        "diagnostics_count": diagnostics.len()}),
-    )
+    Catalog::load(data_dir)?.prepare(output_dir, hostname, force, false)
 }
 
 // The installer argument permits deterministic failure injection in tests.

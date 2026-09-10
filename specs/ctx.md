@@ -309,14 +309,17 @@ per `descriptions scan`).
       systems, absent for others). Deferred: `prepare --all`, prompt embedding,
       ansible upload changes.
 - [ ] User commits the current harness, 15-system results, and prose serving.
-- [ ] Decide hostname enumeration for bulk prepare: `prepare --all`, a
-      scan-driven selection, or a generated hostname list (prepare currently
-      requires explicit `--hostname` arguments).
-- [ ] Resolve or defer the open decisions below; they will propagate to
-      ~4,735 articles if left as-is.
-- [ ] Dry-run prepare across all hostnames; collect and classify failures
-      (ambiguous selection, identifier collisions, unusable host rows) and
-      agree on skip-with-report handling.
+- [x] Decide hostname enumeration for bulk prepare: `prepare --all` +
+      `--dry-run` implemented (2026-09-10). `Catalog` loads both Parquet
+      files once, enumerates hostnames from planet rows, and reports
+      per-system results without writing in dry-run mode.
+- [x] Dry-run prepare across all hostnames: 4,769 systems, 4,768
+      preparable, 1 failure (2MASS J11011926-7732383: no usable
+      stellar-host summary row - accept as skip-with-report). Diagnostics
+      are benign missing-field notes (mass fields on 3,201 systems,
+      radius 1,609, stellar age 1,596, spectype cross-fill 455; median 1
+      per system; 833 fully clean; 16 multi-host count notes; 10
+      unrecognized mass provenance). 60-second wall time.
 - [ ] Confirm batch expectations at scale: ~2,700 tokens/system average
       suggests ~13M tokens and roughly one to two hours at concurrency 4;
       verify rate limits and per-system failure isolation on a slice first.

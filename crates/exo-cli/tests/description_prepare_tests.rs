@@ -155,6 +155,59 @@ fn custom_output_directory_and_stored_identity_mismatch() {
 }
 
 #[test]
+fn all_enumerates_planet_hosts_and_dry_run_writes_nothing() {
+    let f = Fixture::new();
+    f.data(&["Test Host", "Other Host"], &[1, 1]);
+    let mut hosts = df!("hostname" => ["Test Host", "Other Host", "Host Only"],
+        "st_mass" => [1.0, 1.0, 1.0], "st_masslim" => [0i32, 0, 0])
+    .unwrap();
+    ParquetWriter::new(
+        fs::File::create(f.0.join("stellarhosts.parquet")).unwrap(),
+    )
+    .finish(&mut hosts)
+    .unwrap();
+    let mut command = Command::new(assert_cmd::cargo::cargo_bin!("exodata"));
+    let output = command
+        .current_dir(&f.0)
+        .args(["dev", "descriptions", "prepare", "--data-dir"])
+        .arg(&f.0)
+        .args(["--all", "--dry-run", "--output", "json"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let rows = report.as_array().unwrap();
+    let names: Vec<&str> = rows
+        .iter()
+        .map(|row| row["hostname"].as_str().unwrap())
+        .collect();
+    assert_eq!(names, ["Other Host", "Test Host"]);
+    assert!(rows.iter().all(|row| row["dry_run"] == true));
+    assert!(!f.0.join("content/systems/test-host").exists());
+    assert!(!f.0.join("content/systems/other-host").exists());
+    let mut command = Command::new(assert_cmd::cargo::cargo_bin!("exodata"));
+    let output = command
+        .current_dir(&f.0)
+        .args(["dev", "descriptions", "prepare", "--data-dir"])
+        .arg(&f.0)
+        .args(["--all", "--output", "json"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(f.0.join("content/systems/test-host/request.toml").exists());
+    assert!(f.0.join("content/systems/other-host/request.toml").exists());
+    assert!(!f.0.join("content/systems/host-only").exists());
+}
+
+#[test]
 fn collisions_and_failed_selection_write_nothing() {
     let f = Fixture::new();
     f.data(&["Test Host", "Test-Host"], &[1, 1]);
