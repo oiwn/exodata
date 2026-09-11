@@ -160,13 +160,16 @@ stored descriptions for retroactive fixes.
 
 ## Manual Notes
 
-An optional hand-edited tracked `notes.toml` beside the request carries
+An optional hand-edited `notes.toml` beside the request carries
 per-system intent: `facts` (merged into `publishable_comparisons`, so
 their numbers license prose and the critic sees them as source) and
 `guidance` (merged into `silent_constraints`). Merged in memory at
 preflight; the fingerprint covers the merge, so edited notes regenerate
-the system. Prepare and batch never write it. Hand-editing
-`request.toml` remains ephemeral: `prepare --force` clobbers it.
+the system. Prepare and batch never write it. Nothing under
+`content/systems/` is tracked: prose and notes are private local data
+shipped to servers through the upload channel (see `specs/roadmap.md`).
+Hand-editing `request.toml` remains ephemeral: `prepare --force`
+clobbers it.
 
 ## Regression Cases
 

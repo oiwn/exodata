@@ -166,6 +166,7 @@ src/
 crates/
 ├── exo-core/                      # data loading, metadata, insights, table logic
 ├── exo-cli/                       # CLI backends, VOTable conversion, dev commands
+├── exo-prose/                     # stellar-host description generation pipeline
 └── exo-types/                     # shared serializable types
 ```
 

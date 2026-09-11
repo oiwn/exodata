@@ -57,7 +57,7 @@ pub fn line(row: &Value) -> String {
     let tail: String = tail.chars().take(70).collect();
     format!(
         "{hostname:<26} {state:<9} fp{version} {attempts:>2} att {:>6} tok {critic} crit {tail}",
-        crate::output::short_tokens(tokens),
+        super::short_tokens(tokens),
     )
 }
 

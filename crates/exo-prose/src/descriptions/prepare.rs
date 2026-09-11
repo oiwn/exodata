@@ -248,7 +248,7 @@ impl Catalog {
 
 fn selected_rows(frame: &DataFrame, hostname: &str) -> Result<Vec<Value>> {
     let mask = frame.column("hostname")?.str()?.equal(hostname);
-    crate::output::dataframe_to_json(&frame.filter(&mask)?)
+    exo_core::json::dataframe_to_json(&frame.filter(&mask)?)
 }
 
 pub fn run(

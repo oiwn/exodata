@@ -368,7 +368,8 @@ edge dashes. Empty identifiers and distinct catalog hostnames with the same
 identifier fail. Existing preparation files require `--force`; stored hostname
 mismatches fail even with force. Articles and `metadata.toml` remain untouched.
 Inputs are validated and serialized before output files are written.
-Evidence is generated local data ignored by Git; requests and shared prompts
+Evidence is generated local data ignored by Git, as is everything else
+under `content/systems/`; requests and shared prompts at `content/` root
 remain tracked. Always refresh both files through `prepare`, not independently.
 `--force` replaces request edits as well as evidence. Both new files and backups
 are staged in a temporary `.prepare` directory before installation. Installation

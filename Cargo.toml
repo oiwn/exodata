@@ -9,6 +9,7 @@ members = [
     "crates/exo-types",
     "crates/exo-core",
     "crates/exo-cli",
+    "crates/exo-prose",
 ]
 resolver = "2"
 

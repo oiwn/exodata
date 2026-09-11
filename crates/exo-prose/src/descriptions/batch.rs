@@ -588,8 +588,8 @@ pub fn line(row: &Value) -> String {
         attempts
             .map(|a| a.to_string())
             .unwrap_or_else(|| "-".into()),
-        crate::output::short_tokens(tokens),
-        crate::output::short_elapsed_ms(elapsed),
+        super::short_tokens(tokens),
+        super::short_elapsed_ms(elapsed),
     )
 }
 

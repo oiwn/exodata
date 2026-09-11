@@ -13,6 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 exo-types = { package = "exodata-types", version = "0.1.0", path = "../exo-types" }
+anyhow = "1.0.104"
 polars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -4,7 +4,9 @@ State: catalog pass 1 complete — all 4,768 preparable systems generated
 (~39.9M recorded tokens across generation plus `--failed` retry passes;
 zero standing failures; one permanent skip, 2MASS J11011926-7732383).
 Round A (lines output, algorithmic formatting) done. Round B below is
-the active plan. Completed work is archived in `CHANGELOG.md` 2026-09-10.
+the active plan, reprioritized 2026-09-11: crate split and analysis
+tooling first, rig-core and content improving after, deployment last.
+Completed work is archived in `CHANGELOG.md` 2026-09-10.
 
 ## Plan
 
@@ -25,27 +27,37 @@ the active plan. Completed work is archived in `CHANGELOG.md` 2026-09-10.
       state 4,768/4,768 generated, zero fail.toml files, ~39.9M recorded
       tokens total
 
-### Round B — prose tooling rebuild
-- [ ] P1: new `exo-prose` crate (normal workspace member) owning the
-      descriptions pipeline (prepare, batch, validate, client, status,
-      analyze, normalize) with its own LLM deps; `exo-cli` keeps command
-      wiring; web backend untouched
-- [ ] P2: rig-core provider abstraction; provider profiles (base URL,
-      model, key env) selected with `--profile`; metadata records
-      provider and served model; A/B-friendly
-- [ ] P3: critic stays advisory but loses JSON mode — plain-text findings
-      (one per line), no `response_format`; parse failures degrade to
-      fail-open; bolding never LLM-checked
-- [ ] P4: `--variants N` — N independent pipeline runs per system, all
-      kept (ignored `variants/`) with per-variant metadata (tokens,
-      attempts, profile); `description.md` = auto-selected cleanest
-- [ ] P5: de-monotonization — prepare emits the Earth-year comparison
-      only for year extremes; prompt limits the 365-day anchor; deeper
-      fixes chosen from n-gram data
-- [ ] P6: `dev descriptions analyze` — word/sentence counts, type-token
-      ratio, top n-grams (1–5) with document frequency, trope report;
-      the A/B evaluation instrument
-- [ ] P7: regeneration campaign with the rebuilt pipeline; record totals
+### Round B — prose tooling and content improvement (reprioritized 2026-09-11)
+- [x] B1: `exodata-prose` crate split — package `exodata-prose`, lib
+      `exo_prose` at `crates/exo-prose`; the descriptions pipeline
+      (prepare, batch, validate, client, status, normalize, probe) moved
+      out of exo-cli with its unit tests; exo-cli keeps command wiring
+      and the assert_cmd CLI integration tests; `dataframe_to_json`
+      moved to `exo_core::json`; no behavior change
+- [ ] B2: analysis suite — `dev descriptions analyze` subcommands in
+      exodata-prose, the instrument for everything below:
+      - text stats: word/sentence/paragraph counts, article-length
+        distributions (mean/median/percentiles), avg sentence length,
+        type-token ratio, title stats
+      - n-grams 1–5: corpus + document frequency, top-N, sentence-opener
+        n-grams (template monotony detector)
+      - pattern mining: number/unit-masked sentence templates, trope
+        report (known warts with counts + affected systems)
+      - metadata aggregation: tokens by stage, attempts, cache hit rates,
+        generation dates, fingerprints
+      - anomaly detection: length/token outliers, cross-system duplicate
+        sentences, numeric-density anomalies
+      - lines/json/csv output + `--report` markdown dump
+- [ ] B3: rig-core providers — hardcoded profile table (base URL, model,
+      key env var; keys stay in `.env`), `--profile`, smaller models;
+      generations write `description_<label>.md` with multi-generation
+      metadata records; `description.md` stays the served deepseek-flash
+      output; promotion manual
+- [ ] B4: content improving — fixes chosen from B2 data (year-extreme
+      comparisons, 365-day anchor, inventory monotony, length target,
+      retry/critic efficiency); baseline-15 then full regeneration;
+      record totals
+- [ ] B5: deployment (last) — A2 upload channel per roadmap
 
 ## Findings
 
@@ -77,16 +89,17 @@ the active plan. Completed work is archived in `CHANGELOG.md` 2026-09-10.
   Kepler-11, LHS 1140, TRAPPIST-1, HR 8799, PSR B1257+12, Kepler-16,
   55 Cnc, Proxima Cen, HD 189733, GJ 1214, K2-18, HD 10180,
   OGLE-2016-BLG-1195L.
-- Content layout: `description.md` + `notes.toml` tracked; request,
-  metadata, evidence, draft, and failure files ignored. User handles all
-  Git staging/commits.
-- Baseline untrack command (user-run, still pending if not done):
-  `git rm --cached content/systems/*/request.toml content/systems/*/metadata.toml`
+- Content layout: nothing under `content/systems/` is tracked (prose and
+  notes are private local data; deployment via the roadmap's upload
+  channel). Prompts and the guide at `content/` root stay tracked. User
+  handles all Git staging/commits.
+- Baseline untrack and gitignore of `content/systems/` completed
+  2026-09-10 (user-run).
 - Open decisions: mixed-provenance mass ranking (55 Cnc) — current output
-  avoids it; article length target; serving/deployment packaging;
-  translation pipeline (few weeks out, after pass-2 content lands).
+  avoids it; article length target; serving/deployment packaging (see the
+  roadmap's upload-channel entry); translation pipeline (few weeks out,
+  after pass-2 content lands).
 
 ## Next
 
-Start Round B with P1 (exo-prose crate split), then P2 (rig-core
-providers).
+Start B2 (analysis suite) in `exodata-prose`.

@@ -32,6 +32,26 @@ pub fn columns() -> Vec<String> {
     .collect()
 }
 
+/// Short human token counts: 9659 -> "9.7k", 37_804_704 -> "37.8M".
+fn short_tokens(value: u64) -> String {
+    if value >= 1_000_000 {
+        format!("{:.1}M", value as f64 / 1_000_000.0)
+    } else if value >= 1_000 {
+        format!("{:.1}k", value as f64 / 1_000.0)
+    } else {
+        value.to_string()
+    }
+}
+
+/// Elapsed milliseconds as a compact duration: "6.2s" or "481ms".
+fn short_elapsed_ms(value: u64) -> String {
+    if value >= 1_000 {
+        format!("{:.1}s", value as f64 / 1_000.0)
+    } else {
+        format!("{value}ms")
+    }
+}
+
 #[derive(Default)]
 struct Source {
     date: Option<NaiveDate>,

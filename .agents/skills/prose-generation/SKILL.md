@@ -91,12 +91,13 @@ with unchanged inputs. Fingerprints (version 4) compare all three prompt texts,
 the canonical structured request, and generation settings; they do not inspect
 live Parquet data.
 
-Everything per-system lives in `content/systems/<system-id>/`: tracked
-`description.md` and optional hand-edited `notes.toml` (`facts` merge
-into publishable comparisons, `guidance` into silent constraints; the
-fingerprint covers the merge, so edited notes regenerate); ignored
-`request.toml`, `metadata.toml`, `evidence.json`, `draft.md`, and latest
-`fail.toml`. Success updates prose and metadata together and clears old
+Everything per-system lives in `content/systems/<system-id>/`, all
+untracked private local data: `description.md` and optional hand-edited
+`notes.toml` (`facts` merge into publishable comparisons, `guidance`
+into silent constraints; the fingerprint covers the merge, so edited
+notes regenerate); `request.toml`, `metadata.toml`, `evidence.json`,
+`draft.md`, and latest `fail.toml` are generated artifacts. Success
+updates prose and metadata together and clears old
 failure information. Failure keeps the previous success and records
 diagnostics and any available returned text/usage in `fail.toml`.
 Retry failed systems with `generate-batch --failed` (selects `fail.toml`

@@ -3,6 +3,43 @@
 Committed follow-up work. The active generation task remains in
 [ctx.md](ctx.md); uncommitted possibilities live in [ideas.md](ideas.md).
 
+## Prose Out of Git — Upload Channel (Round A2, deferred)
+
+Generated prose is deployment data, not source: nothing under
+`content/systems/` is tracked (already untracked and gitignored; prompts
+and the guide at `content/` root stay tracked). Serve prose through the
+same pattern as the Parquet data: upload + bind mount.
+
+- [ ] Dockerfile: remove `COPY content ./content` (builder) and
+      `COPY --from=builder /app/content/systems /app/content/systems`
+      (runtime). Nothing in the web build reads content at compile time,
+      and CI checkouts no longer contain the directory.
+- [ ] `deploy.yml`: add volume `"{{ content_path }}:/app/content/systems:ro"`
+      beside the data mount.
+- [ ] `group_vars/all.yml`: `content_path: /app/content` (host), and
+      `local_content_path: "{{ playbook_dir }}/../../../content/systems"`
+      (mirrors `local_data_path`).
+- [ ] New `playbooks/upload-content.yml`: ensure
+      `{{ content_path }}/{packs,systems}` exist; localhost pack of
+      `*/description.md` only (`notes.toml` stays local, never uploaded)
+      as `content-<date>-<HHMM>-<N>sys.tar.gz` (fail on zero
+      descriptions); upload; unarchive into `{{ content_path }}/systems/`;
+      prune packs keeping the newest 5; `docker restart {{ app_name }}`
+      plus the same HTTP health-wait task as `deploy.yml`.
+
+Deferred 2026-09-11 until Round B content generation improves (see
+[ctx.md](ctx.md)); deployment is the last stage.
+- [ ] Justfile `ansible-upload-content` recipe; DEPLOY.md section
+      covering the content channel and the rollout ordering rule:
+      upload first (files stage harmlessly), deploy second (mount
+      activates on container recreate). Old images keep their baked prose
+      until the deploy.
+- [ ] Verify: `ansible-playbook --syntax-check`, local `tar tzf` sanity,
+      live upload + deploy + curl one described and one undescribed host
+      page. No Rust changes required (`EXO_CONTENT_DIR` default already
+      resolves to the mount target; the loader tolerates a missing
+      directory).
+
 ## Update tailwind
 
 ```

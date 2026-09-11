@@ -4,7 +4,7 @@ use std::{
     process::Command,
 };
 
-use exo_cli::descriptions::scan;
+use exo_prose::descriptions::scan;
 use polars::prelude::*;
 use serde_json::Value;
 
@@ -295,7 +295,7 @@ fn descriptions_formats_filtering_and_defaults() {
         let headers = reader.headers().unwrap().clone();
         assert_eq!(
             headers.iter().collect::<Vec<_>>(),
-            exo_cli::descriptions::columns()
+            exo_prose::descriptions::columns()
         );
         let records: Vec<_> = reader.records().map(Result::unwrap).collect();
         assert_eq!(records.len(), expected.len());

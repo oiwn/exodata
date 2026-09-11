@@ -8,10 +8,11 @@ use exo_cli::{
         CatalogBackend, DatasetKind, RowsQuery, compiled_insight_meta,
         insight_meta_rows, resolve_backend, schema_rows,
     },
-    commands, config, conversion, descriptions, download,
+    commands, config, conversion, download,
     output::{self, OutputFormat},
     skill, votable_helpers,
 };
+use exo_prose::descriptions;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
