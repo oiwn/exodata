@@ -12,7 +12,9 @@ use std::{
     time::{Instant, SystemTime},
 };
 
-const FINGERPRINT_VERSION: u32 = 4;
+const FINGERPRINT_VERSION: u32 = 10;
+
+mod input;
 
 #[cfg(test)]
 mod tests;
@@ -22,14 +24,61 @@ pub struct Options {
     pub input_dir: PathBuf,
     pub hostnames: Vec<String>,
     pub system_prompt: PathBuf,
-    pub editor_prompt: PathBuf,
-    pub critic_prompt: PathBuf,
+    pub repair_prompt: PathBuf,
     pub concurrency: usize,
     pub max_tokens: u32,
     pub force: bool,
     /// Select only systems whose latest attempt failed (fail.toml present)
     /// and retry them even when a matching fingerprint would otherwise skip.
     pub failed: bool,
+    /// Variant label: writes description_<label>.md and friends instead
+    /// of the served description.md, for experiments and A/B runs.
+    pub label: Option<String>,
+}
+
+/// Validate a variant label for filename use.
+pub(crate) fn validate_label(label: &str) -> Result<()> {
+    OutputNames::validate_label(label)
+}
+
+/// Output file names for one run, honoring the variant label.
+#[derive(Clone)]
+struct OutputNames {
+    description: String,
+    metadata: String,
+    draft: String,
+    fail: String,
+}
+
+impl OutputNames {
+    fn new(label: Option<&str>) -> Result<Self> {
+        if let Some(label) = label {
+            Self::validate_label(label)?;
+            Ok(Self {
+                description: format!("description_{label}.md"),
+                metadata: format!("metadata_{label}.toml"),
+                draft: format!("draft_{label}.md"),
+                fail: format!("fail_{label}.toml"),
+            })
+        } else {
+            Ok(Self {
+                description: "description.md".into(),
+                metadata: "metadata.toml".into(),
+                draft: "draft.md".into(),
+                fail: "fail.toml".into(),
+            })
+        }
+    }
+
+    /// Labels become filename suffixes: nonempty alphanumeric/dashes.
+    pub(crate) fn validate_label(label: &str) -> Result<()> {
+        if label.is_empty()
+            || !label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+        {
+            bail!("label must be nonempty alphanumeric/dashes");
+        }
+        Ok(())
+    }
 }
 
 struct Job {
@@ -39,148 +88,24 @@ struct Job {
     fingerprint: String,
     source_date: Option<String>,
     validation: validate::ValidationContext,
+    output: OutputNames,
 }
 
-/// Result of one system's draft-critic-edit cycle.
+/// One writing call, optionally followed by one repair.
 struct AttemptOutcome {
     outcome: Outcome,
     attempts: u32,
-    draft_attempts: u32,
-    edit_attempts: u32,
-    draft_usage: (u64, u64, u64),
-    edit_usage: (u64, u64, u64),
-    critic_findings: Vec<String>,
-    critic_unparseable: bool,
-    critic_usage: (u64, u64, u64),
-    /// Stage that failed validation, when validation never passed.
+    draft_usage: super::usage::Usage,
+    repair_usage: Option<super::usage::Usage>,
     failed_stage: Option<&'static str>,
-    /// Violations from the final attempt when validation never passed.
     final_errors: Option<Vec<String>>,
-    /// Violations from every rejected attempt, oldest first.
     recovered: Vec<Vec<String>>,
 }
 
-const MAX_ATTEMPTS: u32 = 3;
-
-/// Overwrite reported usage in both the parsed report and the raw response.
-fn set_usage(outcome: &mut Outcome, prompt: u64, completion: u64, total: u64) {
-    if let Some(report) = &mut outcome.report {
-        report["prompt_tokens"] = json!(prompt);
-        report["completion_tokens"] = json!(completion);
-        report["total_tokens"] = json!(total);
-    }
-    if let Some(response) = &mut outcome.response {
-        response["usage"]["prompt_tokens"] = json!(prompt);
-        response["usage"]["completion_tokens"] = json!(completion);
-        response["usage"]["total_tokens"] = json!(total);
-    }
-}
-
-/// Optional extra validation applied after the deterministic gates, used
-/// for the editor's fact-preservation check.
-type Gate<'a> = &'a (dyn Fn(&str) -> Result<(), Vec<String>> + Send + Sync);
-
-/// One stage: up to MAX_ATTEMPTS validated calls with feedback retries.
-struct StageOutcome {
-    outcome: Outcome,
-    attempts: u32,
-    recovered: Vec<Vec<String>>,
-    passed: bool,
-    usage: (u64, u64, u64),
-    text: String,
-}
-
-async fn run_stage(
-    client: &Client,
-    prompt: &str,
-    input: &str,
-    validation: &validate::ValidationContext,
-    max_tokens: u32,
-    extra_gate: Option<Gate<'_>>,
-) -> StageOutcome {
-    let mut recovered: Vec<Vec<String>> = Vec::new();
-    let mut usage = (0u64, 0u64, 0u64);
-    let mut elapsed = 0u128;
-    let mut passed = false;
-    let mut text = String::new();
-    let mut outcome = None;
-    for attempt in 1..=MAX_ATTEMPTS {
-        let input = if attempt == 1 {
-            input.to_owned()
-        } else {
-            let feedback = match recovered.last() {
-                Some(errors) => errors
-                    .iter()
-                    .map(|error| format!("- {error}"))
-                    .collect::<Vec<_>>()
-                    .join("\n"),
-                None => String::new(),
-            };
-            format!(
-                "{input}\n\n# Formatting feedback\n\nThe previous attempt \
-                 violated these rules:\n{feedback}\nReturn the complete \
-                 corrected article."
-            )
-        };
-        let result = client
-            .generate(&input, Some(prompt), max_tokens, false)
-            .await;
-        elapsed += result.elapsed_ms;
-        if let Some(report) = &result.report {
-            usage.0 += report["prompt_tokens"].as_u64().unwrap_or(0);
-            usage.1 += report["completion_tokens"].as_u64().unwrap_or(0);
-            usage.2 += report["total_tokens"].as_u64().unwrap_or(0);
-        }
-        let transport_failed = result.report.is_none();
-        let candidate = result
-            .report
-            .as_ref()
-            .and_then(|report| report["text"].as_str())
-            .unwrap_or_default()
-            .to_owned();
-        // Bolding and the density possessive are algorithmic formatting,
-        // applied before the gates; the gate remains a backstop.
-        let candidate = validate::normalize_article(
-            &candidate,
-            validation.spectral_label.as_deref(),
-        );
-        let errors = if transport_failed {
-            None
-        } else {
-            Some(validate::validate_article(&candidate, validation).and_then(
-                |_| match extra_gate {
-                    Some(gate) => gate(&candidate),
-                    None => Ok(()),
-                },
-            ))
-        };
-        let invalid = matches!(&errors, Some(Err(_)));
-        if let Some(Err(list)) = errors {
-            recovered.push(list);
-        }
-        let mut result = result;
-        if result.report.is_some() {
-            set_usage(&mut result, usage.0, usage.1, usage.2);
-        }
-        result.elapsed_ms = elapsed;
-        if !invalid {
-            passed = !transport_failed;
-            text = candidate;
-        }
-        outcome = Some(result);
-        if !invalid {
-            break;
-        }
-    }
-    let outcome = outcome.expect("at least one attempt always runs");
-    let attempts = (recovered.len() as u32 + 1).min(MAX_ATTEMPTS);
-    StageOutcome {
-        outcome,
-        attempts,
-        recovered,
-        passed,
-        usage,
-        text,
+impl AttemptOutcome {
+    fn usage(&self) -> super::usage::Usage {
+        self.repair_usage
+            .map_or(self.draft_usage, |repair| self.draft_usage.add(repair))
     }
 }
 
@@ -188,191 +113,85 @@ async fn generate_system(
     client: &Client,
     job: &Job,
     drafter_prompt: &str,
-    editor_prompt: &str,
-    critic_prompt: &str,
+    repair_prompt: &str,
     max_tokens: u32,
 ) -> Result<AttemptOutcome> {
-    let draft = run_stage(
-        client,
-        drafter_prompt,
-        &job.input,
-        &job.validation,
-        max_tokens,
-        None,
-    )
-    .await;
-    if !draft.passed {
-        return Ok(AttemptOutcome {
-            failed_stage: Some("draft"),
-            final_errors: draft.recovered.last().cloned(),
-            attempts: draft.attempts,
-            draft_attempts: draft.attempts,
-            edit_attempts: 0,
-            draft_usage: draft.usage,
-            edit_usage: (0, 0, 0),
-            critic_findings: Vec::new(),
-            critic_unparseable: false,
-            critic_usage: (0, 0, 0),
-            recovered: draft.recovered,
-            outcome: draft.outcome,
-        });
-    }
-    fs::write(job.directory.join("draft.md"), &draft.text)
-        .with_context(|| format!("Cannot save draft for {}", job.hostname))?;
-    let critic = run_critic(
-        client,
-        critic_prompt,
-        &draft.text,
-        &job.input,
-        max_tokens.min(768),
-    )
-    .await;
-    let draft_text = draft.text.clone();
-    let editor_input = if critic.findings.is_empty() {
-        format!(
-            "{}\n\n# Source evidence and instructions\n\n{}",
-            draft.text, job.input
-        )
-    } else {
-        format!(
-            "{}\n\n# Verifier findings\n\nA verifier checked this \
-             draft against the source facts and found these \
-             violations:\n{}\n\n# Source evidence and instructions\n\n{}",
-            draft.text,
-            critic.findings.join("\n"),
-            job.input
-        )
-    };
-    let editor = run_stage(
-        client,
-        editor_prompt,
-        &editor_input,
-        &job.validation,
-        max_tokens,
-        Some(&|edited| {
-            validate::preserves_facts(
-                &draft_text,
-                edited,
+    let mut outcome = client
+        .generate(&job.input, Some(drafter_prompt), max_tokens, false)
+        .await;
+    let draft_usage = super::usage::Usage::read(
+        &outcome.response.as_ref().unwrap_or(&Value::Null)["usage"],
+    );
+    let mut candidate = outcome
+        .report
+        .as_ref()
+        .and_then(|r| r["text"].as_str())
+        .map(|text| {
+            validate::normalize_article(
+                text,
+                job.validation.spectral_label.as_deref(),
                 &job.validation.planet_names,
             )
-        }),
-    )
-    .await;
-    if !editor.passed {
-        return Ok(AttemptOutcome {
-            failed_stage: Some("editor"),
-            final_errors: editor.recovered.last().cloned(),
-            attempts: draft.attempts + editor.attempts,
-            draft_attempts: draft.attempts,
-            edit_attempts: editor.attempts,
-            draft_usage: draft.usage,
-            edit_usage: editor.usage,
-            critic_findings: critic.findings,
-            critic_unparseable: critic.unparseable,
-            critic_usage: critic.usage,
-            recovered: [draft.recovered, editor.recovered].concat(),
-            outcome: editor.outcome,
         });
+    let mut errors = candidate
+        .as_ref()
+        .and_then(|text| validate::validate_article(text, &job.validation).err());
+    let mut recovered = Vec::new();
+    let mut repair_usage = None;
+    let mut failed_stage =
+        (outcome.error.is_some() || errors.is_some()).then_some("draft");
+    if let Some(text) = &candidate {
+        // Keep the normalized first response for review, even when invalid.
+        fs::write(job.directory.join(&job.output.draft), text)
+            .with_context(|| format!("Cannot save draft for {}", job.hostname))?;
     }
-    let mut outcome = editor.outcome;
-    // Each stage's usage covers its own attempts, so the totals add every
-    // stage exactly once.
-    let totals = (
-        draft.usage.0 + critic.usage.0 + editor.usage.0,
-        draft.usage.1 + critic.usage.1 + editor.usage.1,
-        draft.usage.2 + critic.usage.2 + editor.usage.2,
-    );
-    set_usage(&mut outcome, totals.0, totals.1, totals.2);
-    outcome.elapsed_ms += draft.outcome.elapsed_ms + critic.elapsed_ms;
-    Ok(AttemptOutcome {
-        failed_stage: None,
-        final_errors: None,
-        attempts: draft.attempts + editor.attempts,
-        draft_attempts: draft.attempts,
-        edit_attempts: editor.attempts,
-        draft_usage: draft.usage,
-        edit_usage: editor.usage,
-        critic_findings: critic.findings,
-        critic_unparseable: critic.unparseable,
-        critic_usage: critic.usage,
-        recovered: [draft.recovered, editor.recovered].concat(),
-        outcome,
-    })
-}
-
-/// One verifier call in json mode (plus a single parse retry).
-/// Unparseable responses fail open: the draft stands and the outcome
-/// records the problem.
-struct CriticOutcome {
-    findings: Vec<String>,
-    unparseable: bool,
-    usage: (u64, u64, u64),
-    elapsed_ms: u128,
-}
-
-async fn run_critic(
-    client: &Client,
-    critic_prompt: &str,
-    article: &str,
-    job_input: &str,
-    max_tokens: u32,
-) -> CriticOutcome {
-    let input = format!("{article}\n\n# Source facts\n\n{job_input}");
-    let mut usage = (0u64, 0u64, 0u64);
-    let mut elapsed = 0u128;
-    let mut findings = Vec::new();
-    let mut unparseable = false;
-    for _ in 0..2 {
-        let result = client
-            .generate(&input, Some(critic_prompt), max_tokens, true)
+    if let Some(violations) = &errors {
+        let repair_input = serde_json::to_string(&json!({
+            "facts": serde_json::from_str::<Value>(&job.input)?,
+            "article": candidate.as_deref().unwrap_or_default(),
+            "violations": violations,
+        }))?;
+        recovered.push(violations.clone());
+        let draft_elapsed = outcome.elapsed_ms;
+        outcome = client
+            .generate(&repair_input, Some(repair_prompt), max_tokens, false)
             .await;
-        elapsed += result.elapsed_ms;
-        if let Some(report) = &result.report {
-            usage.0 += report["prompt_tokens"].as_u64().unwrap_or(0);
-            usage.1 += report["completion_tokens"].as_u64().unwrap_or(0);
-            usage.2 += report["total_tokens"].as_u64().unwrap_or(0);
-            let text = report["text"].as_str().unwrap_or_default();
-            match parse_findings(text) {
-                Some(list) => {
-                    findings = list;
-                    return CriticOutcome {
-                        findings,
-                        unparseable: false,
-                        usage,
-                        elapsed_ms: elapsed,
-                    };
-                }
-                None => unparseable = true,
-            }
-        } else {
-            // Transport failure: the critic is advisory; accept the article.
-            break;
+        repair_usage = Some(super::usage::Usage::read(
+            &outcome.response.as_ref().unwrap_or(&Value::Null)["usage"],
+        ));
+        outcome.elapsed_ms += draft_elapsed;
+        candidate = outcome
+            .report
+            .as_ref()
+            .and_then(|r| r["text"].as_str())
+            .map(|text| {
+                validate::normalize_article(
+                    text,
+                    job.validation.spectral_label.as_deref(),
+                    &job.validation.planet_names,
+                )
+            });
+        errors = candidate.as_ref().and_then(|text| {
+            validate::validate_article(text, &job.validation).err()
+        });
+        failed_stage =
+            (outcome.error.is_some() || errors.is_some()).then_some("repair");
+        if let Some(errors) = &errors {
+            recovered.push(errors.clone());
         }
     }
-    CriticOutcome {
-        findings,
-        unparseable,
-        usage,
-        elapsed_ms: elapsed,
+    if let (Some(text), Some(report)) = (candidate, &mut outcome.report) {
+        report["text"] = json!(text);
     }
-}
-
-fn parse_findings(text: &str) -> Option<Vec<String>> {
-    let start = text.find('{')?;
-    let end = text.rfind('}')?;
-    let parsed: Value = serde_json::from_str(&text[start..=end]).ok()?;
-    let list = parsed["findings"].as_array()?;
-    Some(
-        list.iter()
-            .filter_map(|finding| {
-                let category = finding["category"].as_str()?;
-                let quote = finding["quote"].as_str().unwrap_or_default();
-                let problem = finding["problem"].as_str().unwrap_or_default();
-                let fix = finding["fix"].as_str().unwrap_or_default();
-                Some(format!("- [{category}] \"{quote}\" {problem} Fix: {fix}"))
-            })
-            .collect(),
-    )
+    Ok(AttemptOutcome {
+        outcome,
+        attempts: 1 + u32::from(repair_usage.is_some()),
+        draft_usage,
+        repair_usage,
+        failed_stage,
+        final_errors: errors,
+        recovered,
+    })
 }
 
 pub fn columns() -> Vec<String> {
@@ -385,6 +204,7 @@ pub fn columns() -> Vec<String> {
         "prompt_tokens",
         "completion_tokens",
         "total_tokens",
+        "usage_complete",
         "elapsed_ms",
     ]
     .into_iter()
@@ -425,9 +245,10 @@ fn collect_licensed(value: &Value, licensed: &mut BTreeSet<String>) {
                 collect_licensed(item, licensed);
             }
         }
-        Value::String(text) => {
+        Value::String(text) if !validate::is_earth_year_reference(text) => {
             licensed.extend(validate::numeric_tokens(text));
         }
+        Value::String(_) => {}
         _ => {}
     }
 }
@@ -497,13 +318,12 @@ fn canonical(value: &Value) -> Value {
 fn fingerprint(
     request: &Value,
     prompt: &str,
-    editor_prompt: &str,
-    critic_prompt: &str,
+    style_prompt: &str,
     max_tokens: u32,
 ) -> Result<String> {
     let input = canonical(&json!({"fingerprint_version": FINGERPRINT_VERSION,
         "request": request, "system_prompt": prompt,
-        "editor_prompt": editor_prompt, "critic_prompt": critic_prompt,
+        "style_prompt": style_prompt,
         "settings": settings(max_tokens)}));
     let digest = Sha256::digest(serde_json::to_vec(&input)?);
     let hex: String = digest.iter().map(|byte| format!("{byte:02x}")).collect();
@@ -521,10 +341,10 @@ fn read_toml(path: &Path) -> Result<Value> {
 
 /// Merge optional hand-edited `notes.toml` into the request in memory:
 /// `facts` entries become publishable comparisons (their numbers license
-/// reader-facing use and the critic sees them as source facts) and
-/// `guidance` entries become silent constraints. The merged request feeds
-/// the fingerprint and the wire input, so edited notes regenerate the
-/// system. Prepare and batch never write this file.
+/// reader-facing use) and `guidance` entries become silent constraints.
+/// The merged request feeds the fingerprint and the wire input, so
+/// edited notes regenerate the system. Prepare and batch never write
+/// this file.
 fn merge_notes(directory: &Path, request: &mut Value) -> Result<()> {
     let path = directory.join("notes.toml");
     if !path.try_exists()? {
@@ -605,8 +425,7 @@ fn truncate(text: &str, max: usize) -> String {
 fn preflight(
     options: &Options,
     prompt: &str,
-    editor_prompt: &str,
-    critic_prompt: &str,
+    style_prompt: &str,
 ) -> Result<(VecDeque<Job>, Vec<Value>)> {
     if options.concurrency == 0 || options.max_tokens == 0 {
         bail!("Concurrency and max_tokens must be positive");
@@ -614,9 +433,11 @@ fn preflight(
     if prompt.trim().is_empty() {
         bail!("System prompt must not be blank");
     }
+    let output_names = OutputNames::new(options.label.as_deref())?;
     let filters: BTreeSet<_> =
         options.hostnames.iter().map(String::as_str).collect();
     let mut selected = BTreeMap::new();
+    let mut prepared = 0;
     for entry in fs::read_dir(&options.input_dir)? {
         let entry = entry?;
         if !entry.file_type()?.is_dir() {
@@ -643,7 +464,8 @@ fn preflight(
         {
             bail!("Unsupported prepared request schema for {hostname}");
         }
-        if options.failed && !directory.join("fail.toml").try_exists()? {
+        if options.failed && !directory.join(&output_names.fail).try_exists()? {
+            prepared += 1;
             continue;
         }
         merge_notes(&directory, &mut request)?;
@@ -661,18 +483,12 @@ fn preflight(
                 );
             }
         }
-        let hash = fingerprint(
-            &request,
-            prompt,
-            editor_prompt,
-            critic_prompt,
-            options.max_tokens,
-        )?;
+        let hash =
+            fingerprint(&request, prompt, style_prompt, options.max_tokens)?;
         let source_date =
             request["source"]["source_date"].as_str().map(str::to_owned);
-        // Send deterministic TOML so key order/comments do not change the wire input
-        // while the semantic fingerprint remains unchanged.
-        let input = toml::to_string_pretty(&canonical(&request))?;
+        // Project compact facts after notes merging; keep audit data off the wire.
+        let input = serde_json::to_string(&input::project(&request))?;
         let planet_names: Vec<String> = request["planets"]
             .as_array()
             .map(|planets| {
@@ -696,6 +512,7 @@ fn preflight(
         collect_licensed(&request, &mut licensed_tokens);
         let licensed_phrases = licensed_phrases(&request, &spectral_label);
         let validation = validate::ValidationContext {
+            claims: validate::ClaimContext::from_request(&request),
             planet_names,
             spectral_label,
             licensed_tokens,
@@ -711,6 +528,7 @@ fn preflight(
                     fingerprint: hash,
                     source_date,
                     validation,
+                    output: output_names.clone(),
                 },
             )
             .is_some()
@@ -727,12 +545,15 @@ fn preflight(
         }
     }
     if selected.is_empty() {
+        if options.failed && prepared > 0 {
+            return Ok((VecDeque::new(), Vec::new()));
+        }
         bail!("No prepared requests found");
     }
     let mut jobs = VecDeque::new();
     let mut rows = Vec::new();
     for (_, job) in selected {
-        let metadata_path = job.directory.join("metadata.toml");
+        let metadata_path = job.directory.join(&job.output.metadata);
         let metadata = if metadata_path.try_exists()? {
             Some(read_toml(&metadata_path)?)
         } else {
@@ -744,7 +565,7 @@ fn preflight(
         {
             bail!("Metadata hostname mismatch for {}", job.hostname);
         }
-        let description_path = job.directory.join("description.md");
+        let description_path = job.directory.join(&job.output.description);
         let description = if description_path.try_exists()? {
             fs::read_to_string(&description_path)?
         } else {
@@ -755,7 +576,7 @@ fn preflight(
                 && m["fingerprint_version"].as_u64()
                     == Some(FINGERPRINT_VERSION as u64)
         });
-        let has_failure = job.directory.join("fail.toml").try_exists()?;
+        let has_failure = job.directory.join(&job.output.fail).try_exists()?;
         if !options.force
             && !(options.failed && has_failure)
             && matches
@@ -775,7 +596,11 @@ fn preflight(
                 format!("Cannot write generation files for {}", job.hostname)
             })?;
             fs::remove_dir(&staging)?;
-            for name in ["metadata.toml", "description.md", "fail.toml"] {
+            for name in [
+                job.output.metadata.clone(),
+                job.output.description.clone(),
+                job.output.fail.clone(),
+            ] {
                 let path = job.directory.join(name);
                 if path.try_exists()? && !path.is_file() {
                     bail!("{} is not a file", path.display());
@@ -795,28 +620,19 @@ fn record(job: &Job, max_tokens: u32, result: &AttemptOutcome) -> Value {
     let AttemptOutcome {
         outcome,
         attempts,
-        draft_attempts,
-        edit_attempts,
         draft_usage,
-        edit_usage,
-        critic_findings,
-        critic_unparseable,
-        critic_usage,
+        repair_usage,
         recovered,
         ..
     } = result;
     let mut doc = json!({"hostname": job.hostname, "fingerprint": job.fingerprint,
         "fingerprint_version": FINGERPRINT_VERSION, "settings": settings(max_tokens), "elapsed_ms": outcome.elapsed_ms,
         "attempts": attempts,
-        "stages": {"draft": {"attempts": draft_attempts,
-            "prompt_tokens": draft_usage.0, "completion_tokens": draft_usage.1},
-            "edit": {"attempts": edit_attempts,
-            "prompt_tokens": edit_usage.0, "completion_tokens": edit_usage.1}}});
-    if !critic_findings.is_empty() || *critic_unparseable {
-        doc["critic"] = json!({"findings": critic_findings,
-            "unparseable": critic_unparseable,
-            "prompt_tokens": critic_usage.0,
-            "completion_tokens": critic_usage.1});
+        "stages": {"draft": {"attempts": 1}}});
+    draft_usage.write(&mut doc["stages"]["draft"]);
+    if let Some(usage) = repair_usage {
+        doc["stages"]["repair"] = json!({"attempts": 1});
+        usage.write(&mut doc["stages"]["repair"]);
     }
     if !recovered.is_empty() {
         doc["validation_recovered"] =
@@ -837,6 +653,7 @@ fn record(job: &Job, max_tokens: u32, result: &AttemptOutcome) -> Value {
             doc[key] = report[key].clone();
         }
     }
+    result.usage().write(&mut doc);
     doc
 }
 
@@ -860,7 +677,7 @@ fn save_failure(
         .open(&staged)?;
     file.write_all(toml::to_string_pretty(&doc)?.as_bytes())?;
     drop(file);
-    fs::rename(&staged, job.directory.join("fail.toml"))?;
+    fs::rename(&staged, job.directory.join(&job.output.fail))?;
     Ok(())
 }
 
@@ -884,16 +701,19 @@ fn save_success(
     super::prepare::store_pair(
         &job.directory,
         ".generate",
-        [("description.md", text), ("metadata.toml", &metadata)],
+        [
+            (&job.output.description, text),
+            (&job.output.metadata, &metadata),
+        ],
         || Ok(()),
         |from, to| fs::rename(from, to),
     )?;
-    match fs::remove_file(job.directory.join("fail.toml")) {
+    match fs::remove_file(job.directory.join(&job.output.fail)) {
         Ok(()) => (),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
         Err(e) => {
             return Err(e).context(
-                "Result saved but previous fail.toml could not be removed",
+                "Result saved but the previous fail file could not be removed",
             );
         }
     }
@@ -906,14 +726,12 @@ async fn execute(
     mut rows: Vec<Value>,
     client: Client,
     prompt: String,
-    editor_prompt: String,
-    critic_prompt: String,
+    style_prompt: String,
     concurrency: usize,
     max_tokens: u32,
 ) -> Result<Vec<Value>> {
     let prompt = Arc::new(prompt);
-    let editor_prompt = Arc::new(editor_prompt);
-    let critic_prompt = Arc::new(critic_prompt);
+    let style_prompt = Arc::new(style_prompt);
     let mut tasks = tokio::task::JoinSet::new();
     let mut halted = false;
     while !jobs.is_empty() || !tasks.is_empty() {
@@ -923,16 +741,14 @@ async fn execute(
             };
             let client = client.clone();
             let prompt = prompt.clone();
-            let editor_prompt = editor_prompt.clone();
-            let critic_prompt = critic_prompt.clone();
+            let style_prompt = style_prompt.clone();
             eprintln!("Generating {}", job.hostname);
             tasks.spawn(async move {
                 let result = generate_system(
                     &client,
                     &job,
                     &prompt,
-                    &editor_prompt,
-                    &critic_prompt,
+                    &style_prompt,
                     max_tokens,
                 )
                 .await;
@@ -949,8 +765,6 @@ async fn execute(
         let AttemptOutcome {
             outcome,
             attempts,
-            draft_attempts,
-            edit_attempts,
             failed_stage,
             final_errors,
             ..
@@ -958,11 +772,6 @@ async fn execute(
         let attempts = *attempts;
         let final_errors = final_errors.clone();
         let failed_stage = *failed_stage;
-        let stage_attempts = if failed_stage == Some("editor") {
-            *edit_attempts
-        } else {
-            *draft_attempts
-        };
         halted |= outcome.stop_batch();
         let mut reason = outcome.error.clone().unwrap_or_default();
         let mut status = "generated";
@@ -976,8 +785,7 @@ async fn execute(
             status = "failed";
             if let (Some(stage), Some(errors)) = (failed_stage, &final_errors) {
                 reason = format!(
-                    "{stage} validation failed after {stage_attempts} \
-                     attempts: {}",
+                    "{stage} validation failed after {attempts} total calls: {}",
                     errors.join("; ")
                 );
             }
@@ -1002,13 +810,15 @@ async fn execute(
                 format!(" ({reason})")
             }
         );
-        rows.push(row(
+        let mut output = row(
             &job.hostname,
             status,
             &reason,
             Some(attempts),
             Some(outcome),
-        ));
+        );
+        result.usage().write(&mut output);
+        rows.push(output);
     }
     rows.extend(jobs.iter().map(|job| {
         row(
@@ -1026,10 +836,12 @@ async fn execute(
 pub fn run(options: &Options) -> Result<Vec<Value>> {
     let started = Instant::now();
     let prompt = fs::read_to_string(&options.system_prompt)?;
-    let editor_prompt = fs::read_to_string(&options.editor_prompt)?;
-    let critic_prompt = fs::read_to_string(&options.critic_prompt)?;
-    let (jobs, mut rows) =
-        preflight(options, &prompt, &editor_prompt, &critic_prompt)?;
+    let style_prompt = fs::read_to_string(&options.repair_prompt)?;
+    let (jobs, mut rows) = preflight(options, &prompt, &style_prompt)?;
+    if options.failed && jobs.is_empty() && rows.is_empty() {
+        eprintln!("No failed systems");
+        return Ok(rows);
+    }
     if !jobs.is_empty() {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -1040,8 +852,7 @@ pub fn run(options: &Options) -> Result<Vec<Value>> {
                 rows,
                 Client::from_env()?,
                 prompt,
-                editor_prompt,
-                critic_prompt,
+                style_prompt,
                 options.concurrency,
                 options.max_tokens,
             )

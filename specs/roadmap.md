@@ -40,6 +40,14 @@ Deferred 2026-09-11 until Round B content generation improves (see
       resolves to the mount target; the loader tolerates a missing
       directory).
 
+## Prose Follow-up After Benchmark Acceptance
+
+- [ ] B3: rig-core providers using variant labels: profile table, keys in
+      `.env`, smaller-model comparisons, and manual promotion.
+- [ ] Define the prose translation pipeline after pass-2 content lands.
+- [ ] B5: deploy after content generation through the existing Round A2
+      upload channel above.
+
 ## Update tailwind
 
 ```

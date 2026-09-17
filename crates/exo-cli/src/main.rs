@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
@@ -178,12 +178,13 @@ enum DescriptionCommands {
         hostnames: Vec<String>,
         #[arg(long, default_value = "content/stellarhost_prompt.txt")]
         system_prompt: std::path::PathBuf,
-        /// Editorial second-stage system prompt
-        #[arg(long, default_value = "content/stellarhost_editor_prompt.txt")]
-        editor_prompt: std::path::PathBuf,
-        /// Verifier third-stage system prompt
-        #[arg(long, default_value = "content/stellarhost_critic_prompt.txt")]
-        critic_prompt: std::path::PathBuf,
+        /// Prompt used only to repair a failed validation (legacy alias: --style-prompt)
+        #[arg(
+            long,
+            alias = "style-prompt",
+            default_value = "content/stellarhost_repair_prompt.txt"
+        )]
+        repair_prompt: std::path::PathBuf,
         #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..))]
         concurrency: u32,
         #[arg(long, default_value_t = 1536, value_parser = clap::value_parser!(u32).range(1..))]
@@ -194,6 +195,9 @@ enum DescriptionCommands {
         /// Retry only systems whose latest attempt failed (fail.toml present)
         #[arg(long)]
         failed: bool,
+        /// Generate or retry label-suffixed artifacts instead of served files
+        #[arg(long)]
+        label: Option<String>,
     },
     /// Prepare offline stellar-host evidence and a writing request
     Prepare {
@@ -246,6 +250,104 @@ enum DescriptionCommands {
     Normalize {
         #[arg(long, default_value = "content/systems")]
         content_dir: String,
+        /// Normalize description_<label>.md instead of the served description.md
+        #[arg(long)]
+        label: Option<String>,
+    },
+    /// Analyze generated descriptions: stats, n-grams, tropes, metadata, anomalies
+    Analyze {
+        #[arg(long, global = true, default_value = "content/systems")]
+        content_dir: String,
+        /// Analyze description_<label>.md variant files instead of description.md
+        #[arg(long, global = true)]
+        label: Option<String>,
+        #[clap(subcommand)]
+        command: AnalyzeCommands,
+    },
+    /// Experiment: prepare and generate the fixed 20-system set into variant files
+    Experiment {
+        /// Variant label; outputs become description_<label>.md and never
+        /// touch the served description.md
+        #[arg(long)]
+        label: String,
+        #[arg(long, default_value = "content/systems")]
+        input_dir: std::path::PathBuf,
+        #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..))]
+        concurrency: u32,
+        #[arg(long, default_value_t = 1536, value_parser = clap::value_parser!(u32).range(1..))]
+        max_tokens: u32,
+        /// Regenerate even when the variant fingerprint matches
+        #[arg(long)]
+        force: bool,
+    },
+}
+
+#[derive(Parser, Debug)]
+enum AnalyzeCommands {
+    /// Per-system text metrics: words, sentences, paragraphs, TTR, title
+    Text,
+    /// Corpus-level distributions of the per-system text metrics
+    Summary,
+    /// Word n-grams with corpus and document frequency
+    Ngrams {
+        /// Rows per n value
+        #[arg(long, default_value_t = 25)]
+        top: usize,
+        /// Smallest n
+        #[arg(long, default_value_t = 1)]
+        min_n: usize,
+        /// Largest n
+        #[arg(long, default_value_t = 5)]
+        max_n: usize,
+        /// Count only the first n words of each sentence (monotony detector)
+        #[arg(long)]
+        openers: bool,
+    },
+    /// Sentence templates with numbers and units masked
+    Templates {
+        /// Maximum rows
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        /// Minimum corpus frequency
+        #[arg(long, default_value_t = 3)]
+        min_count: u64,
+    },
+    /// Curated trope report: known prose warts with affected systems
+    Tropes,
+    /// Generation metadata aggregation: tokens, attempts, models, dates
+    Metadata,
+    /// Outliers, duplicate sentences, and numeric-density anomalies
+    Anomalies {
+        /// Minimum |z-score| for distribution outliers
+        #[arg(long, default_value_t = 2.5)]
+        z_threshold: f64,
+        /// Maximum duplicate/repeat rows per kind
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        /// Minimum systems sharing a duplicate sentence
+        #[arg(long, default_value_t = 2)]
+        min_duplicates: u64,
+    },
+    /// Compare two corpora (baseline snapshot vs candidate) on headline metrics
+    Compare {
+        /// Baseline content directory to compare against
+        #[arg(long)]
+        baseline_dir: String,
+        /// Baseline variant label (baseline-dir reads description_<label>.md)
+        #[arg(long)]
+        baseline_label: Option<String>,
+    },
+    /// Write a machine-readable stats snapshot (JSON) for durable comparison
+    Snapshot {
+        /// Snapshot output path (suggested: content/stats/<name>.json)
+        #[arg(long)]
+        output_path: std::path::PathBuf,
+    },
+    /// Write a markdown report combining every analysis section
+    Report {
+        /// Report output path
+        #[arg(long)]
+        output_path: std::path::PathBuf,
     },
 }
 
@@ -342,24 +444,24 @@ fn main() -> Result<()> {
                     input_dir,
                     hostnames,
                     system_prompt,
-                    editor_prompt,
-                    critic_prompt,
+                    repair_prompt,
                     concurrency,
                     max_tokens,
                     force,
                     failed,
+                    label,
                 } => {
                     let rows = descriptions::batch::run(
                         &descriptions::batch::Options {
                             input_dir,
                             hostnames,
                             system_prompt,
-                            editor_prompt,
-                            critic_prompt,
+                            repair_prompt,
                             concurrency: concurrency as usize,
                             max_tokens,
                             force,
                             failed,
+                            label,
                         },
                     )?;
                     render_per_system(
@@ -507,9 +609,11 @@ fn main() -> Result<()> {
                         descriptions::status::line,
                     )?;
                 }
-                DescriptionCommands::Normalize { content_dir } => {
-                    let rows =
-                        descriptions::normalize::run(Path::new(&content_dir))?;
+                DescriptionCommands::Normalize { content_dir, label } => {
+                    let rows = descriptions::normalize::run(
+                        Path::new(&content_dir),
+                        label.as_deref(),
+                    )?;
                     render_per_system(
                         &rows,
                         &descriptions::normalize::columns(),
@@ -525,6 +629,166 @@ fn main() -> Result<()> {
                             };
                             format!("{hostname:<26} {changed:<10} {path}")
                         },
+                    )?;
+                }
+                DescriptionCommands::Analyze {
+                    content_dir,
+                    label,
+                    command,
+                } => {
+                    use descriptions::analyze;
+                    let corpus = analyze::Corpus::load(
+                        Path::new(&content_dir),
+                        label.as_deref(),
+                    )?;
+                    match command {
+                        AnalyzeCommands::Text => {
+                            render_per_system(
+                                &analyze::text::run(&corpus),
+                                &analyze::text::columns(),
+                                cli.output,
+                                analyze::text::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Summary => {
+                            render_per_system(
+                                &analyze::text::summary(&corpus),
+                                &analyze::text::summary_columns(),
+                                cli.output,
+                                analyze::text::summary_line,
+                            )?;
+                        }
+                        AnalyzeCommands::Ngrams {
+                            top,
+                            min_n,
+                            max_n,
+                            openers,
+                        } => {
+                            render_per_system(
+                                &analyze::ngrams::run(
+                                    &corpus,
+                                    &analyze::ngrams::Options {
+                                        top,
+                                        min_n,
+                                        max_n,
+                                        openers,
+                                    },
+                                ),
+                                &analyze::ngrams::columns(),
+                                cli.output,
+                                analyze::ngrams::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Templates { top, min_count } => {
+                            render_per_system(
+                                &analyze::ngrams::templates(
+                                    &corpus,
+                                    &analyze::ngrams::TemplateOptions {
+                                        top,
+                                        min_count,
+                                    },
+                                ),
+                                &analyze::ngrams::template_columns(),
+                                cli.output,
+                                analyze::ngrams::template_line,
+                            )?;
+                        }
+                        AnalyzeCommands::Tropes => {
+                            render_per_system(
+                                &analyze::tropes::run(&corpus),
+                                &analyze::tropes::columns(),
+                                cli.output,
+                                analyze::tropes::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Metadata => {
+                            render_per_system(
+                                &analyze::meta::run(&corpus),
+                                &analyze::meta::columns(),
+                                cli.output,
+                                analyze::meta::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Anomalies {
+                            z_threshold,
+                            top,
+                            min_duplicates,
+                        } => {
+                            render_per_system(
+                                &analyze::anomalies::run(
+                                    &corpus,
+                                    &analyze::anomalies::Options {
+                                        z_threshold,
+                                        top,
+                                        min_duplicate_systems: min_duplicates,
+                                    },
+                                ),
+                                &analyze::anomalies::columns(),
+                                cli.output,
+                                analyze::anomalies::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Compare {
+                            baseline_dir,
+                            baseline_label,
+                        } => {
+                            let baseline = analyze::Corpus::load(
+                                Path::new(&baseline_dir),
+                                baseline_label.as_deref(),
+                            )?;
+                            render_per_system(
+                                &analyze::compare::run(&baseline, &corpus),
+                                &analyze::compare::columns(),
+                                cli.output,
+                                analyze::compare::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Snapshot { output_path } => {
+                            render_per_system(
+                                &analyze::snapshot::run(
+                                    &corpus,
+                                    Path::new(&content_dir),
+                                    &output_path,
+                                )?,
+                                &analyze::snapshot::columns(),
+                                cli.output,
+                                analyze::snapshot::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Report { output_path } => {
+                            render_per_system(
+                                &analyze::report::run(&corpus, &output_path)?,
+                                &analyze::report::columns(),
+                                cli.output,
+                                analyze::report::line,
+                            )?;
+                        }
+                    }
+                }
+                DescriptionCommands::Experiment {
+                    label,
+                    input_dir,
+                    concurrency,
+                    max_tokens,
+                    force,
+                } => {
+                    let rows = descriptions::experiment::run(
+                        &descriptions::experiment::Options {
+                            data_dir: PathBuf::from(
+                                cli.data_dir.as_deref().unwrap_or("data"),
+                            ),
+                            input_dir,
+                            label,
+                            force,
+                            concurrency: concurrency as usize,
+                            max_tokens,
+                        },
+                    )?;
+                    render_per_system(
+                        &rows,
+                        &descriptions::experiment::columns(),
+                        cli.output,
+                        descriptions::experiment::line,
                     )?;
                 }
             },

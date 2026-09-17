@@ -17,7 +17,6 @@ use serde_json::{Value, json};
 const GUIDE: &str =
     include_str!("../../../../content/prompts/stellarhost_guide.toml");
 const LIGHT_YEARS_PER_PARSEC: f64 = 3.26156;
-const EARTH_DAYS_PER_YEAR: f64 = 365.0;
 const EARTH_MASSES_PER_JUPITER: f64 = 317.8;
 const SUN_EFFECTIVE_TEMPERATURE_K: f64 = 5772.0;
 const EARTH_DENSITY_G_CM3: f64 = 5.51;
@@ -656,7 +655,7 @@ fn prepare(
         "These constraints and diagnostics are silent instructions, never reader-facing prose.".into(),
         "Missing measurements are unknown. Do not infer composition, density, habitability, orbital spacing, orbital speed, or observing feasibility.".into(),
         "Use only approved comparisons. Do not calculate new ratios or rank masses; preserve minimum-mass provenance and upper/lower limits.".into(),
-        "Catalog system counts can include other hosts. Describe only the planets explicitly associated with this hostname; name order is not orbital order.".into(),
+        "Catalog system counts can include other hosts. Describe only the planets that orbit this hostname; name order is not orbital order.".into(),
     ];
     if system.catalog_system_star_count.is_some_and(|n| n > 1) {
         silent_constraints.push(
@@ -668,7 +667,7 @@ fn prepare(
         request: BTreeMap::from([
             (
                 "task",
-                "Describe this stellar host and its associated planets for curious general readers.",
+                "Describe this stellar host and its planets for curious general readers.",
             ),
             ("target_words", target_words),
             (
@@ -677,7 +676,7 @@ fn prepare(
             ),
             (
                 "coverage",
-                "Introduce the host, name its associated planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending.",
+                "Introduce the host, name its planets, and select useful supplied measurements. Preserve all qualifiers. Do not recite every number or force a generic ending.",
             ),
         ]),
         guide,
@@ -796,21 +795,6 @@ fn comparisons(star: &Star, planets: &[Planet]) -> Vec<String> {
                 planet.name,
                 significant(relative * EARTH_DENSITY_G_CM3),
                 significant(relative)
-            ));
-        }
-        if let Some(direction) = planet
-            .measurements
-            .get("orbital_period")
-            .and_then(|m| against(m, EARTH_DAYS_PER_YEAR))
-        {
-            let direction = if direction == "smaller" {
-                "shorter"
-            } else {
-                "longer"
-            };
-            result.push(format!(
-                "{}'s year is {direction} than Earth's roughly 365-day year.",
-                planet.name
             ));
         }
     }
@@ -1064,6 +1048,33 @@ mod tests {
         json!({"hostname": "Test", "pl_name": name, "default_flag": 1,
             "pl_orbper": period, "pl_orbperlim": 0, "pl_orbpererr1": 0.01, "pl_orbpererr2": -0.01,
             "pl_rade": null, "pl_bmasse": 25.0, "pl_bmasselim": 1, "pl_bmassprov": "Mass"})
+    }
+
+    #[test]
+    fn periods_remain_in_days_without_earth_year_comparisons() {
+        for period in [5.0, 10.0, 45.0, 365.0, 1095.0, 2000.0] {
+            let (request, _, _) = prepare(
+                "Test",
+                std::slice::from_ref(&host()),
+                &[planet("Test b", period)],
+            )
+            .unwrap();
+            assert!(
+                !request.publishable_comparisons.iter().any(|s| {
+                    crate::descriptions::validate::is_earth_year_reference(s)
+                }),
+                "period {period}"
+            );
+            assert_eq!(
+                request.planets[0].measurements["orbital_period"].value,
+                period
+            );
+            assert!(
+                request.planets[0].measurements["orbital_period"]
+                    .display
+                    .ends_with(" days")
+            );
+        }
     }
 
     #[test]

@@ -25,6 +25,77 @@ fn test_binary_runs_without_args() {
 }
 
 #[test]
+fn descriptions_generate_batch_accepts_label_with_failed_filter() {
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("exodata"));
+    cmd.current_dir(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
+    );
+    cmd.args([
+        "dev",
+        "descriptions",
+        "generate-batch",
+        "--label",
+        "../invalid",
+        "--failed",
+    ]);
+    cmd.assert().failure().stderr(predicate::str::contains(
+        "label must be nonempty alphanumeric/dashes",
+    ));
+}
+
+#[test]
+fn descriptions_empty_failed_retry_needs_no_credentials_or_writes() {
+    let dir = std::env::temp_dir().join(format!(
+        "exodata-empty-retry-{}-{}",
+        std::process::id(),
+        rand::random::<u64>()
+    ));
+    let system = dir.join("test");
+    fs::create_dir_all(&system).unwrap();
+    fs::write(
+        system.join("request.toml"),
+        "schema_version = 1\nplanets = []\n[system]\nhostname = 'Test'\n",
+    )
+    .unwrap();
+    // No evidence is needed for an unselected, successful preparation.
+    fs::write(system.join("description.md"), "previous success").unwrap();
+    for (label, prompt_flag) in [
+        (None, "--repair-prompt"),
+        (Some("onepass-v1"), "--style-prompt"),
+    ] {
+        let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("exodata"));
+        cmd.current_dir(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
+        );
+        cmd.env_remove("DEEPSEEK_API_KEY");
+        cmd.args([
+            "dev",
+            "descriptions",
+            "generate-batch",
+            "--failed",
+            "--output",
+            "json",
+            "--input-dir",
+        ]);
+        cmd.arg(&dir);
+        cmd.args([prompt_flag, "content/stellarhost_repair_prompt.txt"]);
+        if let Some(label) = label {
+            cmd.args(["--label", label]);
+        }
+        cmd.assert()
+            .success()
+            .stderr(predicate::str::contains("No failed systems"))
+            .stdout(predicate::str::contains("[]"));
+        assert_eq!(fs::read_dir(&system).unwrap().count(), 2);
+        assert_eq!(
+            fs::read_to_string(system.join("description.md")).unwrap(),
+            "previous success"
+        );
+    }
+    fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
 fn test_help_shows_public_dev_group() {
     let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("exodata"));
 

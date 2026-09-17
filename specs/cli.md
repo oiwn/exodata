@@ -181,6 +181,7 @@ exodata dev
 ├── convert-raw-files
 ├── sql
 ├── descriptions scan
+├── descriptions analyze
 └── insights run-all
 ```
 
@@ -243,6 +244,13 @@ filters match exact request hostnames. Defaults: `--concurrency 4`,
 `--max-tokens 1536`, and `--system-prompt content/stellarhost_prompt.txt`.
 It never runs preparation or changes saved requests. `--force` regenerates
 matching successful inputs. The existing single-request commands remain available.
+Optional `--label L` selects `description_L.md`, `metadata_L.toml`,
+`draft_L.md`, and `fail_L.toml`; labels are nonempty ASCII alphanumeric/dashes.
+With `--failed`, only that label's failures are selected and cleared on success.
+When prepared systems exist but the unfiltered `--failed` selection is empty,
+exit successfully with `No failed systems` on stderr and empty structured
+results. Do not load credentials, make calls, or write artifacts. Missing
+preparation and explicit hostname selection mismatches remain errors.
 
 Before network access, validate prepared schema version 1, hostname uniqueness,
 matching local evidence, metadata identity, prompt, settings, and writable
@@ -274,43 +282,50 @@ bodies; incomplete/invalid successful HTTP bodies are retained in the failure
 record. Credentials are never persisted. No trial archive or root `tmp/`
 workflow is used.
 
-Generation is draft-critic-edit. Stage one (drafter) uses the shared system
-prompt to turn the saved request into a factual draft, which is stored per
-system as ignored `draft.md` once it validates. Stage two (critic) uses
-`content/stellarhost_critic_prompt.txt` (override with `--critic-prompt`)
-to verify the draft against the source facts; the call runs in DeepSeek
-json mode (`response_format: json_object`) with a 768-token cap, returns
-strict JSON findings (category/quote/problem/fix), gets one parse retry,
-and fails open when unparseable or transport-failed, with a metadata note.
-Stage three (editor) uses `content/stellarhost_editor_prompt.txt`
-(override with `--editor-prompt`) and receives the draft, any critic
-findings as defects to resolve, plus the full evidence request; it polishes
-prose while preserving the science. Every response passes deterministic
-gates before installation: one leading level-one title, paragraphs only
-(no links, lists, tables, code, or extra headings), no em dashes or double
-hyphens, every planet-name occurrence bolded, every used measurement phrase
-(number plus unit, and the spectral label) bolded, output numeric tokens
-within the request-licensed set (display strings, comparisons, guide
-values, years, counts, object names - never raw audit values or errors),
-and no banned phrasings (orbital position/speed, significance/hype,
-missing-field commentary, raw-uncertainty derivation, the doubled hedge
-"about about", meta/preparation language such as "the guide", "supplied",
-"the request", or "the evidence", and unlicensed labels). Label bans are
-licensing-aware: phrases licensed by prepared facts (a per-planet
-`circumbinary` flag, star `host_kind = "pulsar"` and the `Pulsar Timing`
-method label, star `age_class = "very young"`, and "sun-like" only for a
-supplied G-type spectral label) are stripped before the ban list runs.
-Stage outputs pass an algorithmic formatting pass before the gates:
-plain number+unit measurement phrases (including full
-`times Earth's` / `times Jupiter's` forms) and the supplied spectral
-label are bolded automatically outside strong spans, and `times Earth`
-is repaired to `times Earth's`; the bolding gate stays as a backstop.
-Each drafter/editor stage retries with violations appended as formatting
-feedback, at most three attempts per stage; transport/HTTP failures are
-never retried. Exhausted retries fail the system naming the failed stage
-while preserving the previous description. Metadata records per-stage
-attempts, token usage, critic findings, plus totals; the fingerprint
-(version 4) covers the request, all three prompt texts, and settings.
+Generation is one writing pass plus at most one validation repair (fingerprint
+version 10). Compact JSON derived after notes merging includes reader-facing
+displayed measurements and bounds, exact-host counts, stellar multiplicity,
+names, classifications, discovery facts, approved comparisons, guide entries,
+and private guidance. Exclude raw values/errors, source identifiers, conversion
+details, and duplicated request instructions. Distinguish `mass` and
+`minimum_mass` keys without raw audit notation. Saved preparation is unchanged.
+
+The writer uses `content/stellarhost_prompt.txt` (`--system-prompt`).
+Normalize and save its first response as `draft.md`, even if validation rejects
+it. Install a valid first response directly. Only a concrete validation failure
+triggers one repair, which receives compact facts, the failed article, and
+specific violations. Use `content/stellarhost_repair_prompt.txt`
+(`--repair-prompt`, legacy CLI alias `--style-prompt`). Repair preserves
+unaffected supported content and may correct invalid values; numeric equality
+with the invalid draft is not required. There is no always-run editor.
+Transport, malformed/empty, and truncated responses fail without automatic
+retry. Each system makes at most two calls; failures preserve previous successes.
+
+Both candidates pass structural, numeric, emphasis, coverage, and policy/claim
+checks. Every requested planet must appear. Omit Earth-year comparisons and
+conversions; state orbital periods in days. Preparation no longer emits these
+comparisons, and generation filters them from older requests and merged notes.
+The former subject/direction licensing gate is replaced by an omission check.
+Approved period rankings among the listed planets remain available.
+Reject explicit system-wide attribution of
+host-star measurements and the observed stellar minimum-mass wording. These
+bounded checks do not fully verify meaning, units, associations, or bounds;
+evidence review remains required. Repetition metrics are advisory.
+
+Formatting remains mechanical: dashes, redundant hedges, complete measurement
+bolding including all of `g/cm³`, spectral/name bolding, and possessive repair.
+Remove measurement `about` prefixes from model-facing facts and normalized
+articles, including numeric ranges and spelled quantities; ordinary uses such
+as `about its composition` remain. Keep values, units, bounds, and minimum-mass
+meaning intact, with no added disclaimer. Keep existing soft length targets.
+
+Metadata records `draft` and optional `repair` stages. Headline usage and elapsed
+time include every attempted stage on success and failure. Retain returned
+usage even when prose is rejected; `usage_complete = false` marks missing usage,
+so numeric totals then represent known consumption only. Analysis/status prefer
+the latest matching failure and recover historical undercounts from stage
+records without rewriting artifacts. Historical `style` metadata remains
+readable. Fingerprint v10 covers the notes-merged request, both prompts, and settings.
 
 An optional hand-edited `notes.toml` may live beside the request:
 `facts` entries merge into `publishable_comparisons` (their numbers
@@ -320,17 +335,89 @@ covered by the fingerprint, so edited notes regenerate the system.
 Prepare and batch never write this file. `--failed` limits the batch to
 systems with a `fail.toml` and retries them even when a matching
 fingerprint would otherwise skip (recovering forced-rerun failures).
+With `--label L`, the failure file is `fail_L.toml`; unrelated failures and
+served descriptions are preserved.
 
 `dev descriptions status` summarizes a content directory without model
 calls: per-system state (`failed` when a `fail.toml` records the latest
 failed attempt, else `generated` for a nonempty description, else
-`missing`), fingerprint version, attempts, token totals, critic findings
-count, generated timestamp, and the failure error, with an aggregate
+`missing`), fingerprint version, attempts, token totals, generated
+timestamp, and the failure error, with an aggregate
 summary on stderr.
 
-`dev descriptions normalize` re-applies the algorithmic formatting pass
-(bolding and the density possessive) to stored descriptions without
-model calls, rewriting only files that change.
+`dev descriptions normalize` re-applies the algorithmic formatting pass,
+including measurement-hedge removal, to served `description.md` files.
+`normalize --label pass2` selects `description_pass2.md` instead. Labels use
+the same validation as generation. Only changed articles are written; saved
+requests, metadata, drafts, and other variants remain untouched. No model calls
+or re-preparation are needed.
+
+`dev descriptions analyze <subcommand>` reads a content directory
+(`--content-dir`, default `content/systems`; `--label v2` reads
+`description_<label>.md` variant files) without model calls and
+reports on the stored corpus:
+
+- `text` — per-system rows: words, sentences, paragraphs, average
+  sentence words, type-token ratio, title words, and unbolded
+  measurement numbers (number+unit or `about <number>` outside bold
+  spans; discovery years and the 365-day year anchor are excluded).
+- `summary` — corpus distributions (min, p5, p25, median, mean, p75,
+  p95, max, stddev) of the per-system metrics.
+- `ngrams [--top N] [--min-n 1] [--max-n 5] [--openers]` — word n-grams
+  with corpus frequency, document frequency, and document share;
+  `--openers` counts only sentence-initial n-grams (template-monotony
+  detector).
+- `templates [--top N] [--min-count C]` — sentence templates after
+  masking numbers to `<num>` and following unit-lexicon words to
+  `<unit>`; requires at least two systems per template.
+- `tropes` — curated named patterns (for example
+  `listed_planets_ranking`, `earth_year_anchor`) with counts and up to
+  five example systems.
+- `metadata` — generation metadata aggregation: token totals by stage
+  (draft, style), elapsed time, attempts histogram, served models,
+  fingerprint versions, generation date range, and validation
+  recoveries.
+- `anomalies [--z-threshold 2.5] [--top N] [--min-duplicates 2]` —
+  distribution outliers (length, sentences, sentence length, numeric
+  density, recorded tokens) as z-scores, cross-system duplicate
+  sentences, within-article repeated sentences, systems with unbolded
+  measurement numbers, and undescribed systems.
+- `snapshot --output-path FILE.json` — writes a machine-readable stats
+  record (summary distributions, tropes, top templates, metadata
+  aggregates, duplicate-sentence counts, timestamp, corpus path) for
+  durable before/after comparison; store under `content/stats/`
+  (gitignored).
+- `compare --baseline-dir DIR [--baseline-label L]` — side-by-side
+  rows (baseline vs the `--content-dir` corpus) for length/TTR
+  distribution statistics, unbolded measurements, cross-system
+  duplicate sentences, and every trope's system reach, with deltas.
+  Only hostnames with descriptions and no current failure marker on either
+  side contribute to metric pairs. `systems_failed` reports failure counts
+  for each loaded corpus, including systems retaining an older success;
+  `systems_compared` reports the successful intersection.
+  Snapshot a corpus copy before regenerating to compare passes, or
+  compare a labeled variant against the served files in place.
+- `report --output-path FILE.md` — writes one markdown report with all
+  sections (note: `--output` remains the output-format flag).
+
+All subcommands use the `lines` default and support `--output
+table/json/csv`. Analysis lives in the `exodata-prose` crate.
+Labeled analysis reads the matching `fail_<label>.toml`, never `fail.toml`.
+
+`dev descriptions experiment --label v2 [--force]` refreshes the
+requests of the fixed 20-system experiment set (the
+15-system baseline plus Kepler-42, L 98-59, TOI-178, V1298 Tau, and
+HD 260655; global `--data-dir`, `--input-dir content/systems`) —
+experiments always run on current preparation semantics — and
+generates every system into variant files
+(`description_<label>.md`, `metadata_<label>.toml`,
+`draft_<label>.md`, `fail_<label>.toml`) without touching the served
+`description.md`. Variant metadata carries the fingerprint, so
+unchanged inputs skip and prompt or gate-relevant changes regenerate.
+Compare results with `analyze --label v2 compare --baseline-dir
+content/systems` (variant vs current, in place) or against a
+snapshot directory. Labels are alphanumeric/dashes; use `--force`
+to regenerate despite a matching variant fingerprint.
 
 `generate-batch`, `status`, `prepare`, and `normalize` default to the
 `lines` output format: one compact single-line row per system (hostname,

@@ -14,7 +14,6 @@ pub fn columns() -> Vec<String> {
         "prompt_tokens",
         "completion_tokens",
         "total_tokens",
-        "critic_findings",
         "generated_at",
         "error",
     ]
@@ -49,14 +48,10 @@ pub fn line(row: &Value) -> String {
         None => "-".to_owned(),
     };
     let tokens = row["total_tokens"].as_u64().unwrap_or_default();
-    let critic = match row["critic_findings"].as_u64() {
-        Some(c) => c.to_string(),
-        None => "-".to_owned(),
-    };
     let tail = row["error"].as_str().unwrap_or_default();
     let tail: String = tail.chars().take(70).collect();
     format!(
-        "{hostname:<26} {state:<9} fp{version} {attempts:>2} att {:>6} tok {critic} crit {tail}",
+        "{hostname:<26} {state:<9} fp{version} {attempts:>2} att {:>6} tok {tail}",
         super::short_tokens(tokens),
     )
 }
@@ -113,8 +108,12 @@ pub fn run(content_dir: &Path) -> Result<Vec<Value>> {
         } else {
             "missing"
         };
-        let m = metadata.as_ref();
         let f = failure.as_ref();
+        let mut latest = failure.clone().or(metadata);
+        if let Some(record) = &mut latest {
+            super::usage::record_totals(record).write(record);
+        }
+        let m = latest.as_ref();
         systems.insert(
             hostname.clone(),
             json!({
@@ -135,10 +134,7 @@ pub fn run(content_dir: &Path) -> Result<Vec<Value>> {
                 "total_tokens": m
                     .map(|m| number(m, "total_tokens"))
                     .unwrap_or(Value::Null),
-                "critic_findings": m
-                    .and_then(|m| m["critic"]["findings"].as_array())
-                    .map(|list| json!(list.len()))
-                    .unwrap_or(Value::Null),
+                "usage_complete": m.map(|m| m["usage_complete"].clone()).unwrap_or(Value::Null),
                 "generated_at": m
                     .map(|m| text(m, "generated_at"))
                     .unwrap_or(Value::Null),
@@ -221,8 +217,7 @@ mod tests {
             Some(
                 "hostname = 'Alpha'\nfingerprint_version = 4\nattempts = 2\n\
                  prompt_tokens = 10\ncompletion_tokens = 5\ntotal_tokens = 15\n\
-                 generated_at = '2026-09-10T08:00:00+00:00'\n\
-                 [critic]\nfindings = []\n",
+                 generated_at = '2026-09-10T08:00:00+00:00'\n",
             ),
         );
         system(
@@ -239,7 +234,6 @@ mod tests {
         assert_eq!(rows[0]["state"], "generated");
         assert_eq!(rows[0]["fingerprint_version"], 4);
         assert_eq!(rows[0]["total_tokens"], 15);
-        assert_eq!(rows[0]["critic_findings"], 0);
         assert_eq!(rows[1]["state"], "failed");
         assert!(rows[1]["error"].as_str().unwrap().contains("3 attempts"));
         assert_eq!(rows[1]["generated_at"], Value::Null);

@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-09-12
+
+- Split the descriptions pipeline into the new `exodata-prose` crate
+  (`crates/exo-prose`); exo-cli keeps CLI wiring only.
+  `dataframe_to_json` moved to `exo_core::json`.
+- Built the `dev descriptions analyze` suite: `text`, `summary`,
+  `ngrams --openers`, `templates` (number/unit-masked), `tropes`,
+  `metadata`, `anomalies` (outliers, cross-system duplicate sentences,
+  unbolded measurements), `compare --baseline-dir`, `report
+  --output-path`, and `snapshot --output-path` (machine-readable stats
+  under gitignored `content/stats/`; pristine pass-1 recorded as
+  `content/stats/pass1.json`).
+- De-monotonization round 1: prepare gates the Earth-year comparison to
+  year extremes (≤10 days / ≥3 years); drafter prompt requires varied
+  inventory phrasing, at most one discovery-method explanation per
+  article, planet grouping, selective comparisons, folded rankings,
+  varied rhythm, and no recap endings; request wording no longer
+  teaches "associated".
+- Rebuilt the pipeline to draft-style, fingerprint v5: the JSON critic
+  was removed (13.5% of prompt tokens, mostly false-positive findings);
+  the editor became a compact draft-only style pass under
+  `content/stellarhost_style_prompt.txt`; metadata records
+  draft/style stages.
+- Deterministic narrative gates with gates-as-critic flow: the draft
+  retries only on fact gates; all narrative violations (opener share
+  40%/8, sentence-length spread ≥2.0, numeric density ≤2.5, banned
+  machine phrasings, number+unit reuse) are forwarded to the style pass
+  as an explicit defect list; only style exhaustion fails the system.
+- Extended the mechanical post-pass: em dashes/double hyphens become
+  single hyphens, repeated `about` collapses, planet names and spectral
+  labels are auto-bolded outside strong spans; the corresponding gates
+  are backstops. `times Earth` repair consumes typographic possessives.
+- Baseline-15 calibration across four runs reached 15/15 with all
+  failure classes resolved (year anchors licensed-only, TRAPPIST-1
+  openers fixed via forwarded defects, hostname/spectral/365 reuse
+  false positives exempt, Kepler-11 value-collision class fixed by
+  number+unit pair keying). Call economics: ~2 calls/system, ~4-6k
+  tokens/system vs 8.4k pass 1.
+
 ## 2026-09-10
 
 - Completed the full-catalog prose generation for #116: all 4,768

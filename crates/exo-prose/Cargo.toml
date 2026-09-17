@@ -23,6 +23,7 @@ toml = { workspace = true }
 tokio = { version = "1.53.1", features = ["rt-multi-thread"] }
 reqwest = { version = "0.13.4", features = ["json", "rustls"], default-features = false }
 pulldown-cmark = "0.13.4"
+regex = "1.13.1"
 
 [dev-dependencies]
 axum = "0.8.9"

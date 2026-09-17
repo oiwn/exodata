@@ -1,9 +1,12 @@
+pub mod analyze;
 pub mod batch;
 mod client;
+pub mod experiment;
 pub mod normalize;
 pub mod prepare;
 pub mod probe;
 pub mod status;
+mod usage;
 mod validate;
 
 use std::{

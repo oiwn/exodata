@@ -27,6 +27,11 @@ This file defines agent workflow and points to project specifications. Implement
    `clippy --workspace --all-targets --all-features` — so terminal, editor
    (rust-analyzer), the prek hook, and the Justfile all evaluate the same
    warnings.
+10. Edit files with the harness's structured patch instrument (for example
+    `apply_patch` or the edit tool), not with ad-hoc shell scripts
+    (`python3`/`perl` heredocs, `sed -i`) that replace blocks of text.
+    Scripted rewrites silently no-op on formatting drift, bypass diff
+    review, and damage surrounding code when they half-match.
 
 ## Project Development Skills
 

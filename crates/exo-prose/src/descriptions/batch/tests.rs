@@ -22,11 +22,10 @@ impl Fixture {
         fs::create_dir(&root).unwrap();
         fs::write(root.join("prompt.txt"), "Use supplied facts.").unwrap();
         fs::write(
-            root.join("editor-prompt.txt"),
+            root.join("style-prompt.txt"),
             "Polish the draft; preserve facts.",
         )
         .unwrap();
-        fs::write(root.join("critic-prompt.txt"), "critic").unwrap();
         let fixture = Self(root);
         for name in names {
             fixture.request(name, "ok");
@@ -50,12 +49,12 @@ impl Fixture {
             input_dir: self.0.clone(),
             hostnames: vec![],
             system_prompt: self.0.join("prompt.txt"),
-            editor_prompt: self.0.join("editor-prompt.txt"),
-            critic_prompt: self.0.join("critic-prompt.txt"),
+            repair_prompt: self.0.join("style-prompt.txt"),
             concurrency: 4,
             max_tokens: 1536,
             force: false,
             failed: false,
+            label: None,
         }
     }
 }
@@ -82,72 +81,21 @@ async fn handle(
     let active = state.active.fetch_add(1, Ordering::SeqCst) + 1;
     state.peak.fetch_max(active, Ordering::SeqCst);
     state.requests.lock().unwrap().push(body.clone());
-    let system = body["messages"].as_array().unwrap()[0]["content"]
-        .as_str()
-        .unwrap_or_default()
-        .to_owned();
     let content_str =
         body["messages"].as_array().unwrap().last().unwrap()["content"]
             .as_str()
             .unwrap()
             .to_owned();
-    if system == "critic" {
-        state.active.fetch_sub(1, Ordering::SeqCst);
-        tokio::time::sleep(Duration::from_millis(10)).await;
-        let content = match action_for(&state, &content_str).as_deref() {
-            Some("critic") | Some("criticfail") => json!({"findings": [
-                {"category": "editorial_hype", "quote": "most notable",
-                 "problem": "significance claim",
-                 "fix": "delete the claim"}]})
-            .to_string(),
-            Some("criticbad") => "garbage not json".to_owned(),
-            _ => json!({"findings": []}).to_string(),
-        };
-        return Json(json!({"model":MODEL,"id":"mock-critic",
-            "choices":[{"message":{"content":content},"finish_reason":"stop"}],
-            "usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}))
-            .into_response();
-    }
-    let findings = content_str.contains("# Verifier findings");
-    let (name, action) = if findings {
-        let name = content_str
-            .strip_prefix("# ")
-            .and_then(|rest| rest.lines().next())
-            .unwrap_or_default()
-            .to_owned();
-        let action = action_for(&state, &content_str).unwrap_or_default();
-        (name, action)
-    } else {
-        let input: toml::Value = toml::from_str(&content_str)
-            .or_else(|_| {
-                let tail = content_str
-                    .split_once("\n\n# Source evidence and instructions")
-                    .map(|(_, tail)| tail);
-                match tail {
-                    // Editor stage: the TOML follows the evidence marker and
-                    // may carry a trailing formatting-feedback block.
-                    Some(tail) => {
-                        match tail.split_once("\n\n# Formatting feedback") {
-                            Some((head, _)) => toml::from_str(head),
-                            None => toml::from_str(tail),
-                        }
-                    }
-                    None => toml::from_str("{"),
-                }
-            })
-            .or_else(|_| {
-                let head = content_str
-                    .split_once("\n\n# Formatting feedback")
-                    .map(|(head, _)| head)
-                    .unwrap_or(&content_str);
-                toml::from_str(head)
-            })
-            .unwrap();
-        (
-            input["system"]["hostname"].as_str().unwrap().to_owned(),
-            input["test_action"].as_str().unwrap().to_owned(),
-        )
-    };
+    let wire: Value = serde_json::from_str(&content_str).unwrap();
+    let repair_stage = wire.get("facts").is_some();
+    let input = if repair_stage { &wire["facts"] } else { &wire };
+    let name = input["system"]["hostname"].as_str().unwrap().to_owned();
+    // Test control stays in the fixture; it must never leak into wire facts.
+    let action = read_toml(&state.directory.join(&name).join("request.toml"))
+        .unwrap()["test_action"]
+        .as_str()
+        .unwrap()
+        .to_owned();
     tokio::time::sleep(Duration::from_millis(if name == "A" { 100 } else { 40 }))
         .await;
     state.active.fetch_sub(1, Ordering::SeqCst);
@@ -167,47 +115,33 @@ async fn handle(
     if action == "invalid" {
         return (StatusCode::OK, "not JSON").into_response();
     }
-    let content = if findings {
-        if action == "criticfail" {
-            json!(format!("# {name}\nBad — dash."))
-        } else {
-            json!(format!("# {name}\nCorrected prose."))
+    if action == "repair-http500" && repair_stage {
+        return (StatusCode::INTERNAL_SERVER_ERROR, "repair unavailable")
+            .into_response();
+    }
+    let content = match action.as_str() {
+        "retry" if repair_stage => {
+            json!(format!("# {name}\n**Planet b** orbits **about 3 days**."))
         }
-    } else if action == "emdash" {
-        json!(format!("# {name}\nOne — two."))
-    } else if action == "retry" {
-        let planet = "Planet b";
-        if content_str.contains("# Formatting feedback") {
-            json!(format!("# {name}\n**{planet}** orbits **about 3 days**."))
-        } else {
-            json!(format!("# {name}\n{planet} orbits about 3 days."))
+        "retry" | "unlicensed" => {
+            json!(format!("# {name}\n**Planet b** orbits **about 7 days**."))
         }
-    } else if action == "empty" {
-        json!("")
-    } else {
-        json!(format!("# {name}\nGenerated prose."))
+        "stylefail" | "repair-http500" => {
+            json!(format!("# {name}\nIt orbits in 42 days."))
+        }
+        "assoc" => json!(format!(
+            "# {name}\nOne planet is associated with this host."
+        )),
+        "emdash" => json!(format!("# {name}\nOne — two.")),
+        "machine" => json!(format!(
+            "# {name}\nIts mass is large. Its radius is small. Its year is short. Its density is high."
+        )),
+        "empty" => json!(""),
+        _ => json!(format!("# {name}\nGenerated prose.")),
     };
     Json(json!({"model":MODEL,"id":"mock-response-id",
         "choices":[{"message":{"content":content},"finish_reason":if action=="length"{"length"}else{"stop"}}],
         "usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}})).into_response()
-}
-
-/// Recover the fixture action for critic and correction calls, whose user
-/// message carries no TOML: critic inputs still contain the request after
-/// the evidence marker; correction inputs only carry the article title.
-fn action_for(state: &ServerState, content: &str) -> Option<String> {
-    let request_text = content
-        .split_once("\n\n# Source facts\n\n")
-        .map(|(_, tail)| tail.to_owned())
-        .or_else(|| {
-            content.strip_prefix("# ").and_then(|rest| {
-                let name = rest.lines().next()?;
-                let path = state.directory.join(name).join("request.toml");
-                fs::read_to_string(path).ok()
-            })
-        })?;
-    let parsed: toml::Value = toml::from_str(&request_text).ok()?;
-    parsed["test_action"].as_str().map(str::to_owned)
 }
 
 async fn server(
@@ -239,19 +173,10 @@ async fn failed_filter_retries_failed_systems_over_matching_fingerprints() {
     let options = fixture.options();
     let prompt = "prompt";
     let (client, _state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
-    execute(
-        jobs,
-        rows,
-        client,
-        prompt.into(),
-        "editor".into(),
-        "critic".into(),
-        1,
-        1536,
-    )
-    .await
-    .unwrap();
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
+    execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+        .await
+        .unwrap();
     // Simulate a failed forced rerun with unchanged inputs: the success
     // metadata still matches the current fingerprint, but a fail.toml
     // records the latest, failed attempt.
@@ -261,20 +186,15 @@ async fn failed_filter_retries_failed_systems_over_matching_fingerprints() {
     )
     .unwrap();
     let plain = fixture.options();
-    assert!(
-        preflight(&plain, prompt, "editor", "critic")
-            .unwrap()
-            .0
-            .is_empty()
-    );
+    assert!(preflight(&plain, prompt, "style").unwrap().0.is_empty());
     let mut retry = fixture.options();
     retry.failed = true;
-    let (jobs, _rows) = preflight(&retry, prompt, "editor", "critic").unwrap();
+    let (jobs, _rows) = preflight(&retry, prompt, "style").unwrap();
     assert_eq!(jobs.len(), 1);
     assert_eq!(jobs[0].hostname, "A");
     let mut missing = retry.clone();
     missing.hostnames = vec!["B".into()];
-    assert!(preflight(&missing, prompt, "editor", "critic").is_err());
+    assert!(preflight(&missing, prompt, "style").is_err());
     task.abort();
 }
 
@@ -282,7 +202,7 @@ async fn failed_filter_retries_failed_systems_over_matching_fingerprints() {
 fn notes_merge_into_wire_input_and_change_the_fingerprint() {
     let fixture = Fixture::new(&["A"]);
     let options = fixture.options();
-    let (jobs, _) = preflight(&options, "prompt", "editor", "critic").unwrap();
+    let (jobs, _) = preflight(&options, "prompt", "style").unwrap();
     let plain = jobs[0].fingerprint.clone();
     let input = jobs[0].input.clone();
     fs::write(
@@ -291,11 +211,28 @@ fn notes_merge_into_wire_input_and_change_the_fingerprint() {
          guidance = ['Mention the X-ray fact last.']\n",
     )
     .unwrap();
-    let (jobs, _) = preflight(&options, "prompt", "editor", "critic").unwrap();
+    let (jobs, _) = preflight(&options, "prompt", "style").unwrap();
     assert_ne!(jobs[0].fingerprint, plain);
     assert!(jobs[0].input.contains("The planet glows faintly in X-ray."));
     assert!(jobs[0].input.contains("Mention the X-ray fact last."));
     assert!(!input.contains("X-ray"));
+}
+
+#[test]
+fn young_age_alias_requires_an_explicit_request_license() {
+    let title = "# A Young Red Dwarf and Its Single Imaged Planet\n\nA star.";
+    let request = json!({"star": {"age_class": "very young"}});
+    let licensed = licensed_phrases(&request, &None);
+    assert!(validate::banned_patterns(title, &licensed).is_ok());
+    let age_only = json!({"star": {"measurements": {"age": {"display": "about 0.005 billion years"}}}});
+    assert!(
+        validate::banned_patterns(title, &licensed_phrases(&age_only, &None))
+            .is_err()
+    );
+    assert!(
+        validate::banned_patterns("# The youngest star\n\nA star.", &licensed)
+            .is_err()
+    );
 }
 
 #[test]
@@ -305,34 +242,25 @@ fn fingerprint_ignores_object_order_and_formatting_but_preserves_meaning() {
     let b: Value =
         serde_json::from_str("{\n \"a\": [1,2], \"b\": {\"x\":1,\"y\":2}} ")
             .unwrap();
-    let hash = fingerprint(&a, "prompt", "editor", "critic", 1536).unwrap();
-    assert_eq!(
-        hash,
-        fingerprint(&b, "prompt", "editor", "critic", 1536).unwrap()
-    );
+    let hash = fingerprint(&a, "prompt", "style", 1536).unwrap();
+    assert_eq!(hash, fingerprint(&b, "prompt", "style", 1536).unwrap());
     let mut changed = b.clone();
     changed["a"] = json!([2, 1]);
     assert_ne!(
         hash,
-        fingerprint(&changed, "prompt", "editor", "critic", 1536).unwrap()
+        fingerprint(&changed, "prompt", "style", 1536).unwrap()
     );
     changed = b;
     changed["b"]["x"] = json!(3);
     assert_ne!(
         hash,
-        fingerprint(&changed, "prompt", "editor", "critic", 1536).unwrap()
+        fingerprint(&changed, "prompt", "style", 1536).unwrap()
     );
+    assert_ne!(hash, fingerprint(&a, "prompt ", "style", 1536).unwrap());
+    assert_ne!(hash, fingerprint(&a, "prompt", "style", 1000).unwrap());
     assert_ne!(
-        hash,
-        fingerprint(&a, "prompt ", "editor", "critic", 1536).unwrap()
-    );
-    assert_ne!(
-        hash,
-        fingerprint(&a, "prompt", "editor", "critic", 1000).unwrap()
-    );
-    assert_ne!(
-        fingerprint(&json!({"text":"a b"}), "p", "editor", "critic", 1).unwrap(),
-        fingerprint(&json!({"text":"a  b"}), "p", "editor", "critic", 1).unwrap()
+        fingerprint(&json!({"text":"a b"}), "p", "style", 1).unwrap(),
+        fingerprint(&json!({"text":"a  b"}), "p", "style", 1).unwrap()
     );
 }
 
@@ -342,27 +270,19 @@ async fn concurrency_capture_skip_and_force() {
     let options = fixture.options();
     let prompt = fs::read_to_string(&options.system_prompt).unwrap();
     let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) = preflight(&options, &prompt, "editor", "critic").unwrap();
-    let rows = execute(
-        jobs,
-        rows,
-        client,
-        prompt.clone(),
-        "editor".into(),
-        "critic".into(),
-        4,
-        1536,
-    )
-    .await
-    .unwrap();
+    let (jobs, rows) = preflight(&options, &prompt, "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, prompt.clone(), "style".into(), 4, 1536)
+            .await
+            .unwrap();
     assert_eq!(state.peak.load(Ordering::SeqCst), 4);
-    assert_eq!(state.calls.load(Ordering::SeqCst), 15);
+    assert_eq!(state.calls.load(Ordering::SeqCst), 5);
     assert!(rows.iter().all(|r| r["status"] == "generated"));
     assert_eq!(rows[0]["hostname"], "A");
     for name in ["A", "B", "C", "D", "E"] {
         let directory = fixture.0.join(name);
         let metadata = read_toml(&directory.join("metadata.toml")).unwrap();
-        assert_eq!(metadata["total_tokens"], 45);
+        assert_eq!(metadata["total_tokens"], 15);
         assert_eq!(metadata["settings"]["max_tokens"], 1536);
         assert!(
             fs::read_to_string(directory.join("description.md"))
@@ -375,34 +295,21 @@ async fn concurrency_capture_skip_and_force() {
     for body in state.requests.lock().unwrap().iter() {
         assert_eq!(body["model"], MODEL);
         let system = body["messages"][0]["content"].as_str().unwrap();
-        assert_eq!(
-            body["max_tokens"],
-            if system == "critic" { 768 } else { 1536 }
-        );
+        assert_eq!(body["max_tokens"], 1536);
         assert_eq!(body["thinking"]["type"], "disabled");
         assert_eq!(body["stream"], false);
-        if system == "critic" {
-            assert_eq!(body["response_format"]["type"], "json_object");
-        } else {
-            assert!(body.get("response_format").is_none());
-        }
-        assert!(system == prompt || system == "editor" || system == "critic");
+        assert!(body.get("response_format").is_none());
+        assert!(system == prompt || system == "style");
     }
-    let (jobs, rows) = preflight(&options, &prompt, "editor", "critic").unwrap();
+    let (jobs, rows) = preflight(&options, &prompt, "style").unwrap();
     assert!(jobs.is_empty());
     assert_eq!(rows.len(), 5);
     assert!(rows.iter().all(|r| r["status"] == "skipped"));
     let mut forced = options;
     forced.force = true;
+    assert_eq!(preflight(&forced, &prompt, "style").unwrap().0.len(), 5);
     assert_eq!(
-        preflight(&forced, &prompt, "editor", "critic")
-            .unwrap()
-            .0
-            .len(),
-        5
-    );
-    assert_eq!(
-        preflight(&fixture.options(), "changed prompt", "editor", "critic")
+        preflight(&fixture.options(), "changed prompt", "style")
             .unwrap()
             .0
             .len(),
@@ -417,14 +324,13 @@ async fn failure_preserves_previous_success_and_later_success_clears_failure() {
     let options = fixture.options();
     let prompt = "prompt";
     let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
     execute(
         jobs,
         rows,
         client.clone(),
         prompt.into(),
-        "editor".into(),
-        "critic".into(),
+        "style".into(),
         1,
         1536,
     )
@@ -434,15 +340,13 @@ async fn failure_preserves_previous_success_and_later_success_clears_failure() {
     let metadata = fs::read(fixture.0.join("A/metadata.toml")).unwrap();
     for action in ["length", "empty", "invalid", "http500"] {
         fixture.request("A", action);
-        let (jobs, rows) =
-            preflight(&options, prompt, "editor", "critic").unwrap();
+        let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
         let rows = execute(
             jobs,
             rows,
             client.clone(),
             prompt.into(),
-            "editor".into(),
-            "critic".into(),
+            "style".into(),
             1,
             1536,
         )
@@ -480,32 +384,17 @@ async fn failure_preserves_previous_success_and_later_success_clears_failure() {
         if action == "http500" {
             assert!(failure.get("response_body").is_none());
         }
-        assert_eq!(
-            preflight(&options, prompt, "editor", "critic")
-                .unwrap()
-                .0
-                .len(),
-            1
-        );
+        assert_eq!(preflight(&options, prompt, "style").unwrap().0.len(), 1);
     }
     fixture.request("A", "ok");
     let mut force = fixture.options();
     force.force = true;
-    let (jobs, rows) = preflight(&force, prompt, "editor", "critic").unwrap();
-    execute(
-        jobs,
-        rows,
-        client,
-        prompt.into(),
-        "editor".into(),
-        "critic".into(),
-        1,
-        1536,
-    )
-    .await
-    .unwrap();
+    let (jobs, rows) = preflight(&force, prompt, "style").unwrap();
+    execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+        .await
+        .unwrap();
     assert!(!fixture.0.join("A/fail.toml").exists());
-    assert_eq!(state.calls.load(Ordering::SeqCst), 10);
+    assert_eq!(state.calls.load(Ordering::SeqCst), 6);
     task.abort();
 }
 
@@ -528,140 +417,292 @@ async fn validation_retry_recovers_and_records_attempts() {
     let options = fixture.options();
     let prompt = "prompt";
     let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
-    let rows = execute(
-        jobs,
-        rows,
-        client,
-        prompt.into(),
-        "editor".into(),
-        "critic".into(),
-        1,
-        1536,
-    )
-    .await
-    .unwrap();
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
     assert_eq!(rows[0]["status"], "generated");
-    assert_eq!(state.calls.load(Ordering::SeqCst), 5);
+    // One draft and one targeted repair, which may correct the invalid number.
+    assert_eq!(state.calls.load(Ordering::SeqCst), 2);
     let description = fs::read_to_string(dir.join("description.md")).unwrap();
-    assert!(description.contains("**Planet b** orbits **about 3 days**."));
+    assert!(description.contains("**Planet b** orbits **3 days**."));
     let draft = fs::read_to_string(dir.join("draft.md")).unwrap();
-    assert!(draft.contains("**Planet b** orbits **about 3 days**."));
+    assert!(draft.contains("**Planet b** orbits **7 days**."));
     let metadata = read_toml(&dir.join("metadata.toml")).unwrap();
-    assert_eq!(metadata["attempts"], 4);
-    assert_eq!(metadata["stages"]["draft"]["attempts"], 2);
-    assert_eq!(metadata["stages"]["edit"]["attempts"], 2);
+    assert_eq!(metadata["attempts"], 2);
+    assert_eq!(metadata["stages"]["draft"]["attempts"], 1);
+    assert_eq!(metadata["stages"]["repair"]["attempts"], 1);
     assert!(
         metadata["validation_recovered"]
             .as_array()
             .is_some_and(|errors| !errors.is_empty())
     );
+    assert_eq!(metadata["total_tokens"], 30);
+    assert_eq!(rows[0]["total_tokens"], 30);
+    assert_eq!(metadata["usage_complete"], true);
+    let requests = state.requests.lock().unwrap();
+    let repair: Value = serde_json::from_str(
+        requests[1]["messages"][1]["content"].as_str().unwrap(),
+    )
+    .unwrap();
+    assert!(repair["article"].as_str().unwrap().contains("7 days"));
+    assert!(
+        repair["violations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|v| v.as_str().unwrap().contains("not licensed"))
+    );
+    assert_eq!(repair["facts"]["system"]["hostname"], "Retry");
     task.abort();
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn critic_findings_reach_editor_and_record_metadata() {
+async fn labeled_runs_write_variant_files_and_keep_served_output() {
     let fixture = Fixture::new(&["A"]);
-    fixture.request("A", "critic");
+    let options = fixture.options();
+    let prompt = "prompt";
+    let (client, _state, task) = server(&fixture, Duration::from_secs(5)).await;
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
+    execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+        .await
+        .unwrap();
+    let served = fs::read_to_string(fixture.0.join("A/description.md")).unwrap();
+    let mut variant = options;
+    variant.label = Some("v2".into());
+    variant.force = true;
+    let (client, _state, task2) = server(&fixture, Duration::from_secs(5)).await;
+    let (jobs, rows) = preflight(&variant, prompt, "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
+    assert_eq!(rows[0]["status"], "generated");
+    let written =
+        fs::read_to_string(fixture.0.join("A/description_v2.md")).unwrap();
+    assert!(written.contains("Generated prose."));
+    assert!(fixture.0.join("A/metadata_v2.toml").exists());
+    assert!(fixture.0.join("A/draft_v2.md").exists());
+    assert_eq!(
+        fs::read_to_string(fixture.0.join("A/description.md")).unwrap(),
+        served,
+        "the served description is untouched"
+    );
+    task.abort();
+    task2.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn valid_draft_finishes_in_one_call_without_a_repair() {
+    let fixture = Fixture::new(&["A"]);
     let options = fixture.options();
     let prompt = "prompt";
     let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
-    let rows = execute(
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
+    assert_eq!(rows[0]["status"], "generated");
+    assert_eq!(state.calls.load(Ordering::SeqCst), 1);
+    let description =
+        fs::read_to_string(fixture.0.join("A/description.md")).unwrap();
+    assert!(description.contains("Generated prose."));
+    let metadata = read_toml(&fixture.0.join("A/metadata.toml")).unwrap();
+    assert_eq!(metadata["stages"]["draft"]["attempts"], 1);
+    assert!(metadata["stages"].get("repair").is_none());
+    assert_eq!(metadata["total_tokens"], 15);
+    assert!(metadata.get("critic").is_none());
+    task.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn labeled_failed_retry_preserves_other_artifacts_and_clears_only_its_failure()
+ {
+    let fixture = Fixture::new(&["A", "B"]);
+    let mut options = fixture.options();
+    options.label = Some("v2".into());
+    let (client, _state, task) = server(&fixture, Duration::from_secs(5)).await;
+    let (jobs, rows) = preflight(&options, "prompt", "style").unwrap();
+    execute(
         jobs,
         rows,
-        client,
-        prompt.into(),
-        "editor".into(),
-        "critic".into(),
+        client.clone(),
+        "prompt".into(),
+        "style".into(),
         1,
         1536,
     )
     .await
     .unwrap();
+    let dir = fixture.0.join("A");
+    fs::write(dir.join("description.md"), "served").unwrap();
+    fs::write(dir.join("fail.toml"), "error = 'served failed'\n").unwrap();
+    fs::write(dir.join("fail_other.toml"), "error = 'other failed'\n").unwrap();
+    fs::write(dir.join("fail_v2.toml"), "error = 'forced retry failed'\n")
+        .unwrap();
+    assert!(preflight(&options, "prompt", "style").unwrap().0.is_empty());
+    options.failed = true;
+    let (jobs, rows) = preflight(&options, "prompt", "style").unwrap();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].hostname, "A");
+    let rows =
+        execute(jobs, rows, client, "prompt".into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
     assert_eq!(rows[0]["status"], "generated");
-    assert_eq!(state.calls.load(Ordering::SeqCst), 3);
-    let description =
-        fs::read_to_string(fixture.0.join("A/description.md")).unwrap();
-    assert!(description.contains("Corrected prose."));
-    let metadata = read_toml(&fixture.0.join("A/metadata.toml")).unwrap();
-    assert_eq!(metadata["critic"]["findings"].as_array().unwrap().len(), 1);
-    assert!(metadata["critic"].get("corrected").is_none());
+    assert!(!dir.join("fail_v2.toml").exists());
+    assert!(dir.join("fail.toml").exists());
+    assert!(dir.join("fail_other.toml").exists());
+    assert_eq!(
+        fs::read_to_string(dir.join("description.md")).unwrap(),
+        "served"
+    );
+
+    // Matching hashes with an old pipeline version must not skip generation.
+    options.failed = false;
+    options.hostnames = vec!["A".into()];
+    let mut metadata = read_toml(&dir.join("metadata_v2.toml")).unwrap();
+    assert_eq!(metadata["fingerprint_version"], 10);
+    metadata["fingerprint_version"] = json!(5);
+    fs::write(
+        dir.join("metadata_v2.toml"),
+        toml::to_string(&metadata).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(preflight(&options, "prompt", "style").unwrap().0.len(), 1);
+
+    let labeled =
+        super::super::analyze::Corpus::load(&fixture.0, Some("v2")).unwrap();
+    assert!(!labeled.systems.iter().any(|doc| doc.failed));
+    fs::write(dir.join("fail_v2.toml"), "error = 'latest failed'\n").unwrap();
+    let labeled =
+        super::super::analyze::Corpus::load(&fixture.0, Some("v2")).unwrap();
+    assert!(labeled.systems[0].failed);
+    assert!(labeled.systems[0].described);
+    assert!(!labeled.systems[1].failed);
+    assert!(
+        super::super::analyze::Corpus::load(&fixture.0, Some("../bad")).is_err()
+    );
     task.abort();
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn editor_failure_after_findings_fails_and_preserves_previous() {
+async fn repair_failure_counts_both_calls_and_preserves_previous() {
     let fixture = Fixture::new(&["A"]);
     let options = fixture.options();
     let prompt = "prompt";
     let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
     execute(
         jobs,
         rows,
         client.clone(),
         prompt.into(),
-        "editor".into(),
-        "critic".into(),
+        "style".into(),
         1,
         1536,
     )
     .await
     .unwrap();
     let old = fs::read(fixture.0.join("A/description.md")).unwrap();
-    fixture.request("A", "criticfail");
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
-    let rows = execute(
-        jobs,
-        rows,
-        client,
-        prompt.into(),
-        "editor".into(),
-        "critic".into(),
-        1,
-        1536,
-    )
-    .await
-    .unwrap();
+    fixture.request("A", "stylefail");
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
     assert_eq!(rows[0]["status"], "failed");
     assert!(
         rows[0]["reason"]
             .as_str()
             .unwrap()
-            .contains("editor validation failed")
+            .contains("repair validation failed")
     );
-    assert_eq!(state.calls.load(Ordering::SeqCst), 8);
+    // First run uses one call; the failed run uses draft plus one repair.
+    assert_eq!(state.calls.load(Ordering::SeqCst), 3);
     assert_eq!(fs::read(fixture.0.join("A/description.md")).unwrap(), old);
     let failure = read_toml(&fixture.0.join("A/fail.toml")).unwrap();
-    assert_eq!(failure["critic"]["findings"].as_array().unwrap().len(), 1);
+    assert_eq!(failure["stages"]["repair"]["attempts"], 1);
+    assert_eq!(failure["total_tokens"], 30);
+    assert_eq!(rows[0]["total_tokens"], 30);
     task.abort();
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn unparseable_critic_fails_open() {
+async fn ordinary_repetition_does_not_trigger_repair_and_notes_reach_the_writer()
+{
     let fixture = Fixture::new(&["A"]);
-    fixture.request("A", "criticbad");
-    let options = fixture.options();
-    let prompt = "prompt";
+    fixture.request("A", "assoc");
+    fs::write(
+        fixture.0.join("A/notes.toml"),
+        "facts = ['A has a companion.']\nguidance = ['Use compact prose.']\n",
+    )
+    .unwrap();
     let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
+    let (jobs, rows) = preflight(&fixture.options(), "prompt", "repair").unwrap();
     let rows = execute(
         jobs,
         rows,
         client,
-        prompt.into(),
-        "editor".into(),
-        "critic".into(),
+        "prompt".into(),
+        "repair".into(),
         1,
         1536,
     )
     .await
     .unwrap();
     assert_eq!(rows[0]["status"], "generated");
-    assert_eq!(state.calls.load(Ordering::SeqCst), 4);
-    let metadata = read_toml(&fixture.0.join("A/metadata.toml")).unwrap();
-    assert_eq!(metadata["critic"]["unparseable"], true);
+    assert_eq!(state.calls.load(Ordering::SeqCst), 1);
+    let bodies = state.requests.lock().unwrap();
+    let facts: Value = serde_json::from_str(
+        bodies[0]["messages"][1]["content"].as_str().unwrap(),
+    )
+    .unwrap();
+    assert_eq!(facts["publishable_comparisons"][0], "A has a companion.");
+    assert_eq!(facts["silent_constraints"][0], "Use compact prose.");
+    assert!(
+        fs::read_to_string(fixture.0.join("A/description.md"))
+            .unwrap()
+            .contains("associated with")
+    );
+    task.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn em_dashes_are_fixed_mechanically_without_retries() {
+    let fixture = Fixture::new(&["A"]);
+    fixture.request("A", "emdash");
+    let options = fixture.options();
+    let prompt = "prompt";
+    let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
+    assert_eq!(rows[0]["status"], "generated");
+    assert_eq!(state.calls.load(Ordering::SeqCst), 1);
+    let draft = fs::read_to_string(fixture.0.join("A/draft.md")).unwrap();
+    assert!(draft.contains("One - two."), "dash was normalized in place");
+    task.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn uniform_writer_output_does_not_trigger_retries() {
+    let fixture = Fixture::new(&["A"]);
+    fixture.request("A", "machine");
+    let options = fixture.options();
+    let prompt = "prompt";
+    let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
+    assert_eq!(rows[0]["status"], "generated");
+    assert_eq!(state.calls.load(Ordering::SeqCst), 1);
     task.abort();
 }
 
@@ -671,45 +712,36 @@ async fn exhausted_validation_preserves_previous_description() {
     let options = fixture.options();
     let prompt = "prompt";
     let (client, _state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
     execute(
         jobs,
         rows,
         client.clone(),
         prompt.into(),
-        "editor".into(),
-        "critic".into(),
+        "style".into(),
         1,
         1536,
     )
     .await
     .unwrap();
     let old = fs::read(fixture.0.join("A/description.md")).unwrap();
-    fixture.request("A", "emdash");
-    let (jobs, rows) = preflight(&options, prompt, "editor", "critic").unwrap();
-    let rows = execute(
-        jobs,
-        rows,
-        client,
-        prompt.into(),
-        "editor".into(),
-        "critic".into(),
-        1,
-        1536,
-    )
-    .await
-    .unwrap();
+    fixture.request("A", "unlicensed");
+    let (jobs, rows) = preflight(&options, prompt, "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, prompt.into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
     assert_eq!(rows[0]["status"], "failed");
     assert!(
         rows[0]["reason"]
             .as_str()
             .unwrap()
-            .contains("validation failed after 3 attempts")
+            .contains("repair validation failed after 2 total calls")
     );
     assert_eq!(fs::read(fixture.0.join("A/description.md")).unwrap(), old);
     let failure = read_toml(&fixture.0.join("A/fail.toml")).unwrap();
-    assert_eq!(failure["attempts"], 3);
-    assert!(failure["error"].as_str().unwrap().contains("em dashes"));
+    assert_eq!(failure["attempts"], 2);
+    assert!(failure["error"].as_str().unwrap().contains("not licensed"));
     task.abort();
 }
 
@@ -723,29 +755,15 @@ async fn fatal_errors_stop_scheduling_but_server_errors_do_not() {
         let (client, state, task) =
             server(&fixture, Duration::from_secs(5)).await;
         let (jobs, rows) =
-            preflight(&fixture.options(), "prompt", "editor", "critic").unwrap();
-        let rows = execute(
-            jobs,
-            rows,
-            client,
-            "prompt".into(),
-            "editor".into(),
-            "critic".into(),
-            1,
-            1536,
-        )
-        .await
-        .unwrap();
+            preflight(&fixture.options(), "prompt", "style").unwrap();
+        let rows =
+            execute(jobs, rows, client, "prompt".into(), "style".into(), 1, 1536)
+                .await
+                .unwrap();
         let continues = action == "http500";
         assert_eq!(
             state.calls.load(Ordering::SeqCst),
-            if continues {
-                4
-            } else if action == "storage" {
-                3
-            } else {
-                1
-            }
+            if continues { 2 } else { 1 }
         );
         assert_eq!(rows[0]["status"], "failed");
         assert_eq!(
@@ -762,23 +780,42 @@ async fn fatal_errors_stop_scheduling_but_server_errors_do_not() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn timeout_is_recorded_without_retry() {
+async fn repair_transport_failure_keeps_draft_usage_and_marks_it_incomplete() {
     let fixture = Fixture::new(&["A"]);
-    let (client, state, task) = server(&fixture, Duration::from_millis(20)).await;
-    let (jobs, rows) =
-        preflight(&fixture.options(), "prompt", "editor", "critic").unwrap();
+    fixture.request("A", "repair-http500");
+    let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
+    let (jobs, rows) = preflight(&fixture.options(), "prompt", "repair").unwrap();
     let rows = execute(
         jobs,
         rows,
         client,
         "prompt".into(),
-        "editor".into(),
-        "critic".into(),
+        "repair".into(),
         1,
         1536,
     )
     .await
     .unwrap();
+    assert_eq!(state.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(rows[0]["status"], "failed");
+    assert_eq!(rows[0]["total_tokens"], 15);
+    assert_eq!(rows[0]["usage_complete"], false);
+    let failure = read_toml(&fixture.0.join("A/fail.toml")).unwrap();
+    assert_eq!(failure["total_tokens"], 15);
+    assert_eq!(failure["usage_complete"], false);
+    assert!(failure["elapsed_ms"].as_u64().unwrap() >= 200);
+    task.abort();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn timeout_is_recorded_without_retry() {
+    let fixture = Fixture::new(&["A"]);
+    let (client, state, task) = server(&fixture, Duration::from_millis(20)).await;
+    let (jobs, rows) = preflight(&fixture.options(), "prompt", "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, "prompt".into(), "style".into(), 1, 1536)
+            .await
+            .unwrap();
     assert_eq!(rows[0]["status"], "failed");
     assert!(
         read_toml(&fixture.0.join("A/fail.toml")).unwrap()["error"]
@@ -796,21 +833,13 @@ async fn fatal_response_finishes_already_running_requests() {
     // B fails before the slower A finishes; C must never start.
     fixture.request("B", "http429");
     let (client, state, task) = server(&fixture, Duration::from_secs(5)).await;
-    let (jobs, rows) =
-        preflight(&fixture.options(), "prompt", "editor", "critic").unwrap();
-    let rows = execute(
-        jobs,
-        rows,
-        client,
-        "prompt".into(),
-        "editor".into(),
-        "critic".into(),
-        2,
-        1536,
-    )
-    .await
-    .unwrap();
-    assert_eq!(state.calls.load(Ordering::SeqCst), 4);
+    let (jobs, rows) = preflight(&fixture.options(), "prompt", "style").unwrap();
+    let rows =
+        execute(jobs, rows, client, "prompt".into(), "style".into(), 2, 1536)
+            .await
+            .unwrap();
+    // A completes draft + style; B fails at its draft; C never starts.
+    assert_eq!(state.calls.load(Ordering::SeqCst), 2);
     assert_eq!(rows[0]["status"], "generated");
     assert_eq!(rows[1]["status"], "failed");
     assert_eq!(rows[2]["status"], "not_started");
@@ -824,19 +853,19 @@ fn preflight_filters_and_rejects_missing_or_mismatched_inputs() {
     let mut options = fixture.options();
     options.hostnames = vec!["B".into()];
     assert_eq!(
-        preflight(&options, "prompt", "editor", "critic").unwrap().0[0].hostname,
+        preflight(&options, "prompt", "style").unwrap().0[0].hostname,
         "B"
     );
     options.hostnames = vec!["missing".into()];
-    assert!(preflight(&options, "prompt", "editor", "critic").is_err());
+    assert!(preflight(&options, "prompt", "style").is_err());
     options.hostnames.clear();
     options.concurrency = 0;
-    assert!(preflight(&options, "prompt", "editor", "critic").is_err());
+    assert!(preflight(&options, "prompt", "style").is_err());
     options.concurrency = 4;
-    assert!(preflight(&options, " ", "editor", "critic").is_err());
+    assert!(preflight(&options, " ", "style").is_err());
     fs::remove_file(fixture.0.join("B/evidence.json")).unwrap();
-    assert!(preflight(&options, "prompt", "editor", "critic").is_err());
+    assert!(preflight(&options, "prompt", "style").is_err());
     fixture.request("B", "ok");
     fs::write(fixture.0.join("B/evidence.json"), r#"{"hostname":"A"}"#).unwrap();
-    assert!(preflight(&options, "prompt", "editor", "critic").is_err());
+    assert!(preflight(&options, "prompt", "style").is_err());
 }
