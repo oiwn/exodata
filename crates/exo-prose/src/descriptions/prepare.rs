@@ -14,8 +14,7 @@ use polars::prelude::{ChunkCompareEq, DataFrame, ParquetReader, SerReader};
 use serde::Serialize;
 use serde_json::{Value, json};
 
-const GUIDE: &str =
-    include_str!("../../../../content/prompts/stellarhost_guide.toml");
+const GUIDE: &str = include_str!("../../../../content/stellarhost_guide.toml");
 const LIGHT_YEARS_PER_PARSEC: f64 = 3.26156;
 const EARTH_MASSES_PER_JUPITER: f64 = 317.8;
 const SUN_EFFECTIVE_TEMPERATURE_K: f64 = 5772.0;

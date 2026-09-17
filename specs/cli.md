@@ -519,7 +519,7 @@ ten approved comparisons or a single planet target 150-300 words, others
 300-600 words, always permitting shorter supported text.
 `content/stellarhost_prompt.txt` is the single editable system prompt passed
 to the existing generator with `--system-prompt`; preparation never copies it.
-The reusable guide in `content/prompts/stellarhost_guide.toml` is compiled into
+The reusable guide in `content/stellarhost_guide.toml` is compiled into
 preparation and included in requests. Exact prompt capture belongs to generation
 trial artifacts. CLI reports hostname, paths, and diagnostics through existing
 table/JSON/CSV formats. Technical tests use synthetic data, not live counts.

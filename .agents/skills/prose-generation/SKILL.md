@@ -48,7 +48,7 @@ both are read at batch runtime (`--system-prompt`/`--repair-prompt` override,
 with `--style-prompt` retained as a legacy CLI alias).
 Per-system editorial notes go in `request.toml`'s `silent_constraints`; they
 must never become reader-facing prose. Shared explanatory text lives in
-[the guide](../../../content/prompts/stellarhost_guide.toml), compiled into
+[the guide](../../../content/stellarhost_guide.toml), compiled into
 preparation; rebuild/reprepare after editing the guide.
 
 ## Analyze generated prose
