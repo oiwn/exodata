@@ -11,6 +11,7 @@ services:
       - "3000:3000"
     volumes:
       - /app/data:/app/data:ro
+      - ./content/systems:/app/content/systems:ro
     environment:
       - RUST_LOG=info
     # Uncomment to see more detailed logs

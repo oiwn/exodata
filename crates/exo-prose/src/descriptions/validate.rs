@@ -241,7 +241,12 @@ fn number_with_unit(text: &str) -> Option<String> {
                 || (chars[i] == '.'
                     && !dotted
                     && i + 1 < chars.len()
-                    && chars[i + 1].is_ascii_digit()))
+                    && chars[i + 1].is_ascii_digit())
+                || (chars[i] == ','
+                    && chars.get(i + 1..i + 4).is_some_and(|group| {
+                        group.iter().all(|c| c.is_ascii_digit())
+                    })
+                    && !chars.get(i + 4).is_some_and(|c| c.is_ascii_digit())))
         {
             if chars[i] == '.' {
                 dotted = true;
@@ -592,8 +597,9 @@ pub(super) fn normalize_article(
     spectral_label: Option<&str>,
     planet_names: &[String],
 ) -> String {
-    let markdown =
-        fix_dashes(&fix_doubled_hedge(&fix_qualifier_hedges(markdown)));
+    let markdown = fix_dashes(&fix_doubled_hedge(&fix_qualifier_hedges(
+        &fix_split_bold_numbers(markdown),
+    )));
     let (title, body) = match markdown.split_once("\n\n") {
         Some((title, body)) => (title, body),
         None => {
@@ -791,6 +797,43 @@ fn fix_doubled_hedge(markdown: &str) -> String {
             out.push(chars[i]);
             i += 1;
         }
+    }
+    out
+}
+
+/// Merge thousands-grouped numbers split across a bold boundary:
+/// "1,**410 light-years**" becomes "**1,410 light-years**". Only a
+/// digit run immediately before ",**" with a digit right after the
+/// marker is repaired; complete bold spans are untouched. Idempotent.
+fn fix_split_bold_numbers(markdown: &str) -> String {
+    let chars: Vec<char> = markdown.chars().collect();
+    let mut out = String::with_capacity(markdown.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == ','
+            && chars.get(i + 1) == Some(&'*')
+            && chars.get(i + 2) == Some(&'*')
+            && chars.get(i + 3).is_some_and(|c| c.is_ascii_digit())
+        {
+            let bytes = out.as_bytes();
+            let mut start = bytes.len();
+            while start > 0
+                && (bytes[start - 1].is_ascii_digit() || bytes[start - 1] == b',')
+            {
+                start -= 1;
+            }
+            if bytes.get(start).is_some_and(|b| b.is_ascii_digit()) {
+                let leading = out[start..].to_owned();
+                out.truncate(start);
+                out.push_str("**");
+                out.push_str(&leading);
+                out.push(',');
+                i += 3;
+                continue;
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
     }
     out
 }
@@ -1396,6 +1439,38 @@ follows.";
             ),
         ] {
             assert_eq!(remove_measurement_about(input), expected, "{input}");
+        }
+    }
+
+    #[test]
+    fn bolds_comma_grouped_numbers_without_splitting() {
+        let article = "# Kepler-18 and its planets\n\nKepler-18 is a star \
+             located 1,410 light-years away at 5,350 K.";
+        let normalized = normalize_article(article, None, &[]);
+        assert!(normalized.contains("**1,410 light-years**"), "{normalized}");
+        assert!(normalized.contains("**5,350 K**"), "{normalized}");
+        assert!(!normalized.contains(",**"), "{normalized}");
+        assert_eq!(normalize_article(&normalized, None, &[]), normalized);
+    }
+
+    #[test]
+    fn repairs_numbers_split_across_bold_boundaries() {
+        for fragment in [
+            "located 1,**410 light-years** away",
+            "temperature of 5,**350 K** is cooler",
+            "star 24,**400 light-years** away",
+        ] {
+            let article =
+                format!("# Kepler-18 and its planets\n\nThe star is {fragment}.");
+            let normalized = normalize_article(&article, None, &[]);
+            assert!(!normalized.contains(",**"), "{normalized}");
+            assert!(
+                normalized.contains("**1,410 light-years**")
+                    || normalized.contains("**5,350 K**")
+                    || normalized.contains("**24,400 light-years**"),
+                "{normalized}"
+            );
+            assert_eq!(normalize_article(&normalized, None, &[]), normalized);
         }
     }
 }

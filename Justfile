@@ -86,6 +86,10 @@ ansible-ssl:
 ansible-upload-data:
   cd {{ansible_dir}} && ansible-playbook {{ansible_args}} playbooks/upload-data.yml
 
+# Upload generated stellar-host descriptions (description.md files only)
+ansible-upload-descriptions:
+  cd {{ansible_dir}} && ansible-playbook {{ansible_args}} playbooks/upload-descriptions.yml
+
 # Check server status (docker + nginx)
 ansible-status:
   cd {{ansible_dir}} && ansible all {{ansible_args}} -m shell -a "docker ps && echo '---' && systemctl status nginx --no-pager"

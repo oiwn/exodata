@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-09-17
+
+- Generated the full v10 stellar-host description catalog: 4,768/4,768
+  systems, zero failures, 7,091,608 recorded tokens (stats snapshot at
+  `content/stats/v10.json`). Plain measurement values throughout: 6
+  ordinary `about` uses remain corpus-wide, zero Earth-year
+  comparisons, zero raw `M sin i`.
+- Algorithmic-bolding fix: thousands-grouped numbers now bold whole
+  (`**1,410 light-years**`) instead of splitting at the comma, and
+  `dev descriptions normalize` repairs previously split spans in
+  stored articles (148 instances across 110 files cleaned).
+- Post-batch copy-edits: repaired `an mean density` grammar in 8
+  articles; moved the shared guide to `content/stellarhost_guide.toml`
+  (specs already described it at `content/` root).
+- Descriptions ship to production via a mounted volume instead of the
+  Docker image: new `just ansible-upload-descriptions` rsyncs only
+  `description.md` files to the droplet, `deploy.yml` mounts them at
+  `/app/content/systems:ro`, and the runtime `COPY` of gitignored
+  content was removed so GitHub Actions builds succeed from a clean
+  checkout. Prose updates no longer require an image rebuild.
+
 ## 2026-09-12
 
 - Split the descriptions pipeline into the new `exodata-prose` crate

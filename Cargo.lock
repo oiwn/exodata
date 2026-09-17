@@ -1400,7 +1400,7 @@ dependencies = [
 
 [[package]]
 name = "exodata-web"
-version = "0.3.15"
+version = "0.4.0"
 dependencies = [
  "axum",
  "console_error_panic_hook",

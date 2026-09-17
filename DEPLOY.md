@@ -19,6 +19,9 @@ just ansible-deploy
 # Upload data files to server:
 just ansible-upload-data
 
+# Upload stellar-host descriptions:
+just ansible-upload-descriptions
+
 # Full server setup:
 just ansible-setup
 
@@ -151,7 +154,22 @@ This uploads from `data/` directory:
 Uploaded files are served by Nginx at `/data/` for CLI downloads, for example
 `https://exodata.space/data/stellarhosts.parquet`.
 
-### 2.3 Deploy
+### 2.3 Upload Stellar-Host Descriptions
+
+Generated prose articles live locally in `content/systems/<system-id>/description.md`
+(untracked). They are shipped separately from the Docker image:
+
+```bash
+just ansible-upload-descriptions
+```
+
+This rsyncs only the `description.md` files (~6 MB) to `{{ content_path }}`
+(`/app/exodata-descriptions`) on the droplet. The deploy playbook mounts that
+directory into the container at `/app/content/systems:ro`, which is where the
+app loads descriptions from at startup. Requires `rsync` locally and on the
+server.
+
+### 2.4 Deploy
 
 After the GitHub Actions build completes:
 
@@ -161,7 +179,7 @@ just ansible-deploy
 
 This pulls the latest image and restarts the container.
 
-### 2.4 Verify
+### 2.5 Verify
 
 ```bash
 # Check container status
@@ -198,6 +216,13 @@ For data updates only:
 ```bash
 just ansible-upload-data
 just ansible-deploy  # Restart to pick up new data
+```
+
+For description (prose) updates only:
+
+```bash
+just ansible-upload-descriptions
+just ansible-deploy  # Restart to reload descriptions
 ```
 
 If only the Nginx `/data/` serving rule changed, run:
@@ -324,7 +349,8 @@ infrastructure/
 │   │   ├── setup.yml         # Full server setup
 │   │   ├── deploy.yml        # Pull & run container
 │   │   ├── ssl.yml           # SSL certificate
-│   │   └── upload-data.yml   # Upload data files
+│   │   ├── upload-data.yml   # Upload parquet/metadata files
+│   │   └── upload-descriptions.yml  # Upload description.md files
 │   └── roles/
 │       ├── common/
 │       ├── docker/
@@ -348,6 +374,7 @@ infrastructure/
 | `just ansible-deploy` | Pull latest image & restart container |
 | `just ansible-ssl` | Setup/renew SSL certificate |
 | `just ansible-upload-data` | Upload parquet & metadata files |
+| `just ansible-upload-descriptions` | Upload stellar-host description.md files |
 | `just ansible-status` | Check Docker & Nginx status |
 | `just ansible-logs` | View container logs |
 | `just ansible-ssh` | SSH into server |

@@ -1,0 +1,38 @@
+---
+- name: Upload Stellar-Host Descriptions
+  hosts: exodata
+  become: yes
+
+  vars_files:
+    - ../inventory/group_vars/all.yml
+
+  tasks:
+    - name: Ensure descriptions directory exists
+      ansible.builtin.file:
+        path: "{{ content_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Sync description articles
+      ansible.posix.synchronize:
+        src: "{{ local_content_path }}/"
+        dest: "{{ content_path }}/"
+        delete: false
+        rsync_opts:
+          - "--include=*/"
+          - "--include=description.md"
+          - "--exclude=*"
+      delegate_to: localhost
+      become: no
+
+    - name: Count uploaded descriptions
+      ansible.builtin.find:
+        paths: "{{ content_path }}"
+        patterns:
+          - "description.md"
+        recurse: yes
+      register: uploaded
+
+    - name: Display uploaded count
+      ansible.builtin.debug:
+        msg: "Uploaded {{ uploaded.matched }} stellar-host descriptions to {{ content_path }}"
