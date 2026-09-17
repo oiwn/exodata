@@ -9,7 +9,7 @@ use crate::server::stellarhost_canonical::build_canonical_host;
 use exo_types::metadata::ColumnMetadata;
 use polars::prelude::*;
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 pub type HostPlanetsResult =
     Result<(Vec<Value>, Vec<String>, HashMap<String, ColumnMetadata>), String>;
@@ -57,6 +57,7 @@ pub async fn get_stellar_host_detail_cached(
 
     let canonical = build_canonical_host(hostname, &filtered, all_metadata)?;
     let detail = StellarHostDetail {
+        selected_record_index: canonical.selected_record_index,
         hostname: canonical.hostname,
         identity: crate::server::functions::HostIdentity {
             hostname: canonical.identity.hostname,
@@ -165,19 +166,41 @@ pub fn get_planets_by_hostname(
         .clone()
         .lazy()
         .filter(col("hostname").eq(lit(hostname)))
-        .select(valid_columns.iter().map(|c| col(*c)).collect::<Vec<_>>())
         .collect()
         .map_err(|e| format!("Failed to filter planets: {}", e))?;
 
-    let filtered = filtered
-        .unique::<String, String>(
-            Some(&["pl_name".to_string()]),
-            UniqueKeepStrategy::First,
-            None,
-        )
-        .map_err(|e| format!("Failed to deduplicate planets: {}", e))?;
-
-    let rows = dataframe_to_json(&filtered)?;
+    let mut grouped: BTreeMap<String, Vec<Value>> = BTreeMap::new();
+    for row in dataframe_to_json(&filtered)? {
+        if let Some(name) = row["pl_name"].as_str() {
+            grouped.entry(name.to_owned()).or_default().push(row);
+        }
+    }
+    let rows = grouped
+        .into_iter()
+        .map(|(name, records)| {
+            let selected = exo_core::selection::exoplanet_record_index(&records)
+                .map(|index| &records[index]);
+            let mut row = serde_json::Map::new();
+            for &column in &valid_columns {
+                let value = if column == "pl_name" {
+                    Value::String(name.clone())
+                } else {
+                    selected
+                        .and_then(|record| record.get(column))
+                        .cloned()
+                        .unwrap_or(Value::Null)
+                };
+                row.insert(column.to_owned(), value);
+            }
+            if row.get("pl_bmasse").is_some_and(Value::is_null)
+                && let Some(mass) =
+                    selected.and_then(|record| record.get("pl_masse"))
+            {
+                row.insert("pl_bmasse".to_owned(), mass.clone());
+            }
+            Value::Object(row)
+        })
+        .collect();
     let column_names: Vec<String> =
         valid_columns.iter().map(|s| s.to_string()).collect();
 
@@ -283,7 +306,8 @@ mod tests {
             "pl_name" => &["Kepler-10 b", "Kepler-10 b", "TRAPPIST-1 b"],
             "discoverymethod" => &["Transit", "Transit", "Transit"],
             "disc_year" => &[2011_i64, 2011, 2016],
-            "pl_rade" => &[1.47, 1.47, 1.12],
+            "pl_rade" => &[9.0, 1.47, 1.12],
+            "default_flag" => &[0_i32, 1, 1],
         }
         .unwrap();
         let metadata = metadata_for(&["pl_name", "discoverymethod", "disc_year"]);
@@ -293,11 +317,34 @@ mod tests {
 
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["pl_name"], json!("Kepler-10 b"));
+        assert_eq!(rows[0]["pl_rade"], json!(1.47));
         assert_eq!(
             columns,
             vec!["pl_name", "discoverymethod", "disc_year", "pl_rade"]
         );
         assert!(filtered_metadata.contains_key("pl_name"));
         assert!(!filtered_metadata.contains_key("hostname"));
+    }
+
+    #[test]
+    fn related_planets_preserve_names_without_unique_defaults_and_do_not_fill_gaps()
+     {
+        let df = df! {
+            "hostname" => &["Test", "Test", "Test", "Test", "Test"],
+            "pl_name" => &["b", "b", "c", "c", "d"],
+            "default_flag" => &[1_i32, 0, 1, 1, 0],
+            "pl_rade" => &[None, Some(9.0), Some(1.0), Some(3.0), Some(5.0)],
+        }
+        .unwrap();
+        let (rows, _, _) =
+            get_planets_by_hostname(&df, &HashMap::new(), "Test").unwrap();
+        assert_eq!(rows.len(), 3);
+        assert_eq!(
+            rows.iter()
+                .map(|r| r["pl_name"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            vec!["b", "c", "d"]
+        );
+        assert!(rows.iter().all(|row| row["pl_rade"].is_null()));
     }
 }

@@ -23,45 +23,29 @@ This file defines agent workflow and points to project specifications. Implement
 8. When Rust formatting is needed, run `cargo fmt --all`; do not hand-edit code
    to imitate rustfmt output. Use `cargo fmt --all -- --check` only to verify an
    already formatted tree.
+9. Clippy scope: use `cargo lx` — the repo alias for
+   `clippy --workspace --all-targets --all-features` — so terminal, editor
+   (rust-analyzer), the prek hook, and the Justfile all evaluate the same
+   warnings.
+10. Edit files with the harness's structured patch instrument (for example
+    `apply_patch` or the edit tool), not with ad-hoc shell scripts
+    (`python3`/`perl` heredocs, `sed -i`) that replace blocks of text.
+    Scripted rewrites silently no-op on formatting drift, bypass diff
+    review, and damage surrounding code when they half-match.
 
-## Updating NASA Data Files
+## Project Development Skills
 
-Use the Justfile workflow; do not reconstruct the TAP URLs or deployment steps
-from memory.
+- [exodata-checks](.agents/skills/exodata-checks/SKILL.md) — choose focused
+  Rust, API, build, browser, or documentation verification.
+- [exodata-data](.agents/skills/exodata-data/SKILL.md) — inspect local data and
+  perform authorized NASA conversion/refresh workflows using Justfile recipes.
+- [prose-generation](.agents/skills/prose-generation/SKILL.md) — prepare stellar-host
+  prose inputs and conduct bounded, evidence-based generation experiments.
 
-```bash
-# 1. Download both NASA VOTables.
-just download-data
-
-# 2. Convert both VOTables to Parquet and generate both metadata TOML files.
-just convert-raw-files
-
-# 3. Confirm all generated runtime files exist and are non-empty.
-just verify-data
-
-# 4. Upload Parquet and metadata TOML files through Ansible.
-just ansible-upload-data
-
-# 5. Restart the deployed application so it loads the new files.
-just ansible-deploy
-```
-
-If the VOTable files have already been downloaded, start with
-`just convert-raw-files`. Ansible commands require
-`infrastructure/ansible/.env` with `DROPLET_IP` configured.
-
-The expected source files are `data/stellarhosts.vot` and
-`data/exoplanets.vot`. Conversion generates and overwrites:
-
-- `data/stellarhosts.parquet`
-- `data/exoplanets.parquet`
-- `data/stellarhosts-metadata.toml`
-- `data/exoplanets-metadata.toml`
-
-`convert-raw-files` processes every `.vot` file in `data/`; remove temporary or
-old VOTables before running it. Upload only the generated Parquet/TOML files,
-then restart/deploy because the application loads them at startup. See
-`specs/data-management.md` and `DEPLOY.md` for technical details.
+Read the relevant skill when performing these tasks. Technical contracts stay
+in `specs/`; deployment details stay in `DEPLOY.md`. Add future project skills
+to the explicit allowlist in `.agents/skills/.gitignore`. External skills and
+generated public catalog-skill installations remain local and ignored.
 
 ## Agent Rules
 1. **Explicit Instruction Compliance:** Do not perform actions (file edits or command execution) without explicit user request.

@@ -420,6 +420,42 @@ pub fn get_discovery_methods(
     methods_vec
 }
 
+/// Radius-based size classes shared by the overview chart and description
+/// preparation: bare class name plus the chart label range. Radius is in
+/// Earth radii.
+const PLANET_SIZE_CLASSES: &[(&str, &str)] = &[
+    ("Sub-Earth", "< 1 R⊕"),
+    ("Earth-like", "1-1.5 R⊕"),
+    ("Super-Earth", "1.5-2.5 R⊕"),
+    ("Neptune-like", "2.5-4 R⊕"),
+    ("Jupiter-like", "> 4 R⊕"),
+];
+
+fn planet_size_class_index(radius: f64) -> usize {
+    if radius < 1.0 {
+        0
+    } else if radius < 1.5 {
+        1
+    } else if radius < 2.5 {
+        2
+    } else if radius < 4.0 {
+        3
+    } else {
+        4
+    }
+}
+
+/// Bare size class name for a radius in Earth radii.
+pub fn planet_size_class(radius: f64) -> &'static str {
+    PLANET_SIZE_CLASSES[planet_size_class_index(radius)].0
+}
+
+/// Chart label combining the class name with its radius range.
+pub fn planet_size_class_label(radius: f64) -> String {
+    let (class, range) = PLANET_SIZE_CLASSES[planet_size_class_index(radius)];
+    format!("{class} ({range})")
+}
+
 /// Categorize planets by radius into size categories
 pub fn get_planet_size_categories(df: &DataFrame) -> Vec<(String, usize)> {
     let planets = build_planet_aggregates(df);
@@ -427,18 +463,8 @@ pub fn get_planet_size_categories(df: &DataFrame) -> Vec<(String, usize)> {
 
     for aggregate in planets.values() {
         if let Some(radius) = median_f64(&aggregate.radii) {
-            let category = if radius < 1.0 {
-                "Sub-Earth (< 1 R⊕)"
-            } else if radius < 1.5 {
-                "Earth-like (1-1.5 R⊕)"
-            } else if radius < 2.5 {
-                "Super-Earth (1.5-2.5 R⊕)"
-            } else if radius < 4.0 {
-                "Neptune-like (2.5-4 R⊕)"
-            } else {
-                "Jupiter-like (> 4 R⊕)"
-            };
-            *categories.entry(category.to_string()).or_insert(0) += 1;
+            let category = planet_size_class_label(radius);
+            *categories.entry(category).or_insert(0) += 1;
         }
     }
 

@@ -55,26 +55,6 @@ pub fn first_non_empty_string(records: &[Value], key: &str) -> Option<String> {
     })
 }
 
-pub fn median_numeric_value(records: &[Value], key: &str) -> Option<f64> {
-    let mut values = records
-        .iter()
-        .filter_map(|record| record.get(key).and_then(json_number_to_f64))
-        .collect::<Vec<_>>();
-
-    if values.is_empty() {
-        return None;
-    }
-
-    values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    let mid = values.len() / 2;
-
-    if values.len() % 2 == 0 {
-        Some((values[mid - 1] + values[mid]) / 2.0)
-    } else {
-        Some(values[mid])
-    }
-}
-
 pub fn planet_visual_class(
     radius_rearth: Option<f64>,
     equilibrium_temp: Option<f64>,
@@ -93,16 +73,6 @@ pub fn comparison_scale(radius_rearth: f64, max_radius_rearth: f64) -> f64 {
         0.0
     } else {
         radius_rearth / max_radius_rearth
-    }
-}
-
-fn json_number_to_f64(value: &Value) -> Option<f64> {
-    match value {
-        Value::Number(number) => number
-            .as_f64()
-            .or_else(|| number.as_i64().map(|value| value as f64))
-            .or_else(|| number.as_u64().map(|value| value as f64)),
-        _ => None,
     }
 }
 
@@ -138,24 +108,6 @@ mod tests {
             first_non_empty_string(&records, "hostname"),
             Some("Kepler-22".to_string())
         );
-    }
-
-    #[test]
-    fn median_numeric_value_uses_middle_or_average_of_two_values() {
-        let odd = vec![
-            json!({ "pl_rade": 1.0 }),
-            json!({ "pl_rade": 3.0 }),
-            json!({ "pl_rade": 2.0 }),
-        ];
-        let even = vec![
-            json!({ "pl_rade": 1.0 }),
-            json!({ "pl_rade": 2.0 }),
-            json!({ "pl_rade": 4.0 }),
-            json!({ "pl_rade": 10.0 }),
-        ];
-
-        assert_eq!(median_numeric_value(&odd, "pl_rade"), Some(2.0));
-        assert_eq!(median_numeric_value(&even, "pl_rade"), Some(3.0));
     }
 
     #[test]

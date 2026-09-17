@@ -132,6 +132,8 @@ pub fn export_exoplanet(
                     &records, &metadata,
                 );
             to_pretty_json(&ExoplanetDetail {
+                selected_record_index:
+                    exo_core::selection::exoplanet_record_index(&records),
                 pl_name: pl_name.to_string(),
                 canonical,
                 records,
@@ -272,6 +274,75 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn planet_export_keeps_default_values_and_source_qualifiers() {
+        let df = polars::df! {
+            "pl_name" => &["Test b", "Test b"],
+            "default_flag" => &[0_i32, 1],
+            "pl_rade" => &[1.0, 3.0],
+            "pl_eqt" => &[Some(500.0), None],
+            "pl_radelim" => &[0_i32, 1],
+            "pl_refname" => &["A", "B"],
+        }
+        .unwrap();
+        let export = export_exoplanet(
+            &df,
+            &HashMap::new(),
+            "https://example.test",
+            "Test b",
+            ExportFormat::Json,
+        )
+        .unwrap();
+        let data: Value = serde_json::from_str(&export.content).unwrap();
+        assert_eq!(data["selected_record_index"], 1);
+        assert_eq!(data["canonical"]["radius"]["value"], 3.0);
+        assert!(data["canonical"]["equilibrium_temperature"].is_null());
+        assert_eq!(data["records"][1]["pl_radelim"], 1);
+        assert_eq!(data["records"][1]["pl_refname"], "B");
+        assert_eq!(data["records"].as_array().unwrap().len(), 2);
+        let csv = export_exoplanet(
+            &df,
+            &HashMap::new(),
+            "https://example.test",
+            "Test b",
+            ExportFormat::Csv,
+        )
+        .unwrap();
+        assert_eq!(csv.content.lines().count(), 3);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn host_export_and_cache_preserve_selected_record_and_missing_fields() {
+        let df = polars::df! {
+            "hostname" => &["Test", "Test"],
+            "st_mass" => &[1.0, 3.0],
+            "st_rad" => &[Some(1.0), None],
+            "st_teff" => &[Some(5000.0), None],
+            "st_age" => &[None, Some(7.0)],
+            "st_refname" => &["A", "B"],
+        }
+        .unwrap();
+        let cache = crate::server::cache::build_host_detail_cache(10);
+        for _ in 0..2 {
+            let export = export_stellarhost(
+                &df,
+                &cache,
+                &HashMap::new(),
+                "https://example.test",
+                "Test",
+                ExportFormat::Json,
+            )
+            .await
+            .unwrap();
+            let data: Value = serde_json::from_str(&export.content).unwrap();
+            assert_eq!(data["selected_record_index"], 0);
+            assert_eq!(data["star"]["mass"]["value"], 1.0);
+            assert!(data["star"]["age"].is_null());
+            assert_eq!(data["records"][0]["st_refname"], "A");
+            assert_eq!(data["records"].as_array().unwrap().len(), 2);
+        }
+    }
 
     #[test]
     fn safe_filename_replaces_path_unsafe_characters() {

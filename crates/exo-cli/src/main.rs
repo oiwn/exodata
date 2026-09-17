@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
@@ -12,6 +12,7 @@ use exo_cli::{
     output::{self, OutputFormat},
     skill, votable_helpers,
 };
+use exo_prose::descriptions;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -92,6 +93,11 @@ enum Commands {
 
 #[derive(Parser, Debug)]
 enum DevCommands {
+    /// Inspect generated descriptions using local source dates
+    Descriptions {
+        #[clap(subcommand)]
+        command: DescriptionCommands,
+    },
     /// View fields from a VOTable file
     ViewFields { path: String },
     /// View samples from stellarhosts parquet file
@@ -161,6 +167,190 @@ enum DevCommands {
     },
 }
 
+#[derive(Parser, Debug)]
+enum DescriptionCommands {
+    /// Generate changed saved requests concurrently and persist per-system results
+    GenerateBatch {
+        #[arg(long, default_value = "content/systems")]
+        input_dir: std::path::PathBuf,
+        /// Optional repeated exact hostname filters
+        #[arg(long = "hostname")]
+        hostnames: Vec<String>,
+        #[arg(long, default_value = "content/stellarhost_prompt.txt")]
+        system_prompt: std::path::PathBuf,
+        /// Prompt used only to repair a failed validation (legacy alias: --style-prompt)
+        #[arg(
+            long,
+            alias = "style-prompt",
+            default_value = "content/stellarhost_repair_prompt.txt"
+        )]
+        repair_prompt: std::path::PathBuf,
+        #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..))]
+        concurrency: u32,
+        #[arg(long, default_value_t = 1536, value_parser = clap::value_parser!(u32).range(1..))]
+        max_tokens: u32,
+        /// Regenerate even when successful input fingerprints match
+        #[arg(long)]
+        force: bool,
+        /// Retry only systems whose latest attempt failed (fail.toml present)
+        #[arg(long)]
+        failed: bool,
+        /// Generate or retry label-suffixed artifacts instead of served files
+        #[arg(long)]
+        label: Option<String>,
+    },
+    /// Prepare offline stellar-host evidence and a writing request
+    Prepare {
+        /// Exact NASA hostnames; repeat to prepare several systems in one run
+        #[arg(
+            long = "hostname",
+            required_unless_present = "all",
+            conflicts_with = "all"
+        )]
+        hostnames: Vec<String>,
+        #[arg(long, default_value = "content/systems")]
+        output_dir: std::path::PathBuf,
+        /// Replace preparation files, preserving articles and generation metadata
+        #[arg(long)]
+        force: bool,
+        /// Prepare every hostname that has planet rows in the local dataset
+        #[arg(long)]
+        all: bool,
+        /// Select and validate every system without writing files
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Probe DeepSeek with one request capped at 32 output tokens
+    Probe,
+    /// Generate text from an arbitrary UTF-8 input file using DeepSeek
+    Generate {
+        /// File sent verbatim as the user message (TOML or plain text)
+        #[arg(long)]
+        input: std::path::PathBuf,
+        /// Optional UTF-8 file sent as a separate system message
+        #[arg(long)]
+        system_prompt: Option<std::path::PathBuf>,
+        /// Maximum output tokens for this single request
+        #[arg(long, default_value_t = 256, value_parser = clap::value_parser!(u32).range(1..))]
+        max_tokens: u32,
+    },
+    /// Report systems needing descriptions or regeneration
+    Scan {
+        #[arg(long)]
+        all: bool,
+        #[arg(long, default_value = "content/systems")]
+        content_dir: String,
+    },
+    /// Summarize per-system generation state, usage, and failures
+    Status {
+        #[arg(long, default_value = "content/systems")]
+        content_dir: String,
+    },
+    /// Apply algorithmic normalizers to stored descriptions
+    Normalize {
+        #[arg(long, default_value = "content/systems")]
+        content_dir: String,
+        /// Normalize description_<label>.md instead of the served description.md
+        #[arg(long)]
+        label: Option<String>,
+    },
+    /// Analyze generated descriptions: stats, n-grams, tropes, metadata, anomalies
+    Analyze {
+        #[arg(long, global = true, default_value = "content/systems")]
+        content_dir: String,
+        /// Analyze description_<label>.md variant files instead of description.md
+        #[arg(long, global = true)]
+        label: Option<String>,
+        #[clap(subcommand)]
+        command: AnalyzeCommands,
+    },
+    /// Experiment: prepare and generate the fixed 20-system set into variant files
+    Experiment {
+        /// Variant label; outputs become description_<label>.md and never
+        /// touch the served description.md
+        #[arg(long)]
+        label: String,
+        #[arg(long, default_value = "content/systems")]
+        input_dir: std::path::PathBuf,
+        #[arg(long, default_value_t = 4, value_parser = clap::value_parser!(u32).range(1..))]
+        concurrency: u32,
+        #[arg(long, default_value_t = 1536, value_parser = clap::value_parser!(u32).range(1..))]
+        max_tokens: u32,
+        /// Regenerate even when the variant fingerprint matches
+        #[arg(long)]
+        force: bool,
+    },
+}
+
+#[derive(Parser, Debug)]
+enum AnalyzeCommands {
+    /// Per-system text metrics: words, sentences, paragraphs, TTR, title
+    Text,
+    /// Corpus-level distributions of the per-system text metrics
+    Summary,
+    /// Word n-grams with corpus and document frequency
+    Ngrams {
+        /// Rows per n value
+        #[arg(long, default_value_t = 25)]
+        top: usize,
+        /// Smallest n
+        #[arg(long, default_value_t = 1)]
+        min_n: usize,
+        /// Largest n
+        #[arg(long, default_value_t = 5)]
+        max_n: usize,
+        /// Count only the first n words of each sentence (monotony detector)
+        #[arg(long)]
+        openers: bool,
+    },
+    /// Sentence templates with numbers and units masked
+    Templates {
+        /// Maximum rows
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        /// Minimum corpus frequency
+        #[arg(long, default_value_t = 3)]
+        min_count: u64,
+    },
+    /// Curated trope report: known prose warts with affected systems
+    Tropes,
+    /// Generation metadata aggregation: tokens, attempts, models, dates
+    Metadata,
+    /// Outliers, duplicate sentences, and numeric-density anomalies
+    Anomalies {
+        /// Minimum |z-score| for distribution outliers
+        #[arg(long, default_value_t = 2.5)]
+        z_threshold: f64,
+        /// Maximum duplicate/repeat rows per kind
+        #[arg(long, default_value_t = 30)]
+        top: usize,
+        /// Minimum systems sharing a duplicate sentence
+        #[arg(long, default_value_t = 2)]
+        min_duplicates: u64,
+    },
+    /// Compare two corpora (baseline snapshot vs candidate) on headline metrics
+    Compare {
+        /// Baseline content directory to compare against
+        #[arg(long)]
+        baseline_dir: String,
+        /// Baseline variant label (baseline-dir reads description_<label>.md)
+        #[arg(long)]
+        baseline_label: Option<String>,
+    },
+    /// Write a machine-readable stats snapshot (JSON) for durable comparison
+    Snapshot {
+        /// Snapshot output path (suggested: content/stats/<name>.json)
+        #[arg(long)]
+        output_path: std::path::PathBuf,
+    },
+    /// Write a markdown report combining every analysis section
+    Report {
+        /// Report output path
+        #[arg(long)]
+        output_path: std::path::PathBuf,
+    },
+}
+
 #[derive(Clone, Debug, ValueEnum)]
 enum DownloadArg {
     Stellarhosts,
@@ -224,6 +414,21 @@ enum DevInsightCommands {
     },
 }
 
+/// Per-system commands default to compact single-line output when no
+/// explicit `--output` is requested; table, json, and csv stay available.
+fn render_per_system(
+    rows: &[serde_json::Value],
+    columns: &[String],
+    requested: Option<OutputFormat>,
+    line: impl Fn(&serde_json::Value) -> String,
+) -> Result<()> {
+    match requested.unwrap_or(OutputFormat::Lines) {
+        OutputFormat::Lines => output::render_lines(rows, line),
+        format => output::render_rows(rows, columns, format)?,
+    }
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = config::Config::load()?;
@@ -234,6 +439,359 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Dev { command } => match command {
+            DevCommands::Descriptions { command } => match command {
+                DescriptionCommands::GenerateBatch {
+                    input_dir,
+                    hostnames,
+                    system_prompt,
+                    repair_prompt,
+                    concurrency,
+                    max_tokens,
+                    force,
+                    failed,
+                    label,
+                } => {
+                    let rows = descriptions::batch::run(
+                        &descriptions::batch::Options {
+                            input_dir,
+                            hostnames,
+                            system_prompt,
+                            repair_prompt,
+                            concurrency: concurrency as usize,
+                            max_tokens,
+                            force,
+                            failed,
+                            label,
+                        },
+                    )?;
+                    render_per_system(
+                        &rows,
+                        &descriptions::batch::columns(),
+                        cli.output,
+                        descriptions::batch::line,
+                    )?;
+                    if rows.iter().any(|row| {
+                        row["status"] == "failed"
+                            || row["status"] == "not_started"
+                    }) {
+                        anyhow::bail!(
+                            "Batch incomplete; see per-system outcomes and fail.toml files"
+                        );
+                    }
+                }
+                DescriptionCommands::Prepare {
+                    hostnames,
+                    output_dir,
+                    force,
+                    all,
+                    dry_run,
+                } => {
+                    let catalog = descriptions::prepare::Catalog::load(
+                        Path::new(cli.data_dir.as_deref().unwrap_or("data")),
+                    )?;
+                    let hostnames = if all {
+                        catalog.all_hostnames()?
+                    } else {
+                        hostnames
+                    };
+                    let mut rows = Vec::new();
+                    let mut failed = false;
+                    for hostname in &hostnames {
+                        eprintln!("Preparing {hostname}");
+                        match catalog.prepare(
+                            &output_dir,
+                            hostname,
+                            force,
+                            dry_run,
+                        ) {
+                            Ok(row) => {
+                                if let Some(list) = row["diagnostics"].as_array()
+                                {
+                                    for diagnostic in list {
+                                        if let Some(text) = diagnostic.as_str() {
+                                            eprintln!("  - {text}");
+                                        }
+                                    }
+                                }
+                                let count = row["diagnostics_count"]
+                                    .as_u64()
+                                    .unwrap_or_default();
+                                eprintln!(
+                                    "Prepared {hostname} ({count} diagnostic{})",
+                                    if count == 1 { "" } else { "s" }
+                                );
+                                rows.push(row);
+                            }
+                            Err(error) => {
+                                failed = true;
+                                let message = format!("{hostname}: {error:#}");
+                                if format == OutputFormat::Json {
+                                    rows.push(serde_json::json!({
+                                        "hostname": hostname, "error": message,
+                                    }));
+                                } else {
+                                    eprintln!("{message}");
+                                }
+                            }
+                        }
+                    }
+                    if !rows.is_empty() {
+                        render_per_system(
+                            &rows,
+                            &descriptions::prepare::columns(),
+                            cli.output,
+                            descriptions::prepare::line,
+                        )?;
+                    }
+                    if failed {
+                        anyhow::bail!(
+                            "Preparation failed for at least one hostname"
+                        );
+                    }
+                }
+                DescriptionCommands::Probe => {
+                    let row = descriptions::probe::run()?;
+                    output::render_rows(
+                        &[row],
+                        &descriptions::probe::columns(),
+                        format,
+                    )?;
+                }
+                DescriptionCommands::Generate {
+                    input,
+                    system_prompt,
+                    max_tokens,
+                } => {
+                    let text =
+                        std::fs::read_to_string(&input).map_err(|error| {
+                            anyhow::anyhow!(
+                                "Cannot read input file {}: {error}",
+                                input.display()
+                            )
+                        })?;
+                    let system_text = system_prompt
+                        .as_ref()
+                        .map(|path| {
+                            std::fs::read_to_string(path).map_err(|error| {
+                                anyhow::anyhow!(
+                                    "Cannot read system prompt {}: {error}",
+                                    path.display()
+                                )
+                            })
+                        })
+                        .transpose()?;
+                    let row = descriptions::probe::generate_with_system(
+                        &text,
+                        system_text.as_deref(),
+                        max_tokens,
+                    )?;
+                    output::render_rows(
+                        &[row],
+                        &descriptions::probe::columns(),
+                        format,
+                    )?;
+                }
+                DescriptionCommands::Scan { all, content_dir } => {
+                    let rows = descriptions::scan(
+                        Path::new(cli.data_dir.as_deref().unwrap_or("data")),
+                        Path::new(&content_dir),
+                        all,
+                    )?;
+                    output::render_rows(&rows, &descriptions::columns(), format)?;
+                }
+                DescriptionCommands::Status { content_dir } => {
+                    let rows =
+                        descriptions::status::run(Path::new(&content_dir))?;
+                    render_per_system(
+                        &rows,
+                        &descriptions::status::columns(),
+                        cli.output,
+                        descriptions::status::line,
+                    )?;
+                }
+                DescriptionCommands::Normalize { content_dir, label } => {
+                    let rows = descriptions::normalize::run(
+                        Path::new(&content_dir),
+                        label.as_deref(),
+                    )?;
+                    render_per_system(
+                        &rows,
+                        &descriptions::normalize::columns(),
+                        cli.output,
+                        |row| {
+                            let hostname =
+                                row["hostname"].as_str().unwrap_or("?");
+                            let path = row["path"].as_str().unwrap_or_default();
+                            let changed = if row["changed"] == true {
+                                "rewritten"
+                            } else {
+                                "unchanged"
+                            };
+                            format!("{hostname:<26} {changed:<10} {path}")
+                        },
+                    )?;
+                }
+                DescriptionCommands::Analyze {
+                    content_dir,
+                    label,
+                    command,
+                } => {
+                    use descriptions::analyze;
+                    let corpus = analyze::Corpus::load(
+                        Path::new(&content_dir),
+                        label.as_deref(),
+                    )?;
+                    match command {
+                        AnalyzeCommands::Text => {
+                            render_per_system(
+                                &analyze::text::run(&corpus),
+                                &analyze::text::columns(),
+                                cli.output,
+                                analyze::text::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Summary => {
+                            render_per_system(
+                                &analyze::text::summary(&corpus),
+                                &analyze::text::summary_columns(),
+                                cli.output,
+                                analyze::text::summary_line,
+                            )?;
+                        }
+                        AnalyzeCommands::Ngrams {
+                            top,
+                            min_n,
+                            max_n,
+                            openers,
+                        } => {
+                            render_per_system(
+                                &analyze::ngrams::run(
+                                    &corpus,
+                                    &analyze::ngrams::Options {
+                                        top,
+                                        min_n,
+                                        max_n,
+                                        openers,
+                                    },
+                                ),
+                                &analyze::ngrams::columns(),
+                                cli.output,
+                                analyze::ngrams::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Templates { top, min_count } => {
+                            render_per_system(
+                                &analyze::ngrams::templates(
+                                    &corpus,
+                                    &analyze::ngrams::TemplateOptions {
+                                        top,
+                                        min_count,
+                                    },
+                                ),
+                                &analyze::ngrams::template_columns(),
+                                cli.output,
+                                analyze::ngrams::template_line,
+                            )?;
+                        }
+                        AnalyzeCommands::Tropes => {
+                            render_per_system(
+                                &analyze::tropes::run(&corpus),
+                                &analyze::tropes::columns(),
+                                cli.output,
+                                analyze::tropes::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Metadata => {
+                            render_per_system(
+                                &analyze::meta::run(&corpus),
+                                &analyze::meta::columns(),
+                                cli.output,
+                                analyze::meta::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Anomalies {
+                            z_threshold,
+                            top,
+                            min_duplicates,
+                        } => {
+                            render_per_system(
+                                &analyze::anomalies::run(
+                                    &corpus,
+                                    &analyze::anomalies::Options {
+                                        z_threshold,
+                                        top,
+                                        min_duplicate_systems: min_duplicates,
+                                    },
+                                ),
+                                &analyze::anomalies::columns(),
+                                cli.output,
+                                analyze::anomalies::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Compare {
+                            baseline_dir,
+                            baseline_label,
+                        } => {
+                            let baseline = analyze::Corpus::load(
+                                Path::new(&baseline_dir),
+                                baseline_label.as_deref(),
+                            )?;
+                            render_per_system(
+                                &analyze::compare::run(&baseline, &corpus),
+                                &analyze::compare::columns(),
+                                cli.output,
+                                analyze::compare::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Snapshot { output_path } => {
+                            render_per_system(
+                                &analyze::snapshot::run(
+                                    &corpus,
+                                    Path::new(&content_dir),
+                                    &output_path,
+                                )?,
+                                &analyze::snapshot::columns(),
+                                cli.output,
+                                analyze::snapshot::line,
+                            )?;
+                        }
+                        AnalyzeCommands::Report { output_path } => {
+                            render_per_system(
+                                &analyze::report::run(&corpus, &output_path)?,
+                                &analyze::report::columns(),
+                                cli.output,
+                                analyze::report::line,
+                            )?;
+                        }
+                    }
+                }
+                DescriptionCommands::Experiment {
+                    label,
+                    input_dir,
+                    concurrency,
+                    max_tokens,
+                    force,
+                } => {
+                    let rows = descriptions::experiment::run(
+                        &descriptions::experiment::Options {
+                            data_dir: PathBuf::from(
+                                cli.data_dir.as_deref().unwrap_or("data"),
+                            ),
+                            input_dir,
+                            label,
+                            force,
+                            concurrency: concurrency as usize,
+                            max_tokens,
+                        },
+                    )?;
+                    render_per_system(
+                        &rows,
+                        &descriptions::experiment::columns(),
+                        cli.output,
+                        descriptions::experiment::line,
+                    )?;
+                }
+            },
             DevCommands::ViewFields { path } => {
                 votable_helpers::print_votable_headers(&path);
             }

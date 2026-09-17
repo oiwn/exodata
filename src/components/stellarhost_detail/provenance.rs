@@ -122,7 +122,7 @@ fn ProvenanceMetric(label: &'static str, value: String) -> impl IntoView {
 }
 
 #[component]
-fn ProvenanceCell(column: String, value: Value) -> impl IntoView {
+pub(super) fn ProvenanceCell(column: String, value: Value) -> impl IntoView {
     let is_ref_column = matches!(column.as_str(), "st_refname" | "sy_refname");
 
     if is_ref_column && let Some(link) = parse_archive_anchor(&value) {

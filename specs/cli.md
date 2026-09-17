@@ -1,7 +1,8 @@
 # CLI Specification: exodata
 
-`exodata` is the public CLI binary for Exoplanets Catalog. The package/crate
-name is `exodata`; the source folder remains `crates/exo-cli`.
+`exodata` is the public CLI binary for Exoplanets Catalog. The package and binary
+are named `exodata`; the Rust library is `exo_cli`, and the source folder
+remains `crates/exo-cli`.
 
 The CLI is primarily a third-party terminal client for the catalog API, with an
 offline local-data backend for users who download the static data bundle.
@@ -19,7 +20,7 @@ exodata
 ├── insights                 List and run curated insight queries
 ├── download                 Download parquet and metadata files for offline use
 ├── config                   Read or update persistent CLI config
-├── skill                    Print or install agent instructions
+├── skill                    Install public catalog-query agent instructions
 └── dev                      Repository/data-preparation commands
 ```
 
@@ -96,9 +97,9 @@ Local dataset resolution:
 
 ## Configuration
 
-Config is stored outside the repository, using the platform config directory.
+Config is stored at `~/.exodata/config.toml`, under the user's home directory.
 
-Initial config shape:
+Default config shape:
 
 ```toml
 default_backend = "auto"
@@ -179,6 +180,8 @@ exodata dev
 ├── view-exoplanets-stats
 ├── convert-raw-files
 ├── sql
+├── descriptions scan
+├── descriptions analyze
 └── insights run-all
 ```
 
@@ -195,9 +198,403 @@ exodata dev insights run-all --data-dir data
 The old top-level development command paths are intentionally removed. Existing
 local scripts should migrate to `exodata dev ...`.
 
+### DeepSeek Connectivity Probe
+
+`exodata dev descriptions probe` sends one fixed prompt ("Reply with only OK.")
+to `https://api.deepseek.com/chat/completions` with `deepseek-v4-flash`,
+`max_tokens = 32`, thinking disabled, and streaming disabled. There are no
+retries or redirects; the request timeout is 60 seconds. No catalog data is
+sent and no artifacts are written.
+
+Read credentials only from `DEEPSEEK_API_KEY`; missing/blank values fail before
+network access. Do not log credentials or HTTP response bodies on failure.
+No dotenv loading or persistent credential configuration is used.
+
+Shared table/JSON/CSV output reports text, returned model, finish reason,
+prompt/completion/total tokens, and elapsed milliseconds. HTTP failures,
+timeouts, malformed responses, empty text, and finish reasons other than
+`stop` fail the command. A live request is manually tested by the developer.
+
+### Manual DeepSeek Generation
+
+```bash
+exodata dev descriptions generate --input request.toml --output json
+exodata dev descriptions generate --input prompt.txt --max-tokens 512
+```
+
+Read the UTF-8 file verbatim and send it as a single user message, without
+TOML parsing or schema validation. Optional `--system-prompt <file>` reads a
+second UTF-8 file verbatim and places it in a `system` message before the user
+message. Without that option, no system message is added. An unreadable or
+blank system prompt fails before network access. Missing/unreadable
+files and blank input fail before network access. `--max-tokens` must be
+positive and defaults to 256 output tokens. Input tokens are billed separately.
+
+Use the probe's model, environment credential, timeout, disabled thinking,
+no-retry policy, response validation, and shared table/JSON/CSV report format.
+Truncation (`finish_reason = "length"`) fails without retrying; the user may
+explicitly rerun with a larger limit. No content artifacts are written.
+This command supports manual prompt experiments; it is not batch generation.
+
+### Bulk DeepSeek Generation
+
+`exodata dev descriptions generate-batch` reads saved requests from immediate
+subdirectories of `--input-dir` (default `content/systems`). Repeated `--hostname`
+filters match exact request hostnames. Defaults: `--concurrency 4`,
+`--max-tokens 1536`, and `--system-prompt content/stellarhost_prompt.txt`.
+It never runs preparation or changes saved requests. `--force` regenerates
+matching successful inputs. The existing single-request commands remain available.
+Optional `--label L` selects `description_L.md`, `metadata_L.toml`,
+`draft_L.md`, and `fail_L.toml`; labels are nonempty ASCII alphanumeric/dashes.
+With `--failed`, only that label's failures are selected and cleared on success.
+When prepared systems exist but the unfiltered `--failed` selection is empty,
+exit successfully with `No failed systems` on stderr and empty structured
+results. Do not load credentials, make calls, or write artifacts. Missing
+preparation and explicit hostname selection mismatches remain errors.
+
+Before network access, validate prepared schema version 1, hostname uniqueness,
+matching local evidence, metadata identity, prompt, settings, and writable
+output directories. Missing requested hosts and pending `.prepare`, `.generate`,
+or `.fail-write` recovery artifacts fail preflight. Credentials are needed only
+when calls remain after skip selection. One shared async client and a bounded
+Tokio task set enforce concurrency. Model, thinking, timeout, streaming, redirects,
+and retry settings match the single-call command. On 401/402/403/429 or storage
+failure, stop scheduling but finish in-flight work. Other individual failures
+do not stop the queue. Failed/not-started systems make the final exit nonzero.
+
+The versioned SHA-256 fingerprint covers exact prompt text, parsed request
+content, and generation settings. Recursively sorted object keys and preserved
+array order/string contents make formatting and object order irrelevant. Send
+deterministically serialized TOML. Credentials, timestamps, and returned usage
+are not hash inputs. Matching metadata plus a nonempty description skips a call.
+
+Successful results replace `description.md` and compact `metadata.toml` as a
+pair with ordinary-error rollback, using `.generate` staging. Metadata includes
+hostname, fingerprint/version, settings, timestamp, returned model, usage,
+duration, the attempt count, and any recovered validation violations. A source
+date is recorded only if present in the saved request; the legacy NASA-date
+scanner remains separate from prepared-input fingerprinting. Success clears
+old `fail.toml`. Failure preserves the previous successful pair and replaces
+ignored `fail.toml` with attempted fingerprint/settings, timestamp,
+error/status and available response body, finish reason, usage, duration, and
+attempts. Non-success HTTP responses use sanitized diagnostics rather than raw
+bodies; incomplete/invalid successful HTTP bodies are retained in the failure
+record. Credentials are never persisted. No trial archive or root `tmp/`
+workflow is used.
+
+Generation is one writing pass plus at most one validation repair (fingerprint
+version 10). Compact JSON derived after notes merging includes reader-facing
+displayed measurements and bounds, exact-host counts, stellar multiplicity,
+names, classifications, discovery facts, approved comparisons, guide entries,
+and private guidance. Exclude raw values/errors, source identifiers, conversion
+details, and duplicated request instructions. Distinguish `mass` and
+`minimum_mass` keys without raw audit notation. Saved preparation is unchanged.
+
+The writer uses `content/stellarhost_prompt.txt` (`--system-prompt`).
+Normalize and save its first response as `draft.md`, even if validation rejects
+it. Install a valid first response directly. Only a concrete validation failure
+triggers one repair, which receives compact facts, the failed article, and
+specific violations. Use `content/stellarhost_repair_prompt.txt`
+(`--repair-prompt`, legacy CLI alias `--style-prompt`). Repair preserves
+unaffected supported content and may correct invalid values; numeric equality
+with the invalid draft is not required. There is no always-run editor.
+Transport, malformed/empty, and truncated responses fail without automatic
+retry. Each system makes at most two calls; failures preserve previous successes.
+
+Both candidates pass structural, numeric, emphasis, coverage, and policy/claim
+checks. Every requested planet must appear. Omit Earth-year comparisons and
+conversions; state orbital periods in days. Preparation no longer emits these
+comparisons, and generation filters them from older requests and merged notes.
+The former subject/direction licensing gate is replaced by an omission check.
+Approved period rankings among the listed planets remain available.
+Reject explicit system-wide attribution of
+host-star measurements and the observed stellar minimum-mass wording. These
+bounded checks do not fully verify meaning, units, associations, or bounds;
+evidence review remains required. Repetition metrics are advisory.
+
+Formatting remains mechanical: dashes, redundant hedges, complete measurement
+bolding including all of `g/cm³`, spectral/name bolding, and possessive repair.
+Remove measurement `about` prefixes from model-facing facts and normalized
+articles, including numeric ranges and spelled quantities; ordinary uses such
+as `about its composition` remain. Keep values, units, bounds, and minimum-mass
+meaning intact, with no added disclaimer. Keep existing soft length targets.
+
+Metadata records `draft` and optional `repair` stages. Headline usage and elapsed
+time include every attempted stage on success and failure. Retain returned
+usage even when prose is rejected; `usage_complete = false` marks missing usage,
+so numeric totals then represent known consumption only. Analysis/status prefer
+the latest matching failure and recover historical undercounts from stage
+records without rewriting artifacts. Historical `style` metadata remains
+readable. Fingerprint v10 covers the notes-merged request, both prompts, and settings.
+
+An optional hand-edited `notes.toml` may live beside the request:
+`facts` entries merge into `publishable_comparisons` (their numbers
+license reader-facing use) and `guidance` entries merge into
+`silent_constraints`. The merge happens in memory at preflight and is
+covered by the fingerprint, so edited notes regenerate the system.
+Prepare and batch never write this file. `--failed` limits the batch to
+systems with a `fail.toml` and retries them even when a matching
+fingerprint would otherwise skip (recovering forced-rerun failures).
+With `--label L`, the failure file is `fail_L.toml`; unrelated failures and
+served descriptions are preserved.
+
+`dev descriptions status` summarizes a content directory without model
+calls: per-system state (`failed` when a `fail.toml` records the latest
+failed attempt, else `generated` for a nonempty description, else
+`missing`), fingerprint version, attempts, token totals, generated
+timestamp, and the failure error, with an aggregate
+summary on stderr.
+
+`dev descriptions normalize` re-applies the algorithmic formatting pass,
+including measurement-hedge removal, to served `description.md` files.
+`normalize --label pass2` selects `description_pass2.md` instead. Labels use
+the same validation as generation. Only changed articles are written; saved
+requests, metadata, drafts, and other variants remain untouched. No model calls
+or re-preparation are needed.
+
+`dev descriptions analyze <subcommand>` reads a content directory
+(`--content-dir`, default `content/systems`; `--label v2` reads
+`description_<label>.md` variant files) without model calls and
+reports on the stored corpus:
+
+- `text` — per-system rows: words, sentences, paragraphs, average
+  sentence words, type-token ratio, title words, and unbolded
+  measurement numbers (number+unit or `about <number>` outside bold
+  spans; discovery years and the 365-day year anchor are excluded).
+- `summary` — corpus distributions (min, p5, p25, median, mean, p75,
+  p95, max, stddev) of the per-system metrics.
+- `ngrams [--top N] [--min-n 1] [--max-n 5] [--openers]` — word n-grams
+  with corpus frequency, document frequency, and document share;
+  `--openers` counts only sentence-initial n-grams (template-monotony
+  detector).
+- `templates [--top N] [--min-count C]` — sentence templates after
+  masking numbers to `<num>` and following unit-lexicon words to
+  `<unit>`; requires at least two systems per template.
+- `tropes` — curated named patterns (for example
+  `listed_planets_ranking`, `earth_year_anchor`) with counts and up to
+  five example systems.
+- `metadata` — generation metadata aggregation: token totals by stage
+  (draft, style), elapsed time, attempts histogram, served models,
+  fingerprint versions, generation date range, and validation
+  recoveries.
+- `anomalies [--z-threshold 2.5] [--top N] [--min-duplicates 2]` —
+  distribution outliers (length, sentences, sentence length, numeric
+  density, recorded tokens) as z-scores, cross-system duplicate
+  sentences, within-article repeated sentences, systems with unbolded
+  measurement numbers, and undescribed systems.
+- `snapshot --output-path FILE.json` — writes a machine-readable stats
+  record (summary distributions, tropes, top templates, metadata
+  aggregates, duplicate-sentence counts, timestamp, corpus path) for
+  durable before/after comparison; store under `content/stats/`
+  (gitignored).
+- `compare --baseline-dir DIR [--baseline-label L]` — side-by-side
+  rows (baseline vs the `--content-dir` corpus) for length/TTR
+  distribution statistics, unbolded measurements, cross-system
+  duplicate sentences, and every trope's system reach, with deltas.
+  Only hostnames with descriptions and no current failure marker on either
+  side contribute to metric pairs. `systems_failed` reports failure counts
+  for each loaded corpus, including systems retaining an older success;
+  `systems_compared` reports the successful intersection.
+  Snapshot a corpus copy before regenerating to compare passes, or
+  compare a labeled variant against the served files in place.
+- `report --output-path FILE.md` — writes one markdown report with all
+  sections (note: `--output` remains the output-format flag).
+
+All subcommands use the `lines` default and support `--output
+table/json/csv`. Analysis lives in the `exodata-prose` crate.
+Labeled analysis reads the matching `fail_<label>.toml`, never `fail.toml`.
+
+`dev descriptions experiment --label v2 [--force]` refreshes the
+requests of the fixed 20-system experiment set (the
+15-system baseline plus Kepler-42, L 98-59, TOI-178, V1298 Tau, and
+HD 260655; global `--data-dir`, `--input-dir content/systems`) —
+experiments always run on current preparation semantics — and
+generates every system into variant files
+(`description_<label>.md`, `metadata_<label>.toml`,
+`draft_<label>.md`, `fail_<label>.toml`) without touching the served
+`description.md`. Variant metadata carries the fingerprint, so
+unchanged inputs skip and prompt or gate-relevant changes regenerate.
+Compare results with `analyze --label v2 compare --baseline-dir
+content/systems` (variant vs current, in place) or against a
+snapshot directory. Labels are alphanumeric/dashes; use `--force`
+to regenerate despite a matching variant fingerprint.
+
+`generate-batch`, `status`, `prepare`, and `normalize` default to the
+`lines` output format: one compact single-line row per system (hostname,
+state, attempts, short token count, duration or failure reason). Pass
+`--output table`, `--output json`, or `--output csv` for the previous
+renderings.
+
+Progress and aggregate reported tokens/wall time go to stderr; stdout uses
+the per-system output above. Generation success is a transport/
+response check, not a factual correctness guarantee; no editorial states exist.
+
+### Stellar-Host Input Preparation
+
+```bash
+exodata dev descriptions prepare --hostname "LHS 1140"
+exodata dev descriptions prepare --hostname "LHS 1140" --hostname "TRAPPIST-1" --force
+exodata dev descriptions prepare --hostname "LHS 1140" --data-dir data --output-dir content/systems --force
+```
+
+Offline preparation reads the two local Parquet files (`--data-dir`, default
+`data`) and writes `evidence.json` and `request.toml` under
+`<output-dir>/<system-id>/`. Output defaults to `content/systems`. One or
+more exact NASA hostnames are required; repeat `--hostname` to prepare
+several systems in one invocation. A per-system failure does not stop the
+remaining hostnames; errors are reported per row (stderr, or an `error` row
+in JSON) and the process exits nonzero when any preparation failed. No API,
+download, or generation metadata writes occur. Preparation progress goes to
+stderr ("Preparing/Prepared {hostname}") with each diagnostic on its own
+indented line; table and CSV output show hostname, paths, and a diagnostics
+count, while JSON rows carry the full diagnostics array.
+
+Identifiers lowercase ASCII letters, replace whitespace with dashes, remove
+characters other than ASCII letters/digits/dashes, collapse dashes, and trim
+edge dashes. Empty identifiers and distinct catalog hostnames with the same
+identifier fail. Existing preparation files require `--force`; stored hostname
+mismatches fail even with force. Articles and `metadata.toml` remain untouched.
+Inputs are validated and serialized before output files are written.
+Evidence is generated local data ignored by Git, as is everything else
+under `content/systems/`; requests and shared prompts at `content/` root
+remain tracked. Always refresh both files through `prepare`, not independently.
+`--force` replaces request edits as well as evidence. Both new files and backups
+are staged in a temporary `.prepare` directory before installation. Installation
+failure restores the previous pair, including previously absent files. If
+rollback fails, retain backups there and report the recovery location. An
+existing `.prepare` directory blocks another preparation; inspect it before
+manual recovery/removal. This is ordinary-error rollback, not crash-safe storage.
+
+The shared core selector chooses the fullest host summary row and a unique
+default row per matching planet. Missing selection fails; missing measurements
+within selected rows remain missing. Selected rows, including nulls, flags,
+errors, references, source filenames, and selection counts are stored in JSON.
+Planet order is exact-name order. The matching-host planet count is distinct
+from the selected row's catalog system count.
+
+The TOML request separates assignment, explanatory guide, publishable facts,
+approved comparisons, audit context, and silent constraints. Measurements carry
+source field, value, unit, qualifier, display text, and available errors.
+Publishable fields cover identity/distance/counts, stellar spectral type,
+temperature/mass/radius/age, and planetary discovery method/year, period,
+radius/mass. Same-row `pl_masse` is the only fallback for missing `pl_bmasse`.
+Bounds and mass provenance remain explicit. Estimates use three significant
+digits; bounds are not rounded. Parsecs convert with factor 3.26156.
+The source distance field has uncertainty companions but no limit flag, so it
+is treated as an estimate. Other missing/unrecognized limit flags are marked
+unspecified and suppress comparisons. Nonpositive or nonfinite measurements
+are omitted from publishable fields and reported in diagnostics; their selected
+source rows remain in evidence.
+Missing-field diagnostics are retained in local evidence and CLI output, not
+appended to model instructions. Minimum-mass and transit guide entries are
+included only when relevant to the selected planets; the `spectral` entry
+appears only with a stellar spectral type and `planet_classes` only when at
+least one planet carries an estimate radius classification (Sub-Earth,
+Earth-like, Super-Earth, Neptune-like, or Jupiter-like from the shared
+`exo-core` radius classes; the per-planet `classification` field uses the
+same thresholds). Mass display wording explicitly distinguishes a `Mass`
+quantity from `Msini`. Planets with an estimate `Mass`-provenance mass and
+an estimate radius also carry a precalculated mean-density fact from
+ρ = M/R³ with Earth at 5.51 g/cm³; Msini planets and bounds are skipped.
+
+Comparisons cover stellar mass/radius against solar units, stellar
+temperature against the Sun's 5772 K, planetary radius and mass against
+Earth, Jupiter-scale context for planetary masses clearly exceeding
+Jupiter's 317.8 Earth masses, periods against 365 days, and first- and
+second-place extrema of reported period/radius estimates and of reported
+masses. Extrema rank by point value: every listed planet must carry an
+estimate (interval-bearing) measurement for the key, and a fact fires only
+when its value differs in rounded significant digits from every other
+ranked planet; the "by reported estimates" wording is the uncertainty
+hedge. Second-place facts additionally require at least three measured
+planets. Mass extrema also require uniform provenance (`Mass` or `Msini`);
+Msini sets are worded as minimum-mass quantities. Bounds and unknown
+qualifiers suppress comparisons; overlapping supplied uncertainty
+intervals suppress only baseline comparisons (against Earth, the Sun, or
+Jupiter), not extrema. No deeper ordinals or new interplanetary ratios are
+generated. Unknown mass provenance remains explicit.
+
+The writing target is computed from fact richness: systems with fewer than
+ten approved comparisons or a single planet target 150-300 words, others
+300-600 words, always permitting shorter supported text.
+`content/stellarhost_prompt.txt` is the single editable system prompt passed
+to the existing generator with `--system-prompt`; preparation never copies it.
+The reusable guide in `content/stellarhost_guide.toml` is compiled into
+preparation and included in requests. Exact prompt capture belongs to generation
+trial artifacts. CLI reports hostname, paths, and diagnostics through existing
+table/JSON/CSV formats. Technical tests use synthetic data, not live counts.
+
+### Description Regeneration Scan
+
+```bash
+exodata dev descriptions scan
+exodata dev descriptions scan --all
+exodata dev descriptions scan --output json
+exodata dev descriptions scan --data-dir data --content-dir content/systems
+```
+
+This synchronous, read-only command always operates locally. Paths default to
+`data` and `content/systems`, relative to the working directory, as with other
+development commands. Backend selection and configured client data paths do not
+affect the scan. Only `hostname`, `rowupdate`, and `releasedate` are loaded from
+`exoplanets.parquet`; all three must be string columns.
+
+Group all planetary reference rows by exact hostname, without a default-row
+filter. The current source date is the maximum across both date columns and
+all rows. Null and blank dates are ignored; nonblank dates must be valid calendar
+dates in exact `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS` format. Validate the
+complete source timestamp and use its calendar date for comparison; metadata
+`source_date` remains strictly `YYYY-MM-DD`.
+
+Read immediate system directories containing `metadata.toml` and
+`description.md`. Match only the exact string `hostname` in metadata, never the
+directory name. Parse optional string `source_date`; tolerate other fields.
+`generated_at`, model settings, and `request.toml` do not affect classification.
+
+```toml
+hostname = "HD 189733"
+source_date = "2026-07-09"
+generated_at = "2026-09-07T10:00:00Z"
+model = "deepseek-v4-flash"
+```
+
+Classification precedence:
+
+1. `unknown`: invalid dates, invalid metadata, duplicate metadata hostnames, or
+   unreadable artifacts. Duplicate paths are listed in the reason, with no
+   single metadata path or recorded date selected.
+2. `missing`: description or metadata is absent, or description is empty or
+   whitespace-only, even when dates are unavailable.
+3. `outdated`: current source date is later than recorded source date.
+4. `current`: both dates exist and match.
+5. `unknown`: either date is unavailable, or the current date is earlier.
+
+Report columns are `hostname`, `status`, `recorded_source_date`,
+`current_source_date`, `metadata_path`, and `reason`. Unavailable values are JSON
+nulls (empty cells in table/CSV). A valid maximum of available dates remains
+visible even when another date is malformed. Default output hides `current`;
+`--all` includes it. Global output selection uses the shared table/JSON/CSV
+renderer. Stdout contains only the report.
+
+Rows sort by hostname. Unassignable metadata errors appear first with null
+hostname, ordered by metadata path. Missing metadata cannot be matched by
+directory name; the corresponding dataset host remains `missing`. Valid metadata
+for hosts absent from current data is ignored. A nonexistent content root is
+treated as no generated content and is never created.
+
+Unreadable Parquet, incompatible columns, invalid dataset hostnames (null or
+blank), and unreadable content-root listings fail the command. Per-system
+errors produce `unknown` rows; completed reports return success regardless of
+statuses. The scanner writes no artifacts and makes no network requests.
+
+Generation must save the source date actually used only after successfully
+saving the corresponding description. Directory identifier generation and
+request schema belong to generation. This scan does not detect removed records,
+same-date corrections, or independent stellar-host updates.
+
 ## REST And Agent Integration
 
-API mode targets the public REST API documented in `docs/api.md`:
+API mode targets the public REST API documented in [docs/api.md](../docs/api.md):
 
 - `/rest/stellarhosts`
 - `/rest/exoplanets`
@@ -216,18 +613,13 @@ The installed skill follows the Agent Skills directory convention and includes
 an `installed-by: exodata` marker. Existing `exodata` installs are updated;
 foreign/manual skill files are skipped.
 
-The hosted MCP server is mounted by the web service at `/mcp` and is built on
-top of the server's in-memory catalog state, not local parquet files. The
-server uses Streamable HTTP in stateless JSON response mode. Current MCP tools
-are:
+The installed public skill is maintained at
+[crates/exo-cli/skills/exodata.md](../crates/exo-cli/skills/exodata.md).
+It serves catalog users; repository development skills have distinct names
+and live under `.agents/skills/`. The `skill` command currently supports
+installation, not printing instructions.
 
-- `health()`
-- `list_insights()`
-- `run_insight(slug)`
-- `describe_catalog(table, columns)`
-- `query_catalog(sql, limit)`
-
-The MCP surface is read-only. `query_catalog` accepts one SQL `SELECT`
-statement, registers `stellarhosts` and `exoplanets`, defaults to 100 rows, and
-caps MCP responses at 1000 rows. Agents should call `describe_catalog` before
-writing SQL when column names, units, or data types are uncertain.
+Hosted MCP belongs to the web service, not the CLI process. Its shared-state
+integration is described in [web-backend.md](web-backend.md#sql-insights-mcp-and-exports);
+the complete tool inventory, including `download_detail`, is maintained in
+[docs/mcp.md](../docs/mcp.md).

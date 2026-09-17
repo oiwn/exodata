@@ -1,3 +1,6 @@
+[alias]
+lx = "clippy --workspace --all-targets --all-features"
+
 [env]
 MACOSX_DEPLOYMENT_TARGET = { value = "14.0", force = false }
 

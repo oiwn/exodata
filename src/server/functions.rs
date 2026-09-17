@@ -16,7 +16,8 @@ pub mod insights;
 pub mod tables;
 
 pub use details::{
-    get_exoplanet_detail, get_planets_for_host, get_stellar_host_detail,
+    get_exoplanet_detail, get_host_description, get_planets_for_host,
+    get_stellar_host_detail,
 };
 pub use insights::get_insight;
 pub use tables::{get_exoplanets_page, get_stellarhosts_page};
@@ -59,6 +60,8 @@ pub struct TableData {
 /// Stellar host detail data structure.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct StellarHostDetail {
+    #[serde(default)]
+    pub selected_record_index: Option<usize>,
     pub hostname: String,
     pub identity: HostIdentity,
     pub system: HostSystemSummary,
@@ -81,13 +84,15 @@ pub struct HostPlanets {
 /// Exoplanet detail data structure.
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct ExoplanetDetail {
+    #[serde(default)]
+    pub selected_record_index: Option<usize>,
     pub pl_name: String,
     pub canonical: ExoplanetCanonicalSummary,
     pub records: Vec<Value>,
     pub metadata: HashMap<String, ColumnMetadata>,
 }
 
-/// Canonical adopted planet values computed from all detail records.
+/// Adopted planet values from the unique default row, with all-record diagnostics.
 #[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct ExoplanetCanonicalSummary {
     pub hostname: Option<StableValueSummary>,

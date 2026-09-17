@@ -360,3 +360,23 @@
 .host-provenance__cell-value {
   @apply break-words;
 }
+
+.host-description {
+  @apply rounded-[1.5rem] border border-slate-200/5 bg-slate-900/25 px-6 py-5 md:px-8 md:py-6;
+}
+
+.host-description__prose {
+  @apply max-w-3xl text-base leading-relaxed text-slate-300;
+}
+
+.host-description__prose h1 {
+  @apply mb-4 text-xl font-semibold tracking-tight text-white;
+}
+
+.host-description__prose p {
+  @apply mt-4 first:mt-0;
+}
+
+.host-description__prose strong {
+  @apply font-semibold text-slate-100;
+}

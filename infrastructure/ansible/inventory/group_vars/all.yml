@@ -11,5 +11,12 @@ app_name: exodata
 app_port: 3000
 data_path: /app/data
 
+# Server-side directory for generated stellar-host descriptions,
+# mounted into the container at /app/content/systems
+content_path: /app/exodata-descriptions
+
 # Local data path (for upload-data playbook)
 local_data_path: "{{ playbook_dir }}/../../../data"
+
+# Local descriptions path (for upload-descriptions playbook)
+local_content_path: "{{ playbook_dir }}/../../../content/systems"

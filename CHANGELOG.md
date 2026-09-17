@@ -1,5 +1,131 @@
 # Changelog
 
+## 2026-09-17
+
+- Generated the full v10 stellar-host description catalog: 4,768/4,768
+  systems, zero failures, 7,091,608 recorded tokens (stats snapshot at
+  `content/stats/v10.json`). Plain measurement values throughout: 6
+  ordinary `about` uses remain corpus-wide, zero Earth-year
+  comparisons, zero raw `M sin i`.
+- Algorithmic-bolding fix: thousands-grouped numbers now bold whole
+  (`**1,410 light-years**`) instead of splitting at the comma, and
+  `dev descriptions normalize` repairs previously split spans in
+  stored articles (148 instances across 110 files cleaned).
+- Post-batch copy-edits: repaired `an mean density` grammar in 8
+  articles; moved the shared guide to `content/stellarhost_guide.toml`
+  (specs already described it at `content/` root).
+- Descriptions ship to production via a mounted volume instead of the
+  Docker image: new `just ansible-upload-descriptions` rsyncs only
+  `description.md` files to the droplet, `deploy.yml` mounts them at
+  `/app/content/systems:ro`, and the runtime `COPY` of gitignored
+  content was removed so GitHub Actions builds succeed from a clean
+  checkout. Prose updates no longer require an image rebuild.
+
+## 2026-09-12
+
+- Split the descriptions pipeline into the new `exodata-prose` crate
+  (`crates/exo-prose`); exo-cli keeps CLI wiring only.
+  `dataframe_to_json` moved to `exo_core::json`.
+- Built the `dev descriptions analyze` suite: `text`, `summary`,
+  `ngrams --openers`, `templates` (number/unit-masked), `tropes`,
+  `metadata`, `anomalies` (outliers, cross-system duplicate sentences,
+  unbolded measurements), `compare --baseline-dir`, `report
+  --output-path`, and `snapshot --output-path` (machine-readable stats
+  under gitignored `content/stats/`; pristine pass-1 recorded as
+  `content/stats/pass1.json`).
+- De-monotonization round 1: prepare gates the Earth-year comparison to
+  year extremes (≤10 days / ≥3 years); drafter prompt requires varied
+  inventory phrasing, at most one discovery-method explanation per
+  article, planet grouping, selective comparisons, folded rankings,
+  varied rhythm, and no recap endings; request wording no longer
+  teaches "associated".
+- Rebuilt the pipeline to draft-style, fingerprint v5: the JSON critic
+  was removed (13.5% of prompt tokens, mostly false-positive findings);
+  the editor became a compact draft-only style pass under
+  `content/stellarhost_style_prompt.txt`; metadata records
+  draft/style stages.
+- Deterministic narrative gates with gates-as-critic flow: the draft
+  retries only on fact gates; all narrative violations (opener share
+  40%/8, sentence-length spread ≥2.0, numeric density ≤2.5, banned
+  machine phrasings, number+unit reuse) are forwarded to the style pass
+  as an explicit defect list; only style exhaustion fails the system.
+- Extended the mechanical post-pass: em dashes/double hyphens become
+  single hyphens, repeated `about` collapses, planet names and spectral
+  labels are auto-bolded outside strong spans; the corresponding gates
+  are backstops. `times Earth` repair consumes typographic possessives.
+- Baseline-15 calibration across four runs reached 15/15 with all
+  failure classes resolved (year anchors licensed-only, TRAPPIST-1
+  openers fixed via forwarded defects, hostname/spectral/365 reuse
+  false positives exempt, Kepler-11 value-collision class fixed by
+  number+unit pair keying). Call economics: ~2 calls/system, ~4-6k
+  tokens/system vs 8.4k pass 1.
+
+## 2026-09-10
+
+- Completed the full-catalog prose generation for #116: all 4,768
+  preparable systems described (~39.9M recorded tokens including retry
+  passes; one permanent skip, 2MASS J11011926-7732383, with no usable
+  stellar-host summary row). The first pass produced 4,494 systems; the
+  remaining 274 gate failures cleared across `--failed` retry passes.
+- Algorithmic formatting: stage outputs now pass a normalizer that bolds
+  measurement phrases (number+unit, full `times Earth's` forms, spectral
+  label) outside strong spans and repairs the density possessive before
+  the gates; the bolding gate is a backstop only. Bolding failures were
+  67% of first-pass gate failures.
+- Added `dev descriptions normalize` to re-apply the normalizers to
+  stored descriptions (retro-fix rewrote 258 files; zero possessive
+  slips remain).
+- Per-system commands (`generate-batch`, `status`, `prepare`,
+  `normalize`) default to a compact single-line `lines` output;
+  table/json/csv remain available via `--output`. Batch outcome rows now
+  include attempts.
+- Prose pipeline for this pass: draft → JSON-mode critic → editor with
+  deterministic gates (Markdown structure, licensing-aware banned
+  phrases, numeric allowlist, fact preservation), fingerprint v4.
+- Curated licensed facts: per-planet `circumbinary` (NASA `cb_flag`),
+  star `host_kind = "pulsar"`, `age_class = "very young"` (<0.1 Gyr), and
+  "No orbital period is reported" facts, each with guide entries; label
+  bans lift only with their facts.
+- Preparation scale-up: `Catalog` loads source Parquet files once;
+  `prepare --all` enumerates all hostnames, `--dry-run` validates without
+  writing; 4,769-system dry run classified failures and diagnostics.
+- Generation operations: `generate-batch --failed` retries failed systems
+  over matching fingerprints; new `dev descriptions status` summarizes
+  per-system state, usage, and failures with aggregate totals.
+- Per-system manual notes channel: tracked optional `notes.toml`
+  (`facts` merge into publishable comparisons, `guidance` into silent
+  constraints); fingerprint covers the merge, so edited notes regenerate.
+- Content layout for catalog scale: tracked set slimmed to
+  `description.md` + `notes.toml`; request/metadata/evidence/draft/fail
+  files ignored.
+- Tooling alignment: repo alias `cargo lx` (clippy
+  --workspace --all-targets --all-features) shared by prek hook, Justfile,
+  and rust-analyzer; prek test hook fixed to `--workspace` (previously ran
+  only the root package's tests); ~27 clippy warnings fixed.
+- Verified each round with the workspace suites (62 CLI lib tests,
+  integration, 137 web) and live baseline regenerations.
+
+## 2026-09-06
+
+- Merged PR #142: added a single app-wide `<main>` landmark around routed
+  content, including error pages, and replaced page-level landmarks in the
+  overview, about, and docs components to avoid duplicates. PR CI passed
+  formatting, Clippy, tests, coverage, typos, and Playwright smoke checks.
+- Archived the completed Rust dependency upgrade and hardening task: updated
+  canonical dependency requirements and the lockfile, adapted source code to
+  upgraded APIs, and enforced locked resolution across build and CI entry points.
+- Added Cargo Audit policy with scoped exceptions for `RUSTSEC-2026-0194`
+  (trusted offline VOTable input) and `RUSTSEC-2026-0195` (unused Polars cloud
+  XML paths), while keeping informational advisories visible.
+- Retained Serde at exactly `1.0.228` for VOTable `0.7.0` compatibility;
+  documented the constraint in the technical overview. Updated `h2` to
+  `0.4.19` and `chacha20` to `0.10.2`.
+- Dependency-task verification recorded before archival: locked compile,
+  CI-scope Clippy, 175 workspace tests, release cargo-leptos build, coverage,
+  six Playwright smoke tests, formatting, and workflow validation passed.
+  Cargo Audit passed with accepted Bincode, Paste, and proc-macro-error2
+  informational warnings.
+
 ## 2026-09-04
 
 - Added the OpenCode GitHub Actions integration, preserving explicit `/oc` and
@@ -298,7 +424,7 @@
   - CSS blocks interaction and shows dark overlay + spinner via `body::before` / `body::after` while class is present (`style/tailwind.css`)
   - WASM removes the class after `hydrate_body()` completes (`src/lib.rs`)
   - Added `web-sys` dependency scoped to `hydrate` feature only (`Cargo.toml`)
-- **Fixed SSR streaming deadlock on 1-vCPU servers** (see `specs/ssr-streaming-issue.md`):
+- **Fixed SSR streaming deadlock on 1-vCPU servers**:
   - Root cause: Tokio defaulted to 1 worker thread on 1-vCPU droplet; Leptos SSR + `spawn_blocking` caused worker thread starvation
   - Fix: forced `worker_threads = 4` in `#[tokio::main]` (`src/main.rs`) so OS scheduler can interleave threads
   - Also changed `SsrMode::Async` → `SsrMode::OutOfOrder` for table routes (`src/app.rs`) to stream HTML shell immediately

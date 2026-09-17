@@ -39,6 +39,7 @@ pub struct ApiState {
     pub table_cache: TableCache,
     pub host_detail_cache: HostDetailCache,
     pub insight_cache: InsightCache,
+    pub host_descriptions: Arc<HashMap<String, String>>,
 }
 
 /// Generic query parameters for data endpoints

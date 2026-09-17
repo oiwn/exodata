@@ -5,9 +5,22 @@
 /data/*.vot
 /data/*.toml
 /data/*.parquet
+/content/systems/*/evidence.json
+/content/systems/*/fail.toml
+/content/systems/*/draft.md
+/content/systems/*/request.toml
+/content/systems/*/metadata.toml
+
+.codex/
+.claude/
 .crush/
 
 tmp/
+
+# prose related
+content/systems
+report.md
+/content/stats/
 
 end2end/playwright-report
 end2end/test-results

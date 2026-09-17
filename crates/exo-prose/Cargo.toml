@@ -1,0 +1,31 @@
+[package]
+name = "exodata-prose"
+version = "0.1.0"
+edition = "2024"
+description = "Stellar-host description generation, validation, and analysis pipeline for Exoplanets Catalog"
+license = "AGPL-3.0-only"
+repository = "https://github.com/oiwn/exodata"
+homepage = "https://exodata.space"
+
+[lib]
+name = "exo_prose"
+path = "src/lib.rs"
+
+[dependencies]
+exo-core = { package = "exodata-core", version = "0.2.0", path = "../exo-core" }
+anyhow = "1.0.104"
+chrono = { version = "0.4.45", default-features = false, features = ["std"] }
+polars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = "0.11.0"
+toml = { workspace = true }
+tokio = { version = "1.53.1", features = ["rt-multi-thread"] }
+reqwest = { version = "0.13.4", features = ["json", "rustls"], default-features = false }
+pulldown-cmark = "0.13.4"
+regex = "1.13.1"
+
+[dev-dependencies]
+axum = "0.8.9"
+rand = "0.10.2"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "time", "net"] }

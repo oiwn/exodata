@@ -27,6 +27,7 @@ const ALIAS_FIELDS: &[&str] = &["hd_name", "hip_name", "tic_id"];
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CanonicalStellarHost {
+    pub selected_record_index: Option<usize>,
     pub hostname: String,
     pub identity: HostIdentity,
     pub system: HostSystemSummary,
@@ -124,9 +125,12 @@ pub fn build_canonical_host(
     all_metadata: &HashMap<String, ColumnMetadata>,
 ) -> Result<CanonicalStellarHost, String> {
     let records = dataframe_to_json(df)?;
+    let selected_record_index =
+        exo_core::selection::stellar_host_record_index(&records);
+    let selected = selected_record_index.map(|index| &records[index]);
     let identity = build_identity(hostname, &records);
-    let system = build_system_summary(&records, all_metadata);
-    let star = build_star_summary(&records, all_metadata);
+    let system = build_system_summary(&records, all_metadata, selected);
+    let star = build_star_summary(&records, all_metadata, selected);
     let provenance = build_provenance_summary(&records);
     let provenance_columns = PROVENANCE_COLUMNS
         .iter()
@@ -135,6 +139,7 @@ pub fn build_canonical_host(
         .collect();
 
     Ok(CanonicalStellarHost {
+        selected_record_index,
         hostname: hostname.to_string(),
         identity,
         system,
@@ -182,11 +187,12 @@ fn build_identity(hostname: &str, records: &[Value]) -> HostIdentity {
 fn build_system_summary(
     records: &[Value],
     metadata: &HashMap<String, ColumnMetadata>,
+    selected: Option<&Value>,
 ) -> HostSystemSummary {
     let stable_map: HashMap<&str, StableValueSummary> = STABLE_SYSTEM_FIELDS
         .iter()
         .filter_map(|key| {
-            summarize_stable_field(records, key, metadata)
+            summarize_stable_field(records, key, metadata, selected)
                 .map(|summary| (*key, summary))
         })
         .collect();
@@ -195,24 +201,34 @@ fn build_system_summary(
         planet_count: stable_map.get("sy_pnum").cloned(),
         star_count: stable_map.get("sy_snum").cloned(),
         moon_count: stable_map.get("sy_mnum").cloned(),
-        distance: summarize_numeric_field(records, "sy_dist", metadata),
-        parallax: summarize_numeric_field(records, "sy_plx", metadata),
+        distance: summarize_numeric_field(records, "sy_dist", metadata, selected),
+        parallax: summarize_numeric_field(records, "sy_plx", metadata, selected),
     }
 }
 
 fn build_star_summary(
     records: &[Value],
     metadata: &HashMap<String, ColumnMetadata>,
+    selected: Option<&Value>,
 ) -> HostStarSummary {
     HostStarSummary {
-        spectype: summarize_categorical_field(records, "st_spectype", metadata),
-        teff: summarize_numeric_field(records, "st_teff", metadata),
-        mass: summarize_numeric_field(records, "st_mass", metadata),
-        radius: summarize_numeric_field(records, "st_rad", metadata),
-        age: summarize_numeric_field(records, "st_age", metadata),
-        luminosity: summarize_numeric_field(records, "st_lum", metadata),
-        metallicity: summarize_numeric_field(records, "st_met", metadata),
-        logg: summarize_numeric_field(records, "st_logg", metadata),
+        spectype: summarize_categorical_field(
+            records,
+            "st_spectype",
+            metadata,
+            selected,
+        ),
+        teff: summarize_numeric_field(records, "st_teff", metadata, selected),
+        mass: summarize_numeric_field(records, "st_mass", metadata, selected),
+        radius: summarize_numeric_field(records, "st_rad", metadata, selected),
+        age: summarize_numeric_field(records, "st_age", metadata, selected),
+        luminosity: summarize_numeric_field(
+            records, "st_lum", metadata, selected,
+        ),
+        metallicity: summarize_numeric_field(
+            records, "st_met", metadata, selected,
+        ),
+        logg: summarize_numeric_field(records, "st_logg", metadata, selected),
     }
 }
 
@@ -274,7 +290,12 @@ pub(crate) fn summarize_numeric_field(
     records: &[Value],
     key: &str,
     metadata: &HashMap<String, ColumnMetadata>,
+    selected: Option<&Value>,
 ) -> Option<NumericFieldSummary> {
+    let value = selected?
+        .get(key)
+        .and_then(value_as_f64)
+        .filter(|value| value.is_finite())?;
     let mut values = collect_f64_values(records, key);
     if values.is_empty() {
         return None;
@@ -289,7 +310,7 @@ pub(crate) fn summarize_numeric_field(
         key: key.to_string(),
         label: humanize_key(key),
         unit: metadata.get(key).and_then(|m| m.unit.clone()),
-        value: median(&values),
+        value,
         measurement_count: values.len(),
         distinct_count,
         min,
@@ -302,14 +323,15 @@ pub(crate) fn summarize_stable_field(
     records: &[Value],
     key: &str,
     metadata: &HashMap<String, ColumnMetadata>,
+    selected: Option<&Value>,
 ) -> Option<StableValueSummary> {
+    let value = selected?.get(key).filter(|value| !value.is_null())?.clone();
     let mut distinct = distinct_non_null_values(records, key);
     if distinct.is_empty() {
         return None;
     }
 
     distinct.sort_by(stable_value_cmp);
-    let value = distinct[0].clone();
 
     Some(StableValueSummary {
         key: key.to_string(),
@@ -325,14 +347,19 @@ pub(crate) fn summarize_categorical_field(
     records: &[Value],
     key: &str,
     _metadata: &HashMap<String, ColumnMetadata>,
+    selected: Option<&Value>,
 ) -> Option<CategoricalFieldSummary> {
+    let value = selected?
+        .get(key)?
+        .as_str()
+        .filter(|value| !value.trim().is_empty())?
+        .to_owned();
     let mut counts = collect_string_counts(records, key);
     if counts.is_empty() {
         return None;
     }
 
     counts.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
-    let value = counts[0].0.clone();
     let disputed = counts.len() > 1;
     let counts = counts
         .into_iter()
@@ -413,20 +440,6 @@ fn count_distinct_f64(values: &[f64]) -> usize {
         seen.insert(format!("{value:.12}"));
     }
     seen.len()
-}
-
-fn median(values: &[f64]) -> f64 {
-    let len = values.len();
-    if len == 0 {
-        return 0.0;
-    }
-
-    let middle = len / 2;
-    if len % 2 == 1 {
-        values[middle]
-    } else {
-        (values[middle - 1] + values[middle]) / 2.0
-    }
 }
 
 fn humanize_key(key: &str) -> String {
@@ -554,10 +567,39 @@ mod tests {
 
         assert_eq!(host.hostname, "HD 189733");
         assert_eq!(host.provenance.record_count, 3);
-        assert_eq!(host.star.teff.as_ref().unwrap().value, 5000.0);
+        let selected = &host.records[host.selected_record_index.unwrap()];
+        assert_eq!(
+            host.star.teff.as_ref().unwrap().value,
+            selected["st_teff"].as_f64().unwrap()
+        );
         assert!(host.star.teff.as_ref().unwrap().disputed);
         assert_eq!(host.star.spectype.as_ref().unwrap().value, "K1-K2 V");
         assert_eq!(host.system.planet_count.as_ref().unwrap().value, json!(1));
         assert_eq!(host.provenance.stellar_refs.len(), 2);
+    }
+
+    #[test]
+    fn adopts_one_fullest_row_without_filling_gaps_or_averaging() {
+        let df = df! {
+            "hostname" => &["Test", "Test"],
+            "st_teff" => &[Some(4000.0), None],
+            "st_mass" => &[1.0, 3.0],
+            "st_rad" => &[Some(1.0), None],
+            "st_age" => &[None, Some(7.0)],
+            "st_spectype" => &[Some("G"), None],
+            "sy_pnum" => &[2_i64, 1],
+            "st_refname" => &["Source A", "Source B"],
+            "st_masslim" => &[0_i32, 1],
+        }
+        .unwrap();
+        let host = build_canonical_host("Test", &df, &HashMap::new()).unwrap();
+        assert_eq!(host.selected_record_index, Some(0));
+        assert_eq!(host.star.mass.as_ref().unwrap().value, 1.0);
+        assert_eq!(host.star.mass.as_ref().unwrap().measurement_count, 2);
+        assert_eq!(host.star.mass.as_ref().unwrap().max, 3.0);
+        assert!(host.star.age.is_none());
+        assert_eq!(host.system.planet_count.unwrap().value, json!(2));
+        assert_eq!(host.records[0]["st_refname"], "Source A");
+        assert_eq!(host.records[0]["st_masslim"], 0);
     }
 }

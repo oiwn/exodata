@@ -1,27 +1,106 @@
-# Current Task Context: Open-issue triage and next-session plan
+# Roadmap
 
-State: in progress
+Committed follow-up work. The active generation task remains in
+[ctx.md](ctx.md); uncommitted possibilities live in [ideas.md](ideas.md).
 
-## Plan
+## Prose Out of Git — Upload Channel (Round A2, deferred)
 
-- [ ] Review all 33 open issues with the user one at a time; decide whether to close, clarify, implement, investigate, or defer each issue. Do not mutate GitHub without explicit approval.
-- [ ] Start with closure candidates #10, #36, #57, #61, #83, and #107, recording the evidence/comment needed before any closure.
-- [ ] Verify tmux italic fix (new pane + reattach), then optionally confirm matrix theme renders dim green slanted thinking text.
+Generated prose is deployment data, not source: nothing under
+`content/systems/` is tracked (already untracked and gitignored; prompts
+and the guide at `content/` root stay tracked). Serve prose through the
+same pattern as the Parquet data: upload + bind mount.
 
-## Findings
+- [ ] Dockerfile: remove `COPY content ./content` (builder) and
+      `COPY --from=builder /app/content/systems /app/content/systems`
+      (runtime). Nothing in the web build reads content at compile time,
+      and CI checkouts no longer contain the directory.
+- [ ] `deploy.yml`: add volume `"{{ content_path }}:/app/content/systems:ro"`
+      beside the data mount.
+- [ ] `group_vars/all.yml`: `content_path: /app/content` (host), and
+      `local_content_path: "{{ playbook_dir }}/../../../content/systems"`
+      (mirrors `local_data_path`).
+- [ ] New `playbooks/upload-content.yml`: ensure
+      `{{ content_path }}/{packs,systems}` exist; localhost pack of
+      `*/description.md` only (`notes.toml` stays local, never uploaded)
+      as `content-<date>-<HHMM>-<N>sys.tar.gz` (fail on zero
+      descriptions); upload; unarchive into `{{ content_path }}/systems/`;
+      prune packs keeping the newest 5; `docker restart {{ app_name }}`
+      plus the same HTTP health-wait task as `deploy.yml`.
 
-GitHub review on 2026-08-27 found 33 open issues in `oiwn/exodata`; none had comments. No issue was edited or closed.
+Deferred 2026-09-11 until Round B content generation improves (see
+[ctx.md](ctx.md)); deployment is the last stage.
+- [ ] Justfile `ansible-upload-content` recipe; DEPLOY.md section
+      covering the content channel and the rollout ordering rule:
+      upload first (files stage harmlessly), deploy second (mount
+      activates on container recreate). Old images keep their baked prose
+      until the deploy.
+- [ ] Verify: `ansible-playbook --syntax-check`, local `tar tzf` sanity,
+      live upload + deploy + curl one described and one undescribed host
+      page. No Rust changes required (`EXO_CONTENT_DIR` default already
+      resolves to the mount target; the loader tolerates a missing
+      directory).
 
-- **Closure candidates:** #10 (homepage statistics and graphical distribution bars satisfy the aggregation/visualization intent); #36 (live `/pkg/exodata.wasm` returns `Cache-Control: no-cache`); #57 (stellar-host planet cards link to planet details); #61 (host provenance table exposes measurements and references); #83 (homepage Exoplanets heading uses `animate-pulse`); #107 (overview classifies canonical median radii into five size categories).
+## Prose Follow-up After Benchmark Acceptance
+
+- [ ] B3: rig-core providers using variant labels: profile table, keys in
+      `.env`, smaller-model comparisons, and manual promotion.
+- [ ] Define the prose translation pipeline after pass-2 content lands.
+- [ ] B5: deploy after content generation through the existing Round A2
+      upload channel above.
+
+## Update tailwind
+
+```
+Command [tailwindcss] requested version v4.2.1, but a newer version v4.3.3 is available, you can try it out by setting the LEPTOS_TAILWIND_VERSION=v4.3.3 env var and re-running the command
+```
+
+## Shared Measurement Selection — Required Before Release
+
+- [x] Define source-row selection: stellar hosts use the row with the most
+  populated summary measurements; planets use the unique `default_flag = 1`
+  row. No medians, nearest-median selection, or cross-row filling. See
+  [detail contracts](web-backend.md#detail-contracts) for scoring and ties.
+- [ ] Implement and verify shared selection for detail pages and exports,
+  retaining raw records and a selected-record index for references, errors,
+  and qualifiers. Confirm hero values, summary cards, and comparisons agree.
+- [x] Reuse shared selection when implementing description-generation inputs.
+- [ ] Present measurement qualifiers consistently: distinguish mass, minimum
+  mass, and upper/lower bounds using the selected source record. This remains
+  a separate pre-release requirement from selecting existing numeric values.
+
+## Localized Route Declarations
+
+- [ ] Define shared page routes once rather than repeating them for English,
+  Simplified Chinese, and Japanese. Preserve existing URLs, parameters, query
+  state, locale synchronization, lazy loading, SSR modes, 404 behavior, and the
+  single app-wide `<main>`. Verify direct loads and client navigation across
+  supported locales. Adding a locale should not require copying the route list.
+
+## Separate Graphics Page
+
+- [ ] Specify a dedicated page for graphical catalog exploration, distinct
+  from homepage distribution bars (issue references #10 and #11). Define its
+  content and interactions before choosing the rendering library.
+
 ^^^ no there must be separate page with graphics i think we'll use "rust-ui"
-- **Valid, still actionable:** #133 (no OpenCode CI workflow; acceptance criteria vague); #131 (no Pi-harness setup; underspecified); #129 (footer still uses long utility-class strings); #119 (top/manual target remains `#mcp-exoplanet-data`, not `#manual`); #116 (no AI-generated detail reasoning); #115 (`<main>` exists on overview/docs but is absent from tables, insights, detail, and error pages); #111 (crates.io-facing `crates/exo-cli/README.md` still advertises MCP); #108 (no routing progress bar); #104 (no URL shortener); #100 (no arXiv integration); #98 (no `llms.txt` file/route); #95 (missing recent planets and largest/smallest host insights); #82 (API/CLI are links/cards, not tabs); #75 (404 has no facts/insights links); #69 (live invalid detail still renders `Error Loading Planet`, not branded 404); #45 (filter is case-insensitive substring search; no strict mode); #27 (prewarm uses `selected_columns: None`, unlike explicit SSR fetch columns); #11 (2025 appears in an overview bar, but there is no dedicated graphical page).
-- **Partially implemented:** #99 (hero/comparison use medians, but quick-summary cards still use `records.first()`); #87 (nginx declares gzip/WASM support, but render-blocking CSS/analytics remain and live CSS/JS still report four-hour caching); #77 (binary-systems insight exists, requested host-detail visualization does not); #59 (detail pages have JSON/CSV downloads, but general REST/API links are absent); #58 (detail references/exports exist, but wide-table reference links, presets, copy/share, and short URLs remain incomplete).
-- **Investigate or resolve as non-code:** #97 (no `signature-agent` injection in this tree; needs browser/network reproduction); #90 (ratio formula and units are consistent, with values above one caused by compact hosts such as white dwarfs; scientific/data decision); #72 (local data has consistent `1195.98 pc` distance and `8868.67-29300 K` temperatures from different references; provenance is exposed, scientific acceptance remains); #43 (nginx remains deployed; Ferron is an infrastructure research choice, not a defect).
+&&& Preserve the requirement for a separate graphics page. Homepage bars do not complete it; "rust-ui" remains a candidate until the page requirements and library choice are evaluated.
 
-## Context
+## Issue Review
 
-Use the GitHub issue body plus current code as the source of truth for each review. Separate implementation evidence from production evidence and scientific/product judgment. Report first; never close, comment on, or edit issues unless the user explicitly requests that mutation.
+- [ ] Review issues with the user one at a time against their current bodies,
+  current code, and any necessary production evidence. Check GitHub state
+  when that review is requested; do not reuse historical issue counts or
+  closure recommendations as current facts.
+- [ ] Clarify remaining acceptance criteria for harness integrations (#131,
+  #133) and the CLI package description (#111), accounting for the existing
+  OpenCode workflow and hosted MCP service.
+- [ ] Investigate externally observed issues only with a reproduction:
+  unexpected agent injection (#97), production caching/render delays (#87),
+  and disputed dataset interpretations (#72, #90).
+- [ ] Evaluate the infrastructure alternative raised in #43 as a separate
+  research task, not as an assumed defect in the deployed proxy.
 
-## Next
-
-Continue step by step with closure candidate #36, then #57, #61, #83, #107, and #10 unless the user selects another issue.
+Issue numbers identify prior requests, not verified current open/closed status.
+Remaining concrete product and maintenance ideas are grouped in
+[ideas.md](ideas.md). Do not comment on, edit, or close GitHub issues without
+the user's authorization.

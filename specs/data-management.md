@@ -5,71 +5,62 @@ Covers fetching raw data from NASA and preparing it for the web app.
 ## Data Sources
 
 NASA Exoplanet Archive TAP Service:
+
 - **Stellar Hosts**: `https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts&format=votable`
-- **Exoplanets**: `https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+pscomppars&format=votable`
+- **Exoplanets (Planetary Systems, `ps`)**: `https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+ps&format=votable`
+
+Use `ps`, which provides multiple reference-based parameter sets per planet,
+including `default_flag`, `pl_refname`, `releasedate`, and `rowupdate`. Do not
+substitute `pscomppars`: it combines parameters into one row per planet and
+does not expose the same release/update fields. The application loads these
+records under the local table name `exoplanets`.
+
+`releasedate` identifies a parameter set's public release, while `rowupdate`
+identifies its last planet-parameter update and may be missing. `pl_pubdate`
+is the source publication date, not an archive update timestamp. The separate
+`stellarhosts` table has no equivalent release/update fields.
+
+See [NASA column definitions](https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html).
 
 ## Directory Structure
 
 ```
 data/
-├── stellarhosts.vot       # Downloaded VOTable
-├── stellarhosts.parquet   # Converted, used by the web app
-├── exoplanets.vot         # Downloaded VOTable
-└── exoplanets.parquet     # Converted, used by the web app
+├── stellarhosts.vot
+├── exoplanets.vot
+├── stellarhosts.parquet
+├── exoplanets.parquet
+├── stellarhosts-metadata.toml
+└── exoplanets-metadata.toml
 ```
 
-## Fetching Data
+VOTables are source files. The server loads both Parquet files and both
+metadata TOML files at startup. Downloads and generated data files are
+excluded from Git; snapshot retention, dataset diffs, and download versioning
+are out of scope.
 
-```bash
-curl -o data/stellarhosts.vot \
-  "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts&format=votable"
+## Conversion Contract
 
-curl -o data/exoplanets.vot \
-  "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+pscomppars&format=votable"
-```
+[CLI conversion](../crates/exo-cli/src/conversion.rs) reads every `.vot` in
+the chosen directory, writes Zstd-compressed Parquet beside it, and extracts
+metadata into `<stem>-metadata.toml`. Existing outputs are overwritten.
+Conversion reopens each Parquet file and checks its row and column counts.
+The Justfile's `verify-data` recipe checks that the four expected runtime
+files exist and are non-empty.
 
-## Converting to Parquet
+Startup reads the four runtime files from `EXO_DATA_DIR`, defaulting to
+`data`. Uploaded files must be followed by restart/deployment before the
+application uses them. VOTables are conversion inputs and are not uploaded
+as runtime artifacts.
 
-Reads all `.vot` files in `data/` and writes `.parquet` alongside them:
+## Development Workflow
 
-```bash
-cargo run --package exodata -- dev convert-raw-files
-```
+Use the [exodata-data skill](../.agents/skills/exodata-data/SKILL.md) for local
+inspection, source-date queries, conversion, and the ordered NASA refresh
+workflow. The [Justfile](../Justfile) owns download URLs and operational recipes.
+[DEPLOY.md](../DEPLOY.md) remains the human-facing deployment guide.
 
-Or with a custom data directory:
-
-```bash
-cargo run --package exodata -- dev convert-raw-files --data-dir path/to/data
-```
-
-## Inspecting Data
-
-```bash
-# View VOTable column headers
-cargo run --package exodata -- dev view-fields data/stellarhosts.vot
-
-# View column metadata (units, descriptions)
-cargo run --package exodata -- dev view-metadata --path data/exoplanets.vot
-
-# Sample rows from parquet
-cargo run --package exodata -- dev view-samples
-cargo run --package exodata -- dev view-exoplanets-samples
-
-# Statistics
-cargo run --package exodata -- dev view-stats
-cargo run --package exodata -- dev view-exoplanets-stats
-
-# Run SQL against parquet files (tables: stellarhosts, exoplanets)
-cargo run --package exodata -- dev sql "SELECT pl_name, pl_orbper FROM exoplanets LIMIT 10"
-```
-
-## Full Update
-
-```bash
-# 1. Download latest data
-curl -o data/stellarhosts.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+stellarhosts&format=votable"
-curl -o data/exoplanets.vot "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+*+from+pscomppars&format=votable"
-
-# 2. Convert to parquet
-cargo run --package exodata -- dev convert-raw-files
-```
+Description selection operates on current local files; its date formats,
+classification, output, and failure behavior are specified in
+[cli.md](cli.md#description-regeneration-scan). Generation decisions remain
+in the active task context.

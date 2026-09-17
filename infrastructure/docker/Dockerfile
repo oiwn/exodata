@@ -31,6 +31,7 @@ ARG BUILD_DATE=
 ENV BUILD_DATE=${BUILD_DATE}
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
+COPY content ./content
 COPY docs ./docs
 COPY src ./src
 COPY style ./style

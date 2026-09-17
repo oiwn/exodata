@@ -1,23 +1,29 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
 
-use super::format::{
-    first_non_empty_string, format_number, median_numeric_value,
-    planet_visual_class,
-};
+use super::format::{format_number, planet_visual_class};
 use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::ExoplanetDetail;
 
 #[component]
 pub fn PlanetHeroSection(detail: ExoplanetDetail) -> impl IntoView {
-    let host = first_non_empty_string(&detail.records, "hostname");
+    let canonical = &detail.canonical;
+    let host = canonical
+        .hostname
+        .as_ref()
+        .and_then(|s| s.value.as_str())
+        .map(str::to_owned);
     let discovery_method =
-        first_non_empty_string(&detail.records, "discoverymethod");
-    let discovery_year = first_non_empty_string(&detail.records, "disc_year");
-    let radius = median_numeric_value(&detail.records, "pl_rade");
-    let mass = median_numeric_value(&detail.records, "pl_bmasse");
-    let orbital_period = median_numeric_value(&detail.records, "pl_orbper");
-    let equilibrium_temp = median_numeric_value(&detail.records, "pl_eqt");
+        canonical.discovery_method.as_ref().map(|s| s.value.clone());
+    let discovery_year = canonical
+        .discovery_year
+        .as_ref()
+        .map(|s| super::format::format_value(&s.value, ""));
+    let radius = canonical.radius.as_ref().map(|s| s.value);
+    let mass = canonical.mass.as_ref().map(|s| s.value);
+    let orbital_period = canonical.orbital_period.as_ref().map(|s| s.value);
+    let equilibrium_temp =
+        canonical.equilibrium_temperature.as_ref().map(|s| s.value);
     let visual_class = planet_visual_class(radius, equilibrium_temp);
     let host_href = host
         .as_ref()
@@ -80,12 +86,12 @@ pub fn PlanetHeroSection(detail: ExoplanetDetail) -> impl IntoView {
                         <HeroStat
                             label="Radius"
                             value=radius.map(|value| format!("{} R⊕", format_number(value))).unwrap_or_else(|| "—".to_string())
-                            hint="median non-null value".to_string()
+                            hint="default parameter set".to_string()
                         />
                         <HeroStat
                             label="Mass"
                             value=mass.map(|value| format!("{} M⊕", format_number(value))).unwrap_or_else(|| "—".to_string())
-                            hint="median non-null value".to_string()
+                            hint="default parameter set".to_string()
                         />
                     </div>
                 </div>
