@@ -70,7 +70,7 @@ pub async fn get_exoplanets_page(
     let page = table_data::normalize_table_page(page);
     let selected_columns = parse_columns(columns);
 
-    let value = table_data::get_exoplanets_data_cached(
+    let value = table_data::get_exoplanets_website_data_cached(
         &state.exoplanets_df,
         &state.table_cache,
         table_data::TableQuery {

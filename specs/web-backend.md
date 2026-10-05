@@ -64,6 +64,8 @@ on the first selected column, casting it to strings when needed. Sorting
 applies only to a selected column and removes rows with null sort values.
 `desc` selects descending order; other values use ascending order.
 
+The exoplanets website server function uses a separate cached query path: absent sorting defaults to `rowupdate` descending, and update-date sorts run before projection, retain null dates last, and preserve source-row order for equal dates. This allows sorting when Updated is hidden without adding it to the returned column selection. Website table cache keys use a distinct dataset namespace so REST queries cannot reuse website results with different null or projection semantics. REST defaults and explicit sorting contracts remain unchanged.
+
 `total_all` counts source rows before filtering/sorting; `total` counts the
 remaining rows before pagination. Out-of-range backend requests return empty
 rows; the website applies its own branded 404 behavior.

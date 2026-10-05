@@ -9,6 +9,7 @@ use moka::future::Cache;
 pub enum TableKind {
     StellarHosts,
     Exoplanets,
+    ExoplanetsWebsite,
 }
 
 /// Canonicalized sort order used in cache keys.

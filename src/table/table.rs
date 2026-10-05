@@ -288,6 +288,7 @@ fn format_column_name(col: &str) -> String {
         "st_teff" => "Temperature (K)".to_string(),
         "st_mass" => "Mass (M☉)".to_string(),
         "sy_pnum" => "Planets".to_string(),
+        "rowupdate" => "Updated".to_string(),
         _ => col.to_string(),
     }
 }

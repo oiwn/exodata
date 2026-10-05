@@ -48,6 +48,10 @@ changes, and filter commits reset to page 1; pagination preserves other state.
 Removing a sort column clears the sort. Companion error/limit columns are
 excluded from the parsed display-column selection.
 
+The exoplanets website defaults to `rowupdate` descending whenever no explicit sort is selected, including filtered, paginated, and custom-column URLs. Updated is included in its default display columns. Clearing an explicit sort restores the date default; the Updated header toggles between ascending and descending. Hiding Updated retains the descending default and shows a separate active-sort label. Navigation URLs preserve the effective sort, and reloads and browser history restore query state. Stellarhosts retains its existing sort cycle.
+
+Default update-date ordering retains records with null update dates at the end and preserves source-row order within equal dates. Release dates are not substituted for update dates.
+
 Invalid page values and pages beyond the filtered result range render the
 branded 404; zero matching rows still allow page 1. These website rules differ
 from backend page normalization; see [web-backend.md](web-backend.md#tables-and-schema).

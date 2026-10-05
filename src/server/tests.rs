@@ -17,11 +17,135 @@ mod tests {
     use crate::server::cache::{
         build_host_detail_cache, build_insight_cache, build_table_cache,
     };
+    use crate::server::data::tables::{
+        TableQuery, get_exoplanets_data, get_exoplanets_data_cached,
+        get_exoplanets_website_data, get_exoplanets_website_data_cached,
+    };
     use crate::server::functions::DataStats;
     use crate::server::handlers::{
         ApiState, build_sitemaps, get_exoplanets, get_exoplanets_schema,
         get_stellarhosts, get_stellarhosts_schema, site_routes,
     };
+
+    fn date_sort_data() -> DataFrame {
+        df! {
+            "pl_name" => &["Undated", "Old-release", "Same-update", "New-release"],
+            "hostname" => &["Host"; 4],
+            "discoverymethod" => &["Transit"; 4],
+            "disc_year" => &[2000i64, 2003, 2002, 2001],
+            "pl_orbper" => &[1.0; 4],
+            "pl_rade" => &[1.0; 4],
+            "pl_bmasse" => &[1.0; 4],
+            "rowupdate" => &[None, Some("2026-08-20"), Some("2026-08-20"), Some("2024-03-25")],
+            "releasedate" => &["2026-09-01", "2020-01-01", "2021-01-01", "2026-09-01"],
+        }.unwrap()
+    }
+
+    fn date_sort_query(page: usize, limit: usize) -> TableQuery {
+        TableQuery {
+            page,
+            limit,
+            sort_by: None,
+            order: None,
+            selected_columns: Some(vec!["pl_name".to_string()]),
+            filter: None,
+        }
+    }
+
+    #[test]
+    fn table_website_date_sort_retains_nulls_and_stable_ties_across_pages() {
+        let df = date_sort_data();
+        let first =
+            get_exoplanets_website_data(&df, date_sort_query(1, 2)).unwrap();
+        let second =
+            get_exoplanets_website_data(&df, date_sort_query(2, 2)).unwrap();
+        assert_eq!(first.columns, ["pl_name"]);
+        assert_eq!(first.total, 4);
+        assert_eq!(first.total_all, 4);
+        assert_eq!(first.rows[0]["pl_name"], "Old-release");
+        assert_eq!(first.rows[1]["pl_name"], "Same-update");
+        assert_eq!(second.rows[0]["pl_name"], "New-release");
+        assert_eq!(second.rows[1]["pl_name"], "Undated");
+        assert_eq!(second.total, 4);
+
+        let mut query = date_sort_query(1, 10);
+        query.filter = Some("release".to_string());
+        let filtered = get_exoplanets_website_data(&df, query).unwrap();
+        assert_eq!(filtered.total, 2);
+        assert_eq!(filtered.total_all, 4);
+        assert_eq!(filtered.rows[0]["pl_name"], "Old-release");
+        assert_eq!(filtered.rows[1]["pl_name"], "New-release");
+    }
+
+    #[test]
+    fn table_website_date_sort_default_columns_and_explicit_override() {
+        let df = date_sort_data();
+        let mut query = date_sort_query(1, 10);
+        query.selected_columns = None;
+        let default = get_exoplanets_website_data(&df, query).unwrap();
+        assert!(default.columns.iter().any(|column| column == "rowupdate"));
+        assert_eq!(default.rows[0]["pl_name"], "Old-release");
+        assert!(default.rows[3]["rowupdate"].is_null());
+
+        let mut query = date_sort_query(1, 10);
+        query.sort_by = Some("disc_year".to_string());
+        query.order = Some("asc".to_string());
+        query.selected_columns =
+            Some(vec!["pl_name".to_string(), "disc_year".to_string()]);
+        let explicit = get_exoplanets_website_data(&df, query).unwrap();
+        assert_eq!(explicit.rows[0]["pl_name"], "Undated");
+        assert_eq!(explicit.rows[3]["pl_name"], "Old-release");
+        assert_eq!(
+            get_exoplanets_data(&df, date_sort_query(1, 10))
+                .unwrap()
+                .rows[0]["pl_name"],
+            "Undated"
+        );
+    }
+
+    #[tokio::test]
+    async fn table_website_date_sort_cache_is_separate_from_rest() {
+        let df = date_sort_data();
+        let cache = build_table_cache(16);
+        for website_first in [true, false] {
+            cache.invalidate_all();
+            let query = || {
+                let mut query = date_sort_query(1, 10);
+                query.sort_by = Some("rowupdate".to_string());
+                query.order = Some("desc".to_string());
+                query.selected_columns =
+                    Some(vec!["pl_name".to_string(), "rowupdate".to_string()]);
+                query
+            };
+            let (website, rest) = if website_first {
+                let website =
+                    get_exoplanets_website_data_cached(&df, &cache, query())
+                        .await
+                        .unwrap();
+                let rest = get_exoplanets_data_cached(&df, &cache, query())
+                    .await
+                    .unwrap();
+                (website, rest)
+            } else {
+                let rest = get_exoplanets_data_cached(&df, &cache, query())
+                    .await
+                    .unwrap();
+                let website =
+                    get_exoplanets_website_data_cached(&df, &cache, query())
+                        .await
+                        .unwrap();
+                (website, rest)
+            };
+            assert_eq!(website.total, 4);
+            assert_eq!(rest.total, 3);
+            assert_eq!(website.rows[3]["pl_name"], "Undated");
+            let cached = get_exoplanets_website_data_cached(&df, &cache, query())
+                .await
+                .unwrap();
+            assert_eq!(cached.total, 4);
+            assert_eq!(cached.rows, website.rows);
+        }
+    }
 
     fn create_test_state() -> ApiState {
         // Create test dataframes with all default columns that common.rs expects

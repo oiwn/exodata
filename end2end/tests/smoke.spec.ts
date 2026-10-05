@@ -141,6 +141,73 @@ test("SSR + hydration works on /exoplanets", async ({ page }) => {
   await expectNoClientErrors(page, capture);
 });
 
+test("exoplanets date sort defaults survive overrides and hidden columns", async ({
+  page,
+  request,
+}) => {
+  const capture = captureClientErrors(page);
+  const response = await request.get(
+    "/rest/exoplanets?columns=pl_name,rowupdate&sort_by=rowupdate&order=desc&limit=50",
+  );
+  expect(response.ok()).toBeTruthy();
+  const payload = await response.json();
+  const expectedDates = payload.data.map((row: { rowupdate: string }) => row.rowupdate);
+  expect(expectedDates.length).toBeGreaterThan(0);
+
+  const ssr = await request.get("/exoplanets");
+  expect(ssr.status()).toBe(200);
+  const html = await ssr.text();
+  expect(html).toContain("Updated");
+  expect(html).toContain(expectedDates[0]);
+
+  await page.goto("/");
+  await page.locator('nav a[href="/exoplanets"]').first().click();
+  const updated = page.getByRole("columnheader", { name: /Updated/ });
+  await expect(updated).toContainText("↓");
+  await expect.poll(async () => page.locator("table tbody tr td:last-child").allTextContents())
+    .toEqual(expectedDates);
+  const defaultNames = await page.locator("table tbody tr td:first-child").allTextContents();
+
+  await updated.click();
+  await expect(page).toHaveURL(/sort=rowupdate&order=asc/);
+  await expect(updated).toContainText("↑");
+  await page.goBack();
+  await expect(updated).toContainText("↓");
+  await expect.poll(async () => page.locator("table tbody tr td:first-child").allTextContents())
+    .toEqual(defaultNames);
+
+  const name = page.locator("table thead th").first();
+  await name.click();
+  await expect(page).toHaveURL(/sort=pl_name&order=asc/);
+  await name.click();
+  await expect(page).toHaveURL(/sort=pl_name&order=desc/);
+  await name.click();
+  await expect(page).toHaveURL(/sort=rowupdate&order=desc/);
+  await expect(updated).toContainText("↓");
+
+  await page.goto("/exoplanets?columns=pl_name");
+  await expect(page.locator("table thead tr:first-child th")).toHaveCount(1);
+  await expect(page.getByText("Sorted by Updated (newest first)")).toBeVisible();
+  await expect.poll(async () => page.locator("table tbody tr td:first-child").allTextContents())
+    .toEqual(defaultNames);
+  await page.reload();
+  await expect(page.getByText("Sorted by Updated (newest first)")).toBeVisible();
+
+  await page.getByRole("button", { name: "Next" }).last().click();
+  await expect(page).toHaveURL(/page=2&sort=rowupdate&order=desc&columns=pl_name/);
+  await page.reload();
+  await expect(page.getByText("Sorted by Updated (newest first)")).toBeVisible();
+
+  await page.goto("/exoplanets?filter=Kepler");
+  await expect(updated).toContainText("↓");
+  await expect(page.locator("table tbody tr").first()).toContainText("Kepler");
+  await page.goto("/exoplanets?sort=disc_year&order=asc");
+  await expect(page.getByRole("columnheader", { name: /disc_year/ })).toContainText("↑");
+  await page.reload();
+  await expect(page.getByRole("columnheader", { name: /disc_year/ })).toContainText("↑");
+  await expectNoClientErrors(page, capture);
+});
+
 test("catalog table interactions preserve query state", async ({ page }) => {
   for (const route of ["/stellarhosts", "/exoplanets"]) {
     const capture = captureClientErrors(page);

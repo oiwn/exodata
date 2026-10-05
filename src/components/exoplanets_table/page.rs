@@ -18,7 +18,7 @@ use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_router::lazy_route;
 
 const EXOPLANETS_BASE_PATH: &str = "/exoplanets";
-const DEFAULT_EXOPLANETS_COLUMNS: [&str; 7] = [
+const DEFAULT_EXOPLANETS_COLUMNS: [&str; 8] = [
     "pl_name",
     "hostname",
     "discoverymethod",
@@ -26,6 +26,7 @@ const DEFAULT_EXOPLANETS_COLUMNS: [&str; 7] = [
     "pl_orbper",
     "pl_rade",
     "pl_bmasse",
+    "rowupdate",
 ];
 
 fn navigate_exoplanets(
@@ -65,10 +66,14 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             &DEFAULT_EXOPLANETS_COLUMNS,
         )
     });
-    let initial = match initial {
+    let mut initial = match initial {
         Ok(initial) => initial,
         Err(_) => return catalog_not_found_view(),
     };
+    initial.state = initial.state.with_exoplanets_default_sort();
+    initial.canonical_query = initial
+        .canonical_query
+        .map(|query| query.with_exoplanets_default_sort());
     let canonical_query = initial.canonical_query.clone();
 
     if let Some(canonical_query) = canonical_query.clone() {
@@ -93,6 +98,25 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
         initial.state.columns,
         initial.state.filter,
     );
+    Effect::new(move |_| {
+        let query = query_map.with(|q| {
+            initialize_table_query(
+                q.get("page").as_deref(),
+                q.get("sort").as_deref(),
+                q.get("order").as_deref(),
+                q.get("columns").as_deref(),
+                q.get("filter").as_deref(),
+                &DEFAULT_EXOPLANETS_COLUMNS,
+            )
+        });
+        if let Ok(query) = query {
+            let query = query.state.with_exoplanets_default_sort();
+            if untrack(|| table_state.query()) != query {
+                table_state.set_filter_input.set(query.filter.clone());
+                table_state.set_query(query);
+            }
+        }
+    });
     let (selector_is_open, set_selector_is_open) = signal(false);
     let (is_loading, set_is_loading) = signal(false);
     let (has_loaded, set_has_loaded) = signal(false);
@@ -185,7 +209,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let on_sort = Callback::new({
         let navigate = navigate.clone();
         move |column: String| {
-            let query = table_state.query().with_sort_column(column);
+            let query = table_state.query().with_exoplanets_sort_column(column);
             table_state.set_query(query.clone());
             navigate_exoplanets(&navigate, &query, Default::default());
         }
@@ -194,7 +218,10 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
     let on_columns_change = Callback::new({
         let navigate = navigate.clone();
         move |columns: Vec<String>| {
-            let query = table_state.query().with_columns(columns);
+            let query = table_state
+                .query()
+                .with_columns(columns)
+                .with_exoplanets_default_sort();
             table_state.set_query(query.clone());
             navigate_exoplanets(
                 &navigate,
@@ -271,6 +298,16 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
             />
 
             <div class="catalog-table-page__content">
+                {move || {
+                    if table_state.sort_column.get().as_deref() == Some("rowupdate")
+                        && !table_state.selected_columns.get().iter().any(|column| column == "rowupdate")
+                    {
+                        let order = if table_state.sort_order.get() == "desc" { "newest first" } else { "oldest first" };
+                        view! { <p class="text-sm text-gray-300">{format!("Sorted by Updated ({order})")}</p> }.into_any()
+                    } else {
+                        ().into_any()
+                    }
+                }}
                 <LoadingOverlay loading=show_overlay />
                 <Transition fallback=move || view! { <CatalogTableLoadingFallback/> }>
                     {move || {
