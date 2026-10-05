@@ -1,4 +1,4 @@
-session_name: exoplanets-catalog
+session_name: exodata
 shell_command_before: "export RUST_LOG=info; clear"
 windows:
   - window_name: code
@@ -7,11 +7,11 @@ windows:
     panes:
       - shell_command:
         - hx
-  - window_name: agent
+  - window_name: agents
     start-directory: ./
     panes:
       - shell_command:
-        - codex
+        - herdr --session exodata
   - window_name: cmd
     start-directory: ./
     panes:
@@ -21,3 +21,7 @@ windows:
     panes:
       - shell_command:
         - eza --long
+  - window_name: yazi
+    panes:
+      - shell_command:
+        - yazi

@@ -48,3 +48,4 @@ infrastructure/ansible/inventory/group_vars/leptos_env.yml
 # misc
 .DS_Store
 .crush.json
+specs/exodata_seo_audit.md
