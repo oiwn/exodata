@@ -3,11 +3,10 @@
 
 ## Active
 
-- **0003-homepage-mcp-description** — approval — homepage mcp description (https://github.com/oiwn/exodata/issues/148)
+- **0004-detail-color-label-contrast** — approval — detail color label contrast (https://github.com/oiwn/exodata/issues/149)
 
 ## Draft
 
-- **0004-detail-color-label-contrast** — draft — detail color label contrast (https://github.com/oiwn/exodata/issues/149)
 - **0005-stellarhost-source-text-contrast** — draft — stellarhost source text contrast (https://github.com/oiwn/exodata/issues/150)
 - **0006-stellarhost-radius-comparison-layout** — draft — stellarhost radius comparison layout (https://github.com/oiwn/exodata/issues/151)
 - **0007-stellarhost-radius-caption** — draft — stellarhost radius caption (https://github.com/oiwn/exodata/issues/152)
@@ -21,3 +20,4 @@
 
 - **0001-exoplanets-default-date-sort** — blocked — exoplanets default date sort (https://github.com/oiwn/exodata/issues/143)
 - **0002-exoplanets-mcp-seo-research** — blocked — exoplanets mcp seo research (https://github.com/oiwn/exodata/issues/146)
+- **0003-homepage-mcp-description** — blocked — homepage mcp description (https://github.com/oiwn/exodata/issues/148)

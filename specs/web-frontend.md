@@ -99,6 +99,11 @@ description arrives through `get_host_description` and folds to nothing on
 absence or error, so systems without stored prose render normally. Their
 contracts are in [backend details](web-backend.md#detail-contracts).
 
+The star visual's Approximate color badge uses black text for both lines over
+an opaque pale tint derived from the temperature palette (including its missing
+temperature fallback). Its contrast is independent of the underlying star or
+page background. The badge retains its existing position, shape, and wording.
+
 Planet details render hero/visual, canonical summary, comparison, and provenance
 with JSON/CSV exports. See [exoplanet-detail.md](exoplanet-detail.md).
 Both detail pages currently render feature-specific resource errors rather

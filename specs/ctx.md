@@ -1,3 +1,3 @@
 # Current Task Context
 
-Active task: [0003-homepage-mcp-description](tasks/0003-homepage-mcp-description.md).
+Active task: [0004-detail-color-label-contrast](tasks/0004-detail-color-label-contrast.md).

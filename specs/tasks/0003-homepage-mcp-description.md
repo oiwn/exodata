@@ -1,10 +1,11 @@
 ---
 id: 0003-homepage-mcp-description
-status: approval
+status: blocked
 scope: [style/components/homepage-manual.css, src/components/**/*.rs, src/server/*.rs, locales/*.json, docs/mcp.md]
 created: 2026-10-05
 source: https://github.com/oiwn/exodata/issues/148
 attempts: 3
+blocked_reason: Homepage implementation verified; awaiting remaining manual checks and shared batch PR merge while task 0004 proceeds
 ---
 # Task: homepage mcp description
 
@@ -89,3 +90,4 @@ Replace the homepage MCP manual with a brief localized introduction and setup li
 - 2026-10-07 advance in-progress/fix → in-progress/verify
 - 2026-10-07 advance in-progress/verify → in-progress/review
 - 2026-10-07 advance in-progress/review → approval
+- 2026-10-07 blocked: Homepage implementation verified; awaiting remaining manual checks and shared batch PR merge while task 0004 proceeds

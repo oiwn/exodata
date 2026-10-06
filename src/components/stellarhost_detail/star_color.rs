@@ -15,7 +15,7 @@ pub fn star_visual_tokens(teff: Option<f64>) -> StarVisualTokens {
     let rim = darken((r, g, b), 0.26);
     let glow = with_alpha((r, g, b), 0.30);
     let halo = with_alpha((r, g, b), 0.18);
-    let badge = with_alpha(darken((r, g, b), 0.45), 0.24);
+    let badge = rgb_css(highlight);
 
     StarVisualTokens {
         core_gradient: format!(

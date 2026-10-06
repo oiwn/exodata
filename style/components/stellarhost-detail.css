@@ -126,11 +126,11 @@
 }
 
 .star-visual__badge-label {
-  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+  @apply text-xs uppercase tracking-[0.18em] text-black;
 }
 
 .star-visual__badge-value {
-  @apply text-sm text-white;
+  @apply text-sm text-black;
 }
 
 .host-detail-section {
