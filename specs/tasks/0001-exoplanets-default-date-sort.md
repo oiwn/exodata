@@ -1,10 +1,11 @@
 ---
 id: 0001-exoplanets-default-date-sort
-status: approval
+status: blocked
 scope: [src/components/exoplanets_table/page.rs, end2end/tests/smoke.spec.ts, specs/web-frontend.md, specs/web-backend.md, src/table/*.rs, src/server/**/*.rs]
 created: 2026-10-05
 source: https://github.com/oiwn/exodata/issues/143
 attempts: 1
+blocked_reason: Implementation verified and committed; awaiting the shared batch PR merge while following tasks proceed
 ---
 # Task: exoplanets default date sort
 
@@ -105,3 +106,4 @@ Default the exoplanets website to newest update dates first, with an Updated col
 - 2026-10-05 advance in-progress/fix → in-progress/verify
 - 2026-10-06 advance in-progress/verify → in-progress/review
 - 2026-10-06 advance in-progress/review → approval
+- 2026-10-06 blocked: Implementation verified and committed; awaiting the shared batch PR merge while following tasks proceed

@@ -13,8 +13,8 @@
     "language": "言語"
   },
   "home": {
-    "title": "系外惑星カタログ",
-    "description": "検索可能なテーブル、発見統計、サーバー描画の詳細ページから、確認済み系外惑星とその主星を探索できます。",
+    "title": "系外惑星データと MCP サーバー",
+    "description": "NASA 系外惑星アーカイブのレコードを閲覧したり、AI エージェントを Exodata のホスト型 MCP サーバーに接続して、読み取り専用 SQL、スキーマ確認、JSON/CSV の詳細エクスポートを利用できます。",
     "hero_title": "🌌 系外惑星アーカイブ",
     "hero_subtitle": "宇宙を探索する：確認済み系外惑星とその主星の精密なカタログ",
     "loading": "カタログデータを読み込んでいます…",
@@ -83,6 +83,9 @@
     "detection_sources_subtitle": "発見施設で分類した個別の惑星"
   },
   "manual": {
+    "summary_title": "AI エージェント向けの系外惑星 MCP サーバー",
+    "summary_description": "AI エージェントを Exodata のホスト型系外惑星 MCP サーバーに接続できます。スキーマ確認、読み取り専用 SQL、厳選されたデータ分析、JSON/CSV の詳細エクスポートを通じて、NASA 系外惑星アーカイブのレコードを探索できます。",
+    "setup_link": "AI エージェントを接続",
     "examples_title": "実際のカタログレコードを開く",
     "examples_subtitle": "安定したルートにより、ページ、エクスポート、API 文書、ツール設定を簡単に共有できます。",
     "stellar_profile": "恒星ホストのプロフィール",

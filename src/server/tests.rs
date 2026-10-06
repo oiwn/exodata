@@ -674,6 +674,7 @@ mod tests {
         assert!(xml.contains("<loc>https://example.com/docs</loc>"));
         assert!(xml.contains("<loc>https://example.com/docs/cli</loc>"));
         assert!(xml.contains("<loc>https://example.com/docs/api</loc>"));
+        assert!(xml.contains("<loc>https://example.com/docs/mcp</loc>"));
         assert!(xml.contains("<loc>https://example.com/stellarhosts</loc>"));
         assert!(xml.contains("<loc>https://example.com/exoplanets</loc>"));
         assert!(xml.contains("<loc>https://example.com/insights</loc>"));

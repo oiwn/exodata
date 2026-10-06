@@ -164,11 +164,12 @@ using sorted, unique hostnames or planet names from the loaded datasets.
 `public/robots.txt` points to the sitemap index.
 
 The static sitemap includes `/`, `/zh-CN`, `/ja`, `/docs`, `/docs/cli`,
-`/docs/api`, `/stellarhosts`, `/exoplanets`, `/insights`, and registered
+`/docs/api`, `/docs/mcp`, `/stellarhosts`, `/exoplanets`, `/insights`, and registered
 `/insights/:slug` pages. Localized table/detail routes are not advertised;
 see [localization.md](localization.md) for translation and metadata eligibility.
-`/docs/mcp` and `/about` are currently absent from the sitemap; their intended
-inclusion remains proposed in [ideas.md](ideas.md#routing-and-documentation).
+`/docs/mcp` is the English MCP setup landing page; localized docs routes remain
+unadvertised until their content and metadata are translated. `/about` redirects
+to `/docs` and is not separately included.
 
 All entries share a `YYYY-MM-DD` `<lastmod>` date selected by
 `compute_build_date()` in `src/main.rs`: the build-time `BUILD_DATE` value,

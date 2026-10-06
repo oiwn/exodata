@@ -24,7 +24,7 @@ Traditional Chinese is out of scope unless explicitly requested.
 - Translated global navigation, mobile controls, footer text, homepage metadata,
   hero, loading/error states, statistics headings, and the complete homepage
   manual.
-- Added Chinese and Japanese homepage Markdown under `docs/i18n/`.
+- Added Chinese and Japanese homepage Markdown under `docs/i18n/`; these remain source material. The current brief MCP introduction, setup link, and homepage discovery metadata use locale JSON strings.
 - Set `<html lang>` from the URL locale and added homepage canonical and
   `hreflang` metadata.
 - Added `/zh-CN` and `/ja` to the static sitemap; localized table/detail routes

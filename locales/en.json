@@ -13,8 +13,8 @@
     "language": "Language"
   },
   "home": {
-    "title": "Exoplanets Catalog",
-    "description": "Explore confirmed exoplanets and their host stars with searchable tables, discovery stats, and server-rendered detail pages.",
+    "title": "Exoplanet Data & MCP Server",
+    "description": "Browse NASA Exoplanet Archive records or connect your AI agent to Exodata's hosted MCP server for read-only SQL, schema discovery, and JSON/CSV detail exports.",
     "hero_title": "🌌 Exoplanet Archive",
     "hero_subtitle": "Exploring the cosmos: A comprehensive catalog of confirmed exoplanets and their host stars",
     "loading": "Loading catalog data...",
@@ -83,6 +83,9 @@
     "detection_sources_subtitle": "Distinct planets grouped by discovery facility"
   },
   "manual": {
+    "summary_title": "Exoplanet MCP server for AI agents",
+    "summary_description": "Connect your AI agent to Exodata's hosted exoplanet MCP server. Explore NASA Exoplanet Archive records with schema discovery, read-only SQL, curated insights, and JSON/CSV detail exports.",
+    "setup_link": "Connect your AI agent",
     "examples_title": "Open a real catalog record",
     "examples_subtitle": "Stable routes make pages, exports, API docs, and tool setup easy to share.",
     "stellar_profile": "Stellar host profile",

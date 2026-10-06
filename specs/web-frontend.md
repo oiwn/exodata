@@ -71,6 +71,13 @@ summary cards and paired distribution blocks:
 3. Discovery methods / discovery years
 4. Planet temperature bands / detection sources
 
+After the statistics, the homepage MCP section renders one localized heading,
+brief description, and locale-aware link to `/docs/mcp`. Setup commands and
+SQL examples live in the guide rather than on the homepage. The section uses
+locale JSON strings, an H2 beneath the catalog hero's H1, and stable fragment
+destinations `mcp-exoplanet-data`, `catalog-examples-title`, and `mcp-setup-title`;
+the latter two remain aliases into the brief introduction.
+
 Planet distributions count distinct planets using a canonical value per planet.
 The mass block uses median `pl_bmasse` values and fixed Earth-mass bands. The
 stellar-class block counts distinct hosts by the normalized leading letter of a
@@ -106,6 +113,12 @@ Docs pages select compiled `docs/` Markdown through
 links to website routes. The renderer is called by the page component, not by
 a dedicated server function. Unknown documentation slugs have a docs-specific
 not-found view. Specs are not published automatically.
+
+The English `/docs/mcp` landing page has an exoplanet-specific title and
+description, hosted endpoint and quick setup, source/refresh and reference-row
+answers, schema-first SQL examples, tool limits, and named detail exports.
+Client commands use explicit transport and scope where applicable; documentation
+checks inspect CLI help or primary sources without modifying client configuration.
 
 ## Styling with Tailwind CSS
 

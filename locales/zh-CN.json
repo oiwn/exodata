@@ -13,8 +13,8 @@
     "language": "语言"
   },
   "home": {
-    "title": "系外行星目录",
-    "description": "通过可搜索的数据表、发现统计和服务端渲染的详情页，探索已确认的系外行星及其宿主恒星。",
+    "title": "系外行星数据与 MCP 服务器",
+    "description": "浏览 NASA 系外行星档案记录，或将 AI 智能体连接到 Exodata 托管的 MCP 服务器，使用只读 SQL、模式发现以及 JSON/CSV 详情导出。",
     "hero_title": "🌌 系外行星档案",
     "hero_subtitle": "探索宇宙：已确认系外行星及其宿主恒星的精确目录",
     "loading": "正在加载目录数据……",
@@ -83,6 +83,9 @@
     "detection_sources_subtitle": "按发现设施分组的不同系外行星"
   },
   "manual": {
+    "summary_title": "面向 AI 智能体的系外行星 MCP 服务器",
+    "summary_description": "将 AI 智能体连接到 Exodata 托管的系外行星 MCP 服务器。通过模式发现、只读 SQL、精选数据分析及 JSON/CSV 详情导出，探索 NASA 系外行星档案记录。",
+    "setup_link": "连接 AI 智能体",
     "examples_title": "打开真实的目录记录",
     "examples_subtitle": "稳定的路由让页面、导出文件、API 文档和工具配置易于分享。",
     "stellar_profile": "恒星宿主资料",

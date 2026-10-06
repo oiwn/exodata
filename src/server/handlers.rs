@@ -765,6 +765,7 @@ fn build_static_urls(site_url: &str) -> Vec<String> {
         format!("{site_url}/docs"),
         format!("{site_url}/docs/cli"),
         format!("{site_url}/docs/api"),
+        format!("{site_url}/docs/mcp"),
         format!("{site_url}/stellarhosts"),
         format!("{site_url}/exoplanets"),
         format!("{site_url}/insights"),

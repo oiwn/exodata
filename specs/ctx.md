@@ -1,3 +1,3 @@
 # Current Task Context
 
-Active task: [0001-exoplanets-default-date-sort](tasks/0001-exoplanets-default-date-sort.md).
+Active task: [0003-homepage-mcp-description](tasks/0003-homepage-mcp-description.md).

@@ -3,12 +3,10 @@
 
 ## Active
 
-- **0001-exoplanets-default-date-sort** — approval — exoplanets default date sort (https://github.com/oiwn/exodata/issues/143)
+- **0003-homepage-mcp-description** — approval — homepage mcp description (https://github.com/oiwn/exodata/issues/148)
 
 ## Draft
 
-- **0002-exoplanets-mcp-seo-research** — draft — exoplanets mcp seo research (https://github.com/oiwn/exodata/issues/146)
-- **0003-homepage-mcp-description** — draft — homepage mcp description (https://github.com/oiwn/exodata/issues/148)
 - **0004-detail-color-label-contrast** — draft — detail color label contrast (https://github.com/oiwn/exodata/issues/149)
 - **0005-stellarhost-source-text-contrast** — draft — stellarhost source text contrast (https://github.com/oiwn/exodata/issues/150)
 - **0006-stellarhost-radius-comparison-layout** — draft — stellarhost radius comparison layout (https://github.com/oiwn/exodata/issues/151)
@@ -17,3 +15,9 @@
 - **0009-homepage-planet-title-glyph** — draft — homepage planet title glyph (https://github.com/oiwn/exodata/issues/154)
 - **0010-catalog-detail-error-pages** — draft — catalog detail error pages (https://github.com/oiwn/exodata/issues/155)
 - **0011-homepage-counter-links** — draft — homepage counter links (https://github.com/oiwn/exodata/issues/156)
+- **0012-seo-audit-fixes** — draft — seo audit fixes (https://github.com/oiwn/exodata/issues/159)
+
+## Blocked
+
+- **0001-exoplanets-default-date-sort** — blocked — exoplanets default date sort (https://github.com/oiwn/exodata/issues/143)
+- **0002-exoplanets-mcp-seo-research** — blocked — exoplanets mcp seo research (https://github.com/oiwn/exodata/issues/146)
