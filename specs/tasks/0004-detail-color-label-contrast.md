@@ -1,9 +1,11 @@
 ---
 id: 0004-detail-color-label-contrast
-status: approval
+status: blocked
 scope: [style/components/*.css, src/components/**/*.rs, src/server/*.rs, locales/*.json, docs/mcp.md]
 created: 2026-10-05
 source: https://github.com/oiwn/exodata/issues/149
+attempts: 1
+blocked_reason: Design changes verified; homepage spacing visually approved, remaining badge checks and shared batch merge pending while task 0005 proceeds
 ---
 # Task: detail color label contrast
 
@@ -22,6 +24,7 @@ source: https://github.com/oiwn/exodata/issues/149
 
 ## Manual checks
 
+- [ ] Refresh the homepage and inspect the MCP card: more internal top/bottom padding, smaller surrounding vertical gaps, preserved statistics spacing, and acceptable mobile wrapping.
 - [ ] Run `cargo leptos watch --split` with existing runtime data; open `http://127.0.0.1:3000/stellarhosts/Kepler-154` and confirm both “Approximate color” and “from effective temperature” are readable in black on the pale badge.
 - [ ] Inspect a cool star (for example TRAPPIST-1), a hotter star, and a missing-temperature host available in the loaded catalog; check badge contrast and placement at desktop and mobile sizes.
 - [ ] Open a planet detail page such as `/exoplanets/Kepler-22%20b` and inspect the existing dark badge. Report any remaining contrast problem before changing that badge's treatment.
@@ -32,12 +35,15 @@ Improve stellar-host color badge contrast with black text and an opaque pale tem
 
 ## Context
 
+- Additional user-approved design follow-up on 2026-10-07: rebalance homepage MCP spacing in `src/components/overview.rs` and `style/components/homepage-manual.css`, already covered by grouped scope. Set card vertical padding to 1.5rem, gap above it to 1.5rem, and gap before the footer to 1.5rem; preserve 2.5rem spacing between the statistics sections. Task 0003 remains parked; this active design review records the follow-up without reopening unrelated behavior.
 - [Issue #149](https://github.com/oiwn/exodata/issues/149) names `/stellarhosts/Kepler-154` and asks for black text in the Approximate color badge; the planet equivalent is an inspection follow-up, not an automatic black-text change.
 - User authorized starting on 2026-10-07. Intended new edits: `style/components/stellarhost-detail.css` and `src/components/stellarhost_detail/star_color.rs`; technical contract in `specs/web-frontend.md`.
 - Grouped scopes include retained uncommitted task 0002/0003 files solely for batch checking: `docs/mcp.md`, `src/components/docs/registry.rs`, `src/components/homepage_manual.rs`, `src/server/handlers.rs`, `src/server/tests.rs`, `style/components/homepage-manual.css`, and the three locale JSON files. Other files matched by the globs remain outside this plan.
 
 ## Findings
 
+- The user confirmed the revised homepage spacing looks good on 2026-10-07 and requested the next task. Other badge-specific manual checks remain unticked; task parked pending those checks and the shared batch merge.
+- Homepage spacing follow-up verified on 2026-10-07: formatting, `git diff --check`, and split SSR/hydration/Tailwind build passed. Reviewed the two-file layout change: inner card padding 1rem → 1.5rem; upper gap 2.5rem → 1.5rem; footer gap 4rem → 1.5rem. Grouping statistics preserves their existing 2.5rem spacing. Rendered balance awaits the user's refresh/check.
 - Verification on 2026-10-07: two existing star-color tests passed; Rust formatting and split SSR/hydration/Tailwind build passed. A read-only calculation using the source palette anchors/highlight factor checked 716 samples including interpolation and fallback, with minimum black-text contrast 14.81:1. `git diff --check` passed; specdev reports zero errors and 37 existing warnings, with none for this task. Rendered appearance remains for the user to confirm.
 - Star badge labels currently use `text-slate-400` and `text-white`, with a darkened temperature tint at 24% opacity. An opaque pale tint prevents underlying star/glow/background from changing text contrast.
 - Planet labels already sit on a dark slate badge; retain its existing treatment pending the user's rendered-page inspection. No local server was listening during initial inspection.
@@ -61,3 +67,8 @@ Improve stellar-host color badge contrast with black text and an opaque pale tem
 - 2026-10-07 advance in-progress/implement → in-progress/verify
 - 2026-10-07 advance in-progress/verify → in-progress/review
 - 2026-10-07 advance in-progress/review → approval
+- 2026-10-07 advance approval → in-progress/fix (attempts 1)
+- 2026-10-07 advance in-progress/fix → in-progress/verify
+- 2026-10-07 advance in-progress/verify → in-progress/review
+- 2026-10-07 advance in-progress/review → approval
+- 2026-10-07 blocked: Design changes verified; homepage spacing visually approved, remaining badge checks and shared batch merge pending while task 0005 proceeds

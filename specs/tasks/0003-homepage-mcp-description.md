@@ -40,6 +40,7 @@ Replace the homepage MCP manual with a brief localized introduction and setup li
 
 ## Findings
 
+- Subsequent screenshot feedback on 2026-10-07: the user clarified that outside gaps are too large and inside padding too small. The active task 0004 design follow-up now sets card vertical padding and both surrounding gaps to 1.5rem, preserving the statistics' existing spacing. This supersedes the earlier `py-4` adjustment.
 - Headline correction approved on 2026-10-07: issue #148 explicitly requests MCP in the homepage headline. Changed the English heading to “Exoplanet MCP server for AI agents” and updated Chinese/Japanese equivalents. This resolves the missed wording requirement; description and setup link remain as reviewed.
 - Headline verification: all three locale JSON files parse and their headings include MCP; split SSR/hydration build and `git diff --check` passed on 2026-10-07. Refresh the homepage to check the updated heading and wrapping.
 - OpenCode setup follow-up on 2026-10-07: installed `opencode mcp add --help` confirms the named server, `--url`, and optional `--global` flags. Added the user's exact command to the guide's quick setup and retained JSON as an alternative. Earlier verification covered the provider's JSON example but missed this CLI shortcut. Only help was executed; no MCP configuration was written. This explicitly requested documentation correction extends the guide file already included in the task's batch scope.

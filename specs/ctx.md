@@ -1,3 +1,3 @@
 # Current Task Context
 
-Active task: [0004-detail-color-label-contrast](tasks/0004-detail-color-label-contrast.md).
+Active task: [0007-stellarhost-radius-caption](tasks/0007-stellarhost-radius-caption.md).

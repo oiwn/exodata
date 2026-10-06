@@ -65,7 +65,7 @@ pub fn OverviewPage() -> impl IntoView {
             </div>
 
             // Main content
-            <div class="container mx-auto px-4 pb-16">
+            <div class="container mx-auto px-4 pb-6">
                 <Suspense
                     fallback=move || {
                         view! {
@@ -86,9 +86,11 @@ pub fn OverviewPage() -> impl IntoView {
                     {move || {
                         stats_resource.get().map(|result| match result {
                             Ok(stats) => leptos::either::Either::Left(view! {
-                                <div class="space-y-10">
-                                    <StatsOverview stats=stats.clone()/>
-                                    <DetailedStats stats=stats/>
+                                <div class="space-y-6">
+                                    <div class="space-y-10">
+                                        <StatsOverview stats=stats.clone()/>
+                                        <DetailedStats stats=stats/>
+                                    </div>
                                     <HomepageManual/>
                                 </div>
                             }),

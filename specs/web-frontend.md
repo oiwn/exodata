@@ -78,6 +78,10 @@ locale JSON strings, an H2 beneath the catalog hero's H1, and stable fragment
 destinations `mcp-exoplanet-data`, `catalog-examples-title`, and `mcp-setup-title`;
 the latter two remain aliases into the brief introduction.
 
+The MCP card has 1.5rem vertical padding, a 1.5rem gap after the statistics,
+and a 1.5rem gap before the footer. The statistics sections retain their
+existing 2.5rem spacing independently of the final MCP section.
+
 Planet distributions count distinct planets using a canonical value per planet.
 The mass block uses median `pl_bmasse` values and fixed Earth-mass bands. The
 stellar-class block counts distinct hosts by the normalized leading letter of a
@@ -103,6 +107,16 @@ The star visual's Approximate color badge uses black text for both lines over
 an opaque pale tint derived from the temperature palette (including its missing
 temperature fallback). Its contrast is independent of the underlying star or
 page background. The badge retains its existing position, shape, and wording.
+
+The stellar radius comparison places both stars in one shared dark panel.
+Per-star alignment wrappers have no card background, border, or rounded frame;
+circle scaling and labels remain unchanged, with side-by-side desktop and
+stacked mobile placement.
+
+Canonical Summary source labels/separators, plain reference values, and the
+no-usable-source-row message use explicit light slate text against the dark
+detail background. Reference anchors keep their existing light-blue link style
+and destinations; this presentation rule does not affect record selection.
 
 Planet details render hero/visual, canonical summary, comparison, and provenance
 with JSON/CSV exports. See [exoplanet-detail.md](exoplanet-detail.md).
