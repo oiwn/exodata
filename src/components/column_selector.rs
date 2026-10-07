@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::table::is_err_or_lim;
 use exo_types::metadata::ColumnMetadata;
 use leptos::ev::Event;
@@ -14,6 +15,7 @@ fn SelectedColumnItem(
     on_move_down: Callback<String>,
     on_remove: Callback<String>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let name_for_up = name.clone();
     let name_for_down = name.clone();
     let name_for_remove = name.clone();
@@ -27,7 +29,7 @@ fn SelectedColumnItem(
                     class="text-gray-500 hover:text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed"
                     disabled=is_first
                     on:click=move |_| on_move_up.run(name_for_up.clone())
-                    title="Move up"
+                    title=t_string!(i18n, table_controls.move_up)
                 >
                     "▲"
                 </button>
@@ -35,7 +37,7 @@ fn SelectedColumnItem(
                     class="text-gray-500 hover:text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed"
                     disabled=is_last
                     on:click=move |_| on_move_down.run(name_for_down.clone())
-                    title="Move down"
+                    title=t_string!(i18n, table_controls.move_down)
                 >
                     "▼"
                 </button>
@@ -46,7 +48,7 @@ fn SelectedColumnItem(
             <button
                 class="text-red-400 hover:text-red-300 text-sm"
                 on:click=move |_| on_remove.run(name_for_remove.clone())
-                title="Remove column"
+                title=t_string!(i18n, table_controls.remove_column)
             >
                 "✕"
             </button>
@@ -109,6 +111,7 @@ fn SelectedColumnsList(
     on_remove: Callback<String>,
     on_clear_all: Callback<()>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let selected_with_index = move || {
         let cols = selected_columns.get();
         let total = cols.len();
@@ -121,20 +124,20 @@ fn SelectedColumnsList(
     view! {
         <div>
             <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-semibold text-gray-300">"Selected Columns (drag to reorder)"</h3>
+                <h3 class="text-sm font-semibold text-gray-300">{t!(i18n, table_controls.selected_columns)}</h3>
                 <button
                     class="px-2 py-1 text-xs rounded-md bg-slate-700 hover:bg-slate-600 text-gray-300 transition-colors"
                     on:click=move |_| on_clear_all.run(())
                 >
-                    "Clear All"
+                    {t!(i18n, table_controls.clear_all)}
                 </button>
             </div>
             <div class="rounded-lg border border-slate-600 bg-slate-900/30 overflow-hidden">
                 <Show
                     when=move || !selected_columns.get().is_empty()
-                    fallback=|| view! {
+                    fallback=move || view! {
                         <div class="px-4 py-8 text-center text-gray-500 text-sm">
-                            "No columns selected. Select from the list below."
+                            {t!(i18n, table_controls.no_columns_selected)}
                         </div>
                     }
                 >
@@ -168,6 +171,7 @@ fn AvailableColumnsList(
     on_toggle: Callback<String>,
     on_select_all: Callback<()>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let (search_term, set_search_term) = signal(String::new());
 
     // Sort columns alphabetically
@@ -202,13 +206,13 @@ fn AvailableColumnsList(
 
     view! {
         <div>
-            <h3 class="text-sm font-semibold text-gray-300 mb-2">"Add Columns"</h3>
+            <h3 class="text-sm font-semibold text-gray-300 mb-2">{t!(i18n, table_controls.add_columns)}</h3>
 
             // Search box
             <input
                 type="text"
                 class="w-full px-4 py-2 mb-3 rounded-lg bg-slate-900/50 border border-slate-600 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="🔍 Search columns by name or description..."
+                placeholder=t_string!(i18n, table_controls.search_columns)
                 prop:value=move || search_term.get()
                 on:input=move |e: Event| {
                     set_search_term.set(event_target_value(&e));
@@ -221,7 +225,7 @@ fn AvailableColumnsList(
                     class="px-3 py-1.5 text-sm rounded-md bg-purple-600 hover:bg-purple-700 text-white transition-colors"
                     on:click=move |_| on_select_all.run(())
                 >
-                    "Select All"
+                    {t!(i18n, table_controls.select_all)}
                 </button>
             </div>
 
@@ -249,9 +253,9 @@ fn AvailableColumnsList(
                     let filtered = filtered_columns();
                     let total = sorted_columns().len();
                     if filtered.len() < total {
-                        format!("Showing {} of {} columns", filtered.len(), total)
+                        view! { <span>{t!(i18n, table_controls.filtered_columns, shown = filtered.len(), total = total)}</span> }.into_any()
                     } else {
-                        format!("{} columns available", total)
+                        view! { <span>{t!(i18n, table_controls.available_columns, count = total)}</span> }.into_any()
                     }
                 }}
             </div>
@@ -274,6 +278,7 @@ pub fn ColumnSelector(
     #[prop(optional)]
     on_toggle: Option<Callback<bool>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     // Use external is_open if provided, otherwise create internal state
     let (internal_is_open, set_internal_is_open) = signal(false);
     let is_open_signal = is_open.unwrap_or(internal_is_open);
@@ -353,13 +358,13 @@ pub fn ColumnSelector(
             >
                 <span class="text-gray-300 font-medium">
                     {move || if is_open_signal.get() {
-                        "▼ Hide Column Selector"
+                        t_string!(i18n, table_controls.hide_column_selector)
                     } else {
-                        "▶ Select Columns"
+                        t_string!(i18n, table_controls.select_columns)
                     }}
                 </span>
                 <span class="text-sm text-purple-400 font-mono">
-                    {move || format!("{} selected", selected_columns.get().len())}
+                    {t!(i18n, table_controls.selected_count, count = move || selected_columns.get().len())}
                 </span>
             </button>
 

@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use leptos::prelude::*;
 
 /// A loading overlay that appears on top of content while data is loading.
@@ -7,6 +8,7 @@ pub fn LoadingOverlay(
     /// Signal indicating whether loading is in progress
     loading: Signal<bool>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <Show when=move || loading.get()>
             // Overlay covers the table area with subtle dimming
@@ -20,7 +22,7 @@ pub fn LoadingOverlay(
                             "🪐"
                         </div>
                     </div>
-                    <span class="mt-3 text-sm text-gray-300">"Loading..."</span>
+                    <span class="mt-3 text-sm text-gray-300">{t!(i18n, table_controls.loading)}</span>
                 </div>
             </div>
         </Show>

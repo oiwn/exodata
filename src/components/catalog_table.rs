@@ -1,3 +1,5 @@
+use crate::i18n::*;
+use crate::locale::localized_path;
 use crate::structured_data::{StructuredData, collection_page_schema};
 use crate::table::{
     PaginationLinks, Table, TablePaginationState, TableQuerySignals,
@@ -53,11 +55,13 @@ pub fn CatalogTablePageHeader(
     title: &'static str,
     subtitle: &'static str,
 ) -> impl IntoView {
+    let i18n = use_i18n();
+    let overview_href = localized_path("/", i18n.get_locale_untracked());
     view! {
         <div class="catalog-table-page__header">
-            <A href="/" attr:class="catalog-table-page__back-link">
+            <A href=overview_href attr:class="catalog-table-page__back-link">
                 <span>"←"</span>
-                <span>"Back to Overview"</span>
+                <span>{t!(i18n, table_controls.back_to_overview)}</span>
             </A>
 
             <h1 class="catalog-table-page__title">
@@ -70,25 +74,27 @@ pub fn CatalogTablePageHeader(
 
 #[component]
 pub fn CatalogTableLoadingFallback() -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="catalog-table-loading">
             <div class="catalog-table-loading__spinner">
                 <div class="catalog-table-loading__ring"></div>
                 <div class="catalog-table-loading__icon">"🪐"</div>
             </div>
-            <span class="catalog-table-loading__label">"Loading data..."</span>
+            <span class="catalog-table-loading__label">{t!(i18n, table_controls.loading)}</span>
         </div>
     }
 }
 
 #[component]
 pub fn CatalogTableErrorState(error_msg: String) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="catalog-table-error">
             <div class="catalog-table-error__body">
                 <span class="catalog-table-error__icon">"⚠️"</span>
                 <div>
-                    <h3 class="catalog-table-error__title">"Connection Error"</h3>
+                    <h3 class="catalog-table-error__title">{t!(i18n, table_controls.connection_error)}</h3>
                     <p class="catalog-table-error__message">{error_msg}</p>
                 </div>
             </div>
@@ -103,10 +109,11 @@ pub fn CatalogTablePaginationControls(
     on_next: Callback<()>,
     #[prop(optional)] page_links: Option<AnyView>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     view! {
         <div class="catalog-table-pagination">
             <div class="catalog-table-pagination__summary">
-                {format!("Showing {} - {} of {} records", state.start, state.end, state.total)}
+                {t!(i18n, table_controls.records_summary, start = state.start, end = state.end, total = state.total)}
             </div>
 
             {page_links}
@@ -117,11 +124,11 @@ pub fn CatalogTablePaginationControls(
                     disabled=!state.can_go_prev
                     on:click=move |_| on_prev.run(())
                 >
-                    "Previous"
+                    {t!(i18n, table_controls.previous)}
                 </button>
 
                 <div class="catalog-table-pagination__status">
-                    {format!("Page {} of {}", state.current_page, state.total_pages)}
+                    {t!(i18n, table_controls.page_summary, page = state.current_page, total = state.total_pages)}
                 </div>
 
                 <button
@@ -129,7 +136,7 @@ pub fn CatalogTablePaginationControls(
                     disabled=!state.can_go_next
                     on:click=move |_| on_next.run(())
                 >
-                    "Next"
+                    {t!(i18n, table_controls.next)}
                 </button>
             </div>
         </div>
@@ -172,6 +179,8 @@ pub fn CatalogTableResult(
         can_go_next,
     );
     let all_columns: Vec<String> = available_columns.keys().cloned().collect();
+    let exoplanet_headings =
+        crate::locale::strip_locale_prefix(base_path) == "/exoplanets";
     let model =
         build_column_model(&all_columns, &table_state.selected_columns.get());
 
@@ -189,6 +198,7 @@ pub fn CatalogTableResult(
                 current_sort_column=table_state.sort_column.get()
                 current_sort_order=table_state.sort_order.get()
                 column_metadata=available_columns
+                exoplanet_headings=exoplanet_headings
                 display_columns=model.display_columns
                 column_groups=model.groups
                 filter_input=table_state.filter_input
@@ -203,7 +213,7 @@ pub fn CatalogTableResult(
                 on_prev=on_prev_page
                 on_next=on_next_page
                 page_links=pagination_links_view(
-                    base_path,
+                    localized_path(base_path, use_i18n().get_locale_untracked()),
                     pagination_state,
                     table_state.sort_column.get(),
                     table_state.sort_order.get(),
@@ -218,7 +228,7 @@ pub fn CatalogTableResult(
 }
 
 pub fn pagination_links_view(
-    base_url: &'static str,
+    base_url: String,
     pagination_state: TablePaginationState,
     sort_col: Option<String>,
     sort_order: String,
@@ -230,7 +240,7 @@ pub fn pagination_links_view(
         <PaginationLinks
             current_page=pagination_state.current_page
             total_pages=pagination_state.total_pages
-            base_url=base_url.to_string()
+            base_url=base_url
             sort_col=sort_col
             sort_order=sort_order
             columns=columns

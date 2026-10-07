@@ -5,6 +5,8 @@ use crate::components::catalog_table::{
 };
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
+use crate::i18n::*;
+use crate::locale::localized_path;
 use crate::metadata::use_app_metadata_store;
 use crate::server::functions::get_exoplanets_page;
 use crate::table::{
@@ -33,8 +35,10 @@ fn navigate_exoplanets(
     navigate: &impl Fn(&str, NavigateOptions),
     query: &TableQueryState,
     options: NavigateOptions,
+    locale: Locale,
 ) {
-    navigate_table_query(navigate, EXOPLANETS_BASE_PATH, query, options);
+    let base_path = localized_path(EXOPLANETS_BASE_PATH, locale);
+    navigate_table_query(navigate, &base_path, query, options);
 }
 
 #[derive(Clone)]
@@ -53,6 +57,7 @@ impl LazyRoute for ExoplanetsTableLazy {
 
 #[component]
 pub fn ExoplanetsTablePage() -> impl IntoView {
+    let i18n = use_i18n();
     let query_map = use_query_map();
     let navigate = use_navigate();
 
@@ -87,6 +92,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                     scroll: false,
                     ..Default::default()
                 },
+                i18n.get_locale_untracked(),
             );
         });
     }
@@ -211,7 +217,12 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
         move |column: String| {
             let query = table_state.query().with_exoplanets_sort_column(column);
             table_state.set_query(query.clone());
-            navigate_exoplanets(&navigate, &query, Default::default());
+            navigate_exoplanets(
+                &navigate,
+                &query,
+                Default::default(),
+                i18n.get_locale_untracked(),
+            );
         }
     });
 
@@ -230,6 +241,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                     scroll: false,
                     ..Default::default()
                 },
+                i18n.get_locale_untracked(),
             );
         }
     });
@@ -246,6 +258,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                     scroll: false,
                     ..Default::default()
                 },
+                i18n.get_locale_untracked(),
             );
         }
     });
@@ -255,7 +268,12 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
         move |page: usize| {
             let query = table_state.query().with_page(page);
             table_state.set_query(query.clone());
-            navigate_exoplanets(&navigate, &query, Default::default());
+            navigate_exoplanets(
+                &navigate,
+                &query,
+                Default::default(),
+                i18n.get_locale_untracked(),
+            );
         }
     });
 
@@ -285,8 +303,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
         <CatalogTablePageShell>
             <CatalogTablePageHeader
                 icon="🪐"
-                title="Exoplanets Catalog"
-                subtitle="Browse the complete database of confirmed exoplanets"
+                title=t_string!(i18n, table_controls.exoplanets_title)
+                subtitle=t_string!(i18n, table_controls.exoplanets_subtitle)
             />
 
             <ColumnSelector
@@ -302,8 +320,8 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                     if table_state.sort_column.get().as_deref() == Some("rowupdate")
                         && !table_state.selected_columns.get().iter().any(|column| column == "rowupdate")
                     {
-                        let order = if table_state.sort_order.get() == "desc" { "newest first" } else { "oldest first" };
-                        view! { <p class="text-sm text-gray-300">{format!("Sorted by Updated ({order})")}</p> }.into_any()
+                        let order = if table_state.sort_order.get() == "desc" { t_string!(i18n, table_controls.newest_first) } else { t_string!(i18n, table_controls.oldest_first) };
+                        view! { <p class="text-sm text-gray-300">{t!(i18n, table_controls.sorted_updated, order = order)}</p> }.into_any()
                     } else {
                         ().into_any()
                     }
@@ -332,7 +350,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                             }.into_any(),
                             Err(err) => view! {
                                 <CatalogTableErrorState
-                                    error_msg=format!("Error loading data: {}", err)
+                                    error_msg=format!("{} {}", t_string!(i18n, table_controls.error_loading), err)
                                 />
                             }
                             .into_any(),
@@ -343,4 +361,40 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
         </CatalogTablePageShell>
     }
     .into_any()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    #[test]
+    fn exoplanet_navigation_preserves_locale_and_scientific_query_keys() {
+        let query = TableQueryState::new(
+            2,
+            Some("pl_rade".to_string()),
+            "asc".to_string(),
+            vec!["pl_name".to_string(), "pl_rade".to_string()],
+            "Kepler".to_string(),
+        );
+        for (locale, prefix) in [
+            (Locale::en, "/exoplanets?"),
+            (Locale::zh_CN, "/zh-CN/exoplanets?"),
+            (Locale::ja, "/ja/exoplanets?"),
+        ] {
+            let captured = RefCell::new(String::new());
+            navigate_exoplanets(
+                &|url, _| *captured.borrow_mut() = url.to_string(),
+                &query,
+                Default::default(),
+                locale,
+            );
+            let url = captured.into_inner();
+            assert!(url.starts_with(prefix));
+            assert!(url.contains("page=2"));
+            assert!(url.contains("sort=pl_rade"));
+            assert!(url.contains("columns=pl_name,pl_rade"));
+            assert!(url.contains("filter=Kepler"));
+        }
+    }
 }

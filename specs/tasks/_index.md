@@ -3,7 +3,6 @@
 
 ## Draft
 
-- **0008-exoplanet-table-localized-headings** — draft — exoplanet table localized headings (https://github.com/oiwn/exodata/issues/153)
 - **0009-homepage-planet-title-glyph** — draft — homepage planet title glyph (https://github.com/oiwn/exodata/issues/154)
 - **0010-catalog-detail-error-pages** — draft — catalog detail error pages (https://github.com/oiwn/exodata/issues/155)
 - **0011-homepage-counter-links** — draft — homepage counter links (https://github.com/oiwn/exodata/issues/156)
@@ -18,3 +17,4 @@
 - **0005-stellarhost-source-text-contrast** — blocked — stellarhost source text contrast (https://github.com/oiwn/exodata/issues/150)
 - **0006-stellarhost-radius-comparison-layout** — blocked — stellarhost radius comparison layout (https://github.com/oiwn/exodata/issues/151)
 - **0007-stellarhost-radius-caption** — blocked — stellarhost radius caption (https://github.com/oiwn/exodata/issues/152)
+- **0008-exoplanet-table-localized-headings** — blocked — exoplanet table localized headings (https://github.com/oiwn/exodata/issues/153)
