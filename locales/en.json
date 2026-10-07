@@ -15,7 +15,7 @@
   "home": {
     "title": "Exoplanet Data & MCP Server",
     "description": "Browse NASA Exoplanet Archive records or connect your AI agent to Exodata's hosted MCP server for read-only SQL, schema discovery, and JSON/CSV detail exports.",
-    "hero_title": "🌌 Exoplanet Archive",
+    "hero_title": "Exoplanet Archive",
     "hero_subtitle": "Exploring the cosmos: A comprehensive catalog of confirmed exoplanets and their host stars",
     "loading": "Loading catalog data...",
     "connection_error": "Connection Error",
@@ -128,11 +128,11 @@
   "exoplanet_columns": {
     "pl_name": "Planet name",
     "hostname": "Host star",
-    "discoverymethod": "Discovery method",
+    "discoverymethod": "Disc. method",
     "disc_year": "Disc. year",
     "pl_orbper": "Orbital period",
     "pl_rade": "Planet radius",
-    "pl_bmasse": "Mass or M sin i",
+    "pl_bmasse": "Mass",
     "rowupdate": "Updated"
   },
   "manual": {

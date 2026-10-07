@@ -15,7 +15,7 @@
   "home": {
     "title": "系外行星数据与 MCP 服务器",
     "description": "浏览 NASA 系外行星档案记录，或将 AI 智能体连接到 Exodata 托管的 MCP 服务器，使用只读 SQL、模式发现以及 JSON/CSV 详情导出。",
-    "hero_title": "🌌 系外行星档案",
+    "hero_title": "系外行星档案",
     "hero_subtitle": "探索宇宙：已确认系外行星及其宿主恒星的精确目录",
     "loading": "正在加载目录数据……",
     "connection_error": "连接错误",
@@ -132,7 +132,7 @@
     "disc_year": "发现年份",
     "pl_orbper": "公转周期",
     "pl_rade": "行星半径",
-    "pl_bmasse": "质量或 M sin i",
+    "pl_bmasse": "质量",
     "rowupdate": "更新时间"
   },
   "manual": {

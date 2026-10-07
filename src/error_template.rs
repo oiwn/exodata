@@ -1,17 +1,23 @@
+use crate::i18n::use_i18n;
+use crate::locale::localized_path;
+use crate::metadata_helpers::title_with_site;
 use leptos::error::Errors;
 use leptos::prelude::*;
+use leptos_meta::{Meta, Title};
 use leptos_router::components::A;
 use std::fmt;
 
 #[derive(Clone, Debug)]
 pub enum AppError {
     NotFound,
+    InternalServerError,
 }
 
 impl AppError {
     pub fn status_code(&self) -> u16 {
         match self {
             AppError::NotFound => 404,
+            AppError::InternalServerError => 500,
         }
     }
 }
@@ -20,11 +26,18 @@ impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AppError::NotFound => write!(f, "Not Found"),
+            AppError::InternalServerError => write!(f, "Unable to Load Profile"),
         }
     }
 }
 
 impl std::error::Error for AppError {}
+
+pub fn app_error_view(error: AppError) -> AnyView {
+    let mut errors = Errors::default();
+    errors.insert_with_default_key(error);
+    view! { <ErrorTemplate outside_errors=errors/> }.into_any()
+}
 
 #[component]
 pub fn ErrorTemplate(
@@ -45,19 +58,27 @@ pub fn ErrorTemplate(
         .filter_map(|(_k, v)| v.downcast_ref::<AppError>().cloned())
         .collect();
 
+    let primary_error = errors
+        .first()
+        .cloned()
+        .unwrap_or(AppError::InternalServerError);
+    let locale = use_i18n().get_locale_untracked();
+    let overview_href = localized_path("/", locale);
+    let hosts_href = localized_path("/stellarhosts", locale);
+    let planets_href = localized_path("/exoplanets", locale);
+
     #[cfg(feature = "ssr")]
     {
         use axum::http::StatusCode;
         use leptos_axum::ResponseOptions;
         let response = use_context::<ResponseOptions>();
         if let Some(response) = response {
-            let status = StatusCode::from_u16(errors[0].status_code())
+            let status = StatusCode::from_u16(primary_error.status_code())
                 .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             response.set_status(status);
         }
     }
 
-    let primary_error = errors.first().cloned().unwrap_or(AppError::NotFound);
     let error_code = primary_error.status_code().to_string();
     let error_code_badge = error_code.clone();
     let error_title = primary_error.to_string();
@@ -69,14 +90,21 @@ pub fn ErrorTemplate(
     let description = if matches!(primary_error, AppError::NotFound) {
         "The page you requested is not in this catalog. The route may be incorrect, or the object may not have a published page yet."
     } else {
-        "Something went wrong while rendering this page."
+        "We could not load this profile right now. Please try again, or return to the catalog."
+    };
+    let region_detail = if matches!(primary_error, AppError::NotFound) {
+        "No published page at this path"
+    } else {
+        "Profile temporarily unavailable"
     };
 
     view! {
+        <Title text=title_with_site(&error_title)/>
+        <Meta name="robots" content="noindex"/>
         <div class="min-h-[calc(100vh-8rem)] bg-[radial-gradient(circle_at_top,_rgba(129,140,248,0.18),_transparent_35%),linear-gradient(180deg,_#040816_0%,_#070b1d_100%)]">
             <div class="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-10 lg:px-8 lg:py-14">
                 <A
-                    href="/"
+                    href=overview_href.clone()
                     attr:class="inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition-colors hover:text-white"
                 >
                     <span>"←"</span>
@@ -127,19 +155,19 @@ pub fn ErrorTemplate(
 
                             <div class="flex flex-wrap gap-3 pt-2">
                                 <A
-                                    href="/"
+                                    href=overview_href
                                     attr:class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.02]"
                                 >
                                     <span>"Open Overview"</span>
                                 </A>
                                 <A
-                                    href="/stellarhosts"
+                                    href=hosts_href
                                     attr:class="inline-flex items-center gap-2 rounded-full border border-slate-600 bg-slate-800/70 px-5 py-3 text-sm font-semibold text-slate-100 transition-colors hover:border-slate-400 hover:bg-slate-800"
                                 >
                                     <span>"Browse Stellar Hosts"</span>
                                 </A>
                                 <A
-                                    href="/exoplanets"
+                                    href=planets_href
                                     attr:class="inline-flex items-center gap-2 rounded-full border border-slate-600 bg-slate-800/70 px-5 py-3 text-sm font-semibold text-slate-100 transition-colors hover:border-slate-400 hover:bg-slate-800"
                                 >
                                     <span>"Browse Exoplanets"</span>
@@ -160,7 +188,7 @@ pub fn ErrorTemplate(
                                         "Approximate Region"
                                     </div>
                                     <div class="text-sm font-semibold text-white">
-                                        "No published page at this path"
+                                        {region_detail}
                                     </div>
                                 </div>
                             </div>
@@ -190,5 +218,75 @@ fn InfoCard(
                 {detail}
             </div>
         </div>
+    }
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod tests {
+    use super::*;
+    use crate::i18n::{I18nContextProvider, Locale};
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+    };
+    use leptos_router::components::Router;
+
+    async fn render(error: AppError, locale: Locale) -> (String, StatusCode) {
+        tokio::task::LocalSet::new()
+            .run_until(async move {
+                // Route registration initializes the SSR executor before rendering.
+                let _ = leptos_axum::generate_route_list(|| view! { <div/> });
+                let handler = leptos_axum::render_app_async_with_context(
+                    || {},
+                    move || {
+                        let error = error.clone();
+                        view! {
+                        <html>
+                            <head></head>
+                            <body>
+                        <I18nContextProvider enable_cookie=false>
+                            <Router>
+                                {move || {
+                                    use_i18n().set_locale(locale);
+                                    app_error_view(error.clone())
+                                }}
+                            </Router>
+                        </I18nContextProvider>
+                            </body>
+                        </html>
+                        }
+                    },
+                );
+                let response = handler(
+                    Request::builder().uri("/").body(Body::empty()).unwrap(),
+                )
+                .await;
+                let status = response.status();
+                let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+                    .await
+                    .unwrap();
+                (String::from_utf8(body.to_vec()).unwrap(), status)
+            })
+            .await
+    }
+
+    #[tokio::test]
+    async fn detail_error_template_returns_404_and_locale_recovery_links() {
+        let (html, status) = render(AppError::NotFound, Locale::ja).await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert!(html.contains("Not Found"));
+        assert!(html.contains("href=\"/ja/stellarhosts\""));
+        assert!(html.contains("href=\"/ja/exoplanets\""));
+        assert!(!html.contains("error running server function"));
+    }
+
+    #[tokio::test]
+    async fn detail_error_template_returns_500_without_not_found_copy() {
+        let (html, status) =
+            render(AppError::InternalServerError, Locale::en).await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(html.contains("Unable to Load Profile"));
+        assert!(html.contains("Please try again"));
+        assert!(!html.contains("No published page at this path"));
     }
 }

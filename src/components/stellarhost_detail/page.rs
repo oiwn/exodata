@@ -11,6 +11,7 @@ use super::hero::HostHeroSection;
 use super::planets::PlanetsSection;
 use super::provenance::ProvenanceSection;
 use super::summary::CanonicalSummarySection;
+use crate::error_template::{AppError, app_error_view};
 use crate::metadata_helpers::{
     canonical_url, decode_path_segment, encode_path_segment,
     stellarhost_detail_description, stellarhost_detail_title, title_with_site,
@@ -74,21 +75,15 @@ pub fn StellarHostDetailPage() -> impl IntoView {
         <Title text=move || fallback_title()/>
         <Meta name="description" content=move || fallback_description()/>
         <Link rel="canonical" href=canonical_href.clone()/>
-        <div class="stellarhost-detail-page">
-            <div class="stellarhost-detail-page__container">
-                <A
-                    href="/stellarhosts"
-                    attr:class="stellarhost-detail-page__back-link"
-                >
-                    <span>"←"</span>
-                    <span>"Back to Stellar Hosts"</span>
-                </A>
-
                 <Suspense fallback=move || {
                     view! {
+                        <div class="stellarhost-detail-page">
+                        <div class="stellarhost-detail-page__container">
                         <div class="stellarhost-detail-page__loading">
                             <div class="stellarhost-detail-page__loading-spinner"></div>
                             <p class="stellarhost-detail-page__loading-label">"Loading stellar profile"</p>
+                        </div>
+                        </div>
                         </div>
                     }
                 }>
@@ -100,10 +95,16 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                             .and_then(|result| result.ok().flatten());
 
                         match (host_data, planets_data) {
-                            (Some(Ok(host)), Some(Ok(planets))) => view! {
+                            (Some(Ok(Some(host))), Some(Ok(planets))) => view! {
                                 <Title text=stellarhost_detail_title(&host)/>
                                 <Meta name="description" content=stellarhost_detail_description(&host)/>
                                 <StructuredData value=stellarhost_dataset_schema(&host)/>
+                                <div class="stellarhost-detail-page">
+                                <div class="stellarhost-detail-page__container">
+                                    <A href="/stellarhosts" attr:class="stellarhost-detail-page__back-link">
+                                        <span>"←"</span>
+                                        <span>"Back to Stellar Hosts"</span>
+                                    </A>
                                 <div class="stellarhost-detail-page__content">
                                     <HostHeroSection host=host.clone() />
                                     <CanonicalSummarySection host=host.clone() />
@@ -112,20 +113,15 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                                     <DescriptionSection description=description />
                                     <ProvenanceSection host=host />
                                 </div>
-                            }
-                            .into_any(),
-                            (Some(Err(error)), _) | (_, Some(Err(error))) => view! {
-                                <div class="stellarhost-detail-page__error">
-                                    <h2 class="stellarhost-detail-page__error-title">"Error Loading Host"</h2>
-                                    <p class="stellarhost-detail-page__error-message">{error.to_string()}</p>
+                                </div>
                                 </div>
                             }
                             .into_any(),
+                            (Some(Ok(None)), _) => app_error_view(AppError::NotFound),
+                            (Some(Err(_)), _) | (_, Some(Err(_))) => app_error_view(AppError::InternalServerError),
                             _ => view! { <div></div> }.into_any(),
                         }
                     }}
                 </Suspense>
-            </div>
-        </div>
     }
 }

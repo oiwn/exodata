@@ -15,7 +15,7 @@
   "home": {
     "title": "系外惑星データと MCP サーバー",
     "description": "NASA 系外惑星アーカイブのレコードを閲覧したり、AI エージェントを Exodata のホスト型 MCP サーバーに接続して、読み取り専用 SQL、スキーマ確認、JSON/CSV の詳細エクスポートを利用できます。",
-    "hero_title": "🌌 系外惑星アーカイブ",
+    "hero_title": "系外惑星アーカイブ",
     "hero_subtitle": "宇宙を探索する：確認済み系外惑星とその主星の精密なカタログ",
     "loading": "カタログデータを読み込んでいます…",
     "connection_error": "接続エラー",
@@ -132,7 +132,7 @@
     "disc_year": "発見年",
     "pl_orbper": "公転周期",
     "pl_rade": "惑星半径",
-    "pl_bmasse": "質量または M sin i",
+    "pl_bmasse": "質量",
     "rowupdate": "更新日"
   },
   "manual": {

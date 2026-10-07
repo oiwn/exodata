@@ -42,7 +42,9 @@ Startup capacities are set in `main.rs`. Host-detail entries are keyed by hostna
 
 ## Detail Contracts
 
-All payload types below are defined in [functions.rs](../src/server/functions.rs). Lookups use exact catalog names and retain matching source records; missing entities produce errors.
+The `get_stellar_host_detail` and `get_exoplanet_detail` UI server functions return optional detail payloads: `Ok(None)` for absent objects, `Ok(Some(detail))` for matches, and server errors for operational failures. Internal detail lookups distinguish absence from query/conversion errors without matching error strings. Host/planet pages render the shared branded 404 or 500 and set the corresponding SSR response status; raw server errors remain in logs. Related-planet loading failures render 500. Detail exports retain their existing payload and string error contracts.
+
+All payload types below are defined in [functions.rs](../src/server/functions.rs). Lookups use exact catalog names and retain matching source records; missing entities produce typed absence errors internally and optional payloads at the UI server-function boundary.
 
 `StellarHostDetail` contains:
 

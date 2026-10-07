@@ -6,11 +6,13 @@ The route `/exoplanets/:pl_name` renders all matching source records together wi
 
 The parent module is [exoplanet_detail.rs](../src/components/exoplanet_detail.rs). Its children are `page.rs`, `hero.rs`, `comparison.rs`, `summary.rs`, `records.rs`, and `format.rs`. Feature styles live in [exoplanet-detail.css](../style/components/exoplanet-detail.css), imported by `style/tailwind.css`. Follow the shared [styling convention](web-frontend.md#styling-with-tailwind-css).
 
-The page renders a back link, hero, canonical summary, radius comparison, and provenance section. It loads through a lazy route and a Leptos resource. Loading and resource errors use feature-specific views; missing entities do not yet use the shared branded 404.
+The page renders a back link, hero, canonical summary, radius comparison, and provenance section. It loads through a lazy route and a Leptos resource. Loading uses the feature-specific view. A missing detail payload renders the shared branded 404; operational loading errors render the branded 500 without raw server error text. SSR sets the corresponding HTTP status; recovery links retain the current locale.
 
 ## Data Contract
 
-`get_exoplanet_detail` returns the shared type from [functions.rs](../src/server/functions.rs):
+Error pages render at the route root with their own background, container, and recovery navigation. The successful profile shell and profile back link do not wrap the error template.
+
+`get_exoplanet_detail` returns `Result<Option<ExoplanetDetail>, ServerFnError>`: `None` means no matching records, and errors indicate operational failures. The shared detail type from [functions.rs](../src/server/functions.rs) is:
 
 ```rust
 pub struct ExoplanetDetail {

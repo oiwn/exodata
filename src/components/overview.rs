@@ -51,8 +51,11 @@ pub fn OverviewPage() -> impl IntoView {
 
                 <div class="container mx-auto px-4 py-16 relative">
                     <div class="text-center space-y-4">
-                        <h1 class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-pulse">
-                            {t!(i18n, home.hero_title)}
+                        <h1 class="text-5xl md:text-6xl font-bold text-white animate-pulse">
+                            <span aria-hidden="true">"🪐 "</span>
+                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
+                                {t!(i18n, home.hero_title)}
+                            </span>
                         </h1>
                         <a
                             href="#mcp-exoplanet-data"

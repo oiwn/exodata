@@ -173,10 +173,10 @@ pub fn Table(
                                 {columns.iter().enumerate().map(|(idx, _)| {
                                     if idx == 0 {
                                         view! {
-                                            <th class="px-3 py-2 border-r border-b border-slate-700/60 last:border-r-0">
+                                            <th class="px-3 py-2 border-r border-b border-slate-700/60 last:border-r-0 text-left font-normal">
                                                 <input
                                                     type="text"
-                                                    class="w-32 max-w-full px-2 py-2 rounded-md bg-slate-900/50 border border-slate-700 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                                    class="block w-32 max-w-full px-2 py-1 rounded-md bg-slate-900/50 border border-slate-700 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                                                     placeholder=t_string!(i18n, table_controls.filter)
                                                     prop:value=move || filter_input.get()
                                                     on:input=move |e| {
@@ -257,9 +257,13 @@ pub fn Table(
                                             />
                                         }.into_any()
                                     } else {
-                                        let full_method = (col == "discoverymethod"
-                                            && value.as_str() == Some("Transit Timing Variations"))
-                                            .then(|| value.as_str().unwrap().to_string());
+                                        let full_method = if col == "discoverymethod" {
+                                            value.as_str()
+                                                .filter(|method| discovery_method_abbreviation(method).is_some())
+                                                .map(str::to_owned)
+                                        } else {
+                                            None
+                                        };
                                         let tooltip_id = format!("catalog-method-{idx}-tooltip");
                                         let tooltip_describedby = tooltip_id.clone();
                                         view! {
@@ -441,11 +445,23 @@ fn format_error_value(value: &Value) -> Option<String> {
 /// Format cell value for display
 fn format_display_cell_value(column: &str, value: &Value) -> String {
     if column == "discoverymethod"
-        && value.as_str() == Some("Transit Timing Variations")
+        && let Some(abbreviation) =
+            value.as_str().and_then(discovery_method_abbreviation)
     {
-        "TTV".to_string()
-    } else {
-        format_cell_value(value)
+        return abbreviation.to_string();
+    }
+    format_cell_value(value)
+}
+
+fn discovery_method_abbreviation(method: &str) -> Option<&'static str> {
+    match method {
+        "Radial Velocity" => Some("RV"),
+        "Transit Timing Variations" => Some("TTV"),
+        "Eclipse Timing Variations" => Some("ETV"),
+        "Pulsation Timing Variations" => Some("PTV"),
+        "Orbital Brightness Modulation" => Some("OBM"),
+        "Disk Kinematics" => Some("DK"),
+        _ => None,
     }
 }
 
@@ -476,19 +492,43 @@ mod tests {
 
     #[test]
     fn discovery_method_abbreviation_is_display_only() {
-        let value = Value::String("Transit Timing Variations".to_string());
-        assert_eq!(format_display_cell_value("discoverymethod", &value), "TTV");
+        for (method, abbreviation) in [
+            ("Radial Velocity", "RV"),
+            ("Transit Timing Variations", "TTV"),
+            ("Eclipse Timing Variations", "ETV"),
+            ("Pulsation Timing Variations", "PTV"),
+            ("Orbital Brightness Modulation", "OBM"),
+            ("Disk Kinematics", "DK"),
+        ] {
+            let value = Value::String(method.to_string());
+            assert_eq!(
+                format_display_cell_value("discoverymethod", &value),
+                abbreviation
+            );
+            assert_eq!(format_display_cell_value("other_column", &value), method);
+            assert_eq!(value.as_str(), Some(method));
+            assert_eq!(discovery_method_abbreviation(method), Some(abbreviation));
+        }
+        for method in [
+            "Transit",
+            "Imaging",
+            "Microlensing",
+            "Astrometry",
+            "Pulsar Timing",
+            "Unknown method",
+        ] {
+            assert_eq!(discovery_method_abbreviation(method), None);
+            assert_eq!(
+                format_display_cell_value(
+                    "discoverymethod",
+                    &Value::String(method.to_string())
+                ),
+                method
+            );
+        }
         assert_eq!(
-            format_display_cell_value("other_column", &value),
-            "Transit Timing Variations"
-        );
-        assert_eq!(value.as_str(), Some("Transit Timing Variations"));
-        assert_eq!(
-            format_display_cell_value(
-                "discoverymethod",
-                &Value::String("Transit".to_string())
-            ),
-            "Transit"
+            format_display_cell_value("discoverymethod", &Value::Null),
+            "—"
         );
     }
 
@@ -536,6 +576,10 @@ mod tests {
 
     #[test]
     fn default_exoplanet_headings_use_the_selected_locale() {
+        assert_eq!(
+            format_column_name("discoverymethod", Some(Locale::en)),
+            "Disc. method"
+        );
         for column in [
             "pl_name",
             "hostname",
@@ -564,10 +608,12 @@ mod tests {
             "行星名称"
         );
         assert_eq!(format_column_name("pl_name", Some(Locale::ja)), "惑星名");
-        for locale in [Locale::en, Locale::zh_CN, Locale::ja] {
-            assert!(
-                format_column_name("pl_bmasse", Some(locale)).contains("M sin i")
-            );
+        for (locale, heading) in [
+            (Locale::en, "Mass"),
+            (Locale::zh_CN, "质量"),
+            (Locale::ja, "質量"),
+        ] {
+            assert_eq!(format_column_name("pl_bmasse", Some(locale)), heading);
         }
     }
 

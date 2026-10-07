@@ -38,9 +38,13 @@ Catalog interface controls use locale resources, including page copy, column sel
 
 Table cells use compact horizontal padding and header/filter cells have subtle separators. The eight default exoplanet headings provide localized explanatory hover/focus tooltips without a native show delay, retaining raw field identifiers and metadata unit strings; explicit caller descriptions take precedence. Other columns keep source metadata tooltips. Catalog titles have extra line-height/bottom room for gradient-text descenders, without changing the title or header font sizes.
 
-The English discovery-year label is “Disc. year”. Discovery-method display cells abbreviate Transit Timing Variations as TTV and show the full name on immediate hover/focus; source values, filtering, sorting, and exports keep the full string.
+The filter input aligns with the first column's left padding, uses normal-weight text, and has compact vertical padding. It remains bounded to 8rem and the available cell width; filtering events and query behavior are unchanged.
+
+The English discovery headings are “Disc. year” and “Disc. method”. The mass heading is “Mass” (Chinese “质量”, Japanese “質量”); its tooltip retains the full mass-or-minimum-mass (M sin i) distinction, Earth-mass units, and pl_bmassprov reference. Discovery-method display cells abbreviate Radial Velocity as RV, Transit Timing Variations as TTV, Eclipse Timing Variations as ETV, Pulsation Timing Variations as PTV, Orbital Brightness Modulation as OBM, and Disk Kinematics as DK. Every abbreviated cell shows the full source name on immediate hover/focus; other method strings, source values, filtering, sorting, and exports keep their full text. Object names, dates, and numeric values retain their existing display formatting.
 
 ## Overview, Details, Insights, and Docs
+
+The homepage h1 renders a shared decorative 🪐 span with normal text color outside the gradient text span. The three localized `home.hero_title` strings contain only title text; the icon is aria-hidden and does not inherit transparent gradient text styling.
 
 `OverviewPage` fetches precomputed `DataStats` using `get_stats`. It renders summary cards and paired distribution blocks:
 
