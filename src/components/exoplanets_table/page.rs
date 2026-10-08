@@ -346,6 +346,7 @@ pub fn ExoplanetsTablePage() -> impl IntoView {
                                     base_path=EXOPLANETS_BASE_PATH
                                     link_column="pl_name"
                                     link_base="/exoplanets/"
+                                    additional_links=vec![("hostname", "/stellarhosts/")]
                                 />
                             }.into_any(),
                             Err(err) => view! {

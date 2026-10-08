@@ -159,6 +159,7 @@ pub fn CatalogTableResult(
     base_path: &'static str,
     link_column: &'static str,
     link_base: &'static str,
+    #[prop(optional)] additional_links: Vec<(&'static str, &'static str)>,
 ) -> AnyView {
     if catalog_page_is_out_of_range(&data) {
         return catalog_not_found_view();
@@ -183,6 +184,13 @@ pub fn CatalogTableResult(
         crate::locale::strip_locale_prefix(base_path) == "/exoplanets";
     let model =
         build_column_model(&all_columns, &table_state.selected_columns.get());
+    let mut column_links =
+        HashMap::from([(link_column.to_string(), link_base.to_string())]);
+    column_links.extend(
+        additional_links
+            .into_iter()
+            .map(|(column, base)| (column.to_string(), base.to_string())),
+    );
 
     view! {
         <div class="space-y-6">
@@ -204,8 +212,7 @@ pub fn CatalogTableResult(
                 filter_input=table_state.filter_input
                 set_filter_input=table_state.set_filter_input
                 on_filter_commit=on_filter_commit
-                link_column=link_column.to_string()
-                link_base=link_base.to_string()
+                column_links=column_links
             />
 
             <CatalogTablePaginationControls

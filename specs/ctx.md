@@ -2,11 +2,11 @@
 
 Latest task: [0008-exoplanet-table-localized-headings](tasks/0008-exoplanet-table-localized-headings.md) — implemented, verified, and visually approved on 2026-10-07; parked pending the shared batch PR merge.
 
-Latest approved task: [0012-seo-audit-fixes](tasks/0012-seo-audit-fixes.md) — first-five-fix batch implemented, verified, and visually approved on 2026-10-08; parked pending the user-managed commit/shared batch merge. Production remains undeployed.
+Active task: [0014-exoplanet-host-star-links](tasks/0014-exoplanet-host-star-links.md) — implemented as a separate unit after the user's prior commit. All 45 focused table tests, split build, formatting, Clippy, and live link checks in all three locales passed. Ready for click/client-navigation review.
 
 ## Next
 
-User-managed commit/shared batch merge, or select the next task. Remaining SEO audit follow-ups are retained in task 0012 Findings/Coordination; task 0014 (exoplanet host-star links) remains queued.
+With `cargo leptos watch --split`, open `http://127.0.0.1:3000/exoplanets`: click Host star and Planet name, then repeat under `/zh-CN` and `/ja`. Detailed manual checks are in task 0014; staging/commit remains user-managed.
 
 ## Session handoff
 

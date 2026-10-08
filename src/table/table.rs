@@ -58,18 +58,14 @@ pub fn Table(
     #[prop(optional)] filter_input: Option<ReadSignal<String>>,
     #[prop(optional)] set_filter_input: Option<WriteSignal<String>>,
     #[prop(optional)] on_filter_commit: Option<Callback<String>>,
-    /// Column name to render as a link (e.g., "hostname")
+    /// Column-to-route mapping; cell names are appended as encoded path segments.
     #[prop(optional)]
-    link_column: Option<String>,
-    /// Base URL for the link (e.g., "/stellarhosts/") - column value will be appended
-    #[prop(optional)]
-    link_base: Option<String>,
+    column_links: HashMap<String, String>,
 ) -> impl IntoView {
     let columns = display_columns.unwrap_or_else(|| data.columns.clone());
     let i18n = use_i18n();
     let locale = i18n.get_locale_untracked();
     let exoplanet_locale = exoplanet_headings.then_some(locale);
-    let link_base = link_base.map(|base| localized_path(&base, locale));
     let groups = column_groups.unwrap_or_default();
     let show_filter = filter_input.is_some()
         && set_filter_input.is_some()
@@ -210,24 +206,15 @@ pub fn Table(
                             "bg-slate-800/10"
                         };
 
-                        let link_col = link_column.clone();
-                        let link_url_base = link_base.clone();
-
                         view! {
                             <tr class=format!("{} hover:bg-slate-700/50 transition-colors", row_class)>
                                 {columns.iter().map(|col| {
                                     let value = row.get(col).unwrap_or(&Value::Null);
                                     let formatted_value = format_display_cell_value(col, value);
-                                    let is_link_column = link_col.as_ref() == Some(col);
+                                    let link_href = cell_link_href(col, value, &column_links, locale);
                                     let group = groups.get(col);
 
-                                    if is_link_column {
-                                        let link_value = value.as_str().unwrap_or("");
-                                        let encoded = encode_path_segment(link_value);
-                                        let href = link_url_base.as_ref()
-                                            .map(|base| format!("{}{}", base, encoded))
-                                            .unwrap_or_default();
-
+                                    if let Some(href) = link_href {
                                         view! {
                                             <td class="px-3 py-4 text-sm font-mono">
                                                 <A
@@ -426,6 +413,21 @@ fn encode_query_value(value: &str) -> String {
         .replace('?', "%3F")
 }
 
+fn cell_link_href(
+    column: &str,
+    value: &Value,
+    column_links: &HashMap<String, String>,
+    locale: Locale,
+) -> Option<String> {
+    let base = column_links.get(column)?;
+    let name = value.as_str().filter(|name| !name.trim().is_empty())?;
+    Some(format!(
+        "{}{}",
+        localized_path(base, locale),
+        encode_path_segment(name)
+    ))
+}
+
 fn format_error_value(value: &Value) -> Option<String> {
     let formatted = format_cell_value(value);
     if formatted == "—" {
@@ -489,6 +491,41 @@ fn format_cell_value(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn table_detail_links_use_column_destinations_locale_and_encoded_names() {
+        let links = HashMap::from([
+            ("pl_name".to_string(), "/exoplanets/".to_string()),
+            ("hostname".to_string(), "/stellarhosts/".to_string()),
+        ]);
+        let name = Value::String("Host A+B/#".to_string());
+        for (locale, prefix) in [
+            (Locale::en, ""),
+            (Locale::zh_CN, "/zh-CN"),
+            (Locale::ja, "/ja"),
+        ] {
+            for (column, route) in
+                [("pl_name", "exoplanets"), ("hostname", "stellarhosts")]
+            {
+                assert_eq!(
+                    cell_link_href(column, &name, &links, locale),
+                    Some(format!("{prefix}/{route}/Host%20A%2BB%2F%23"))
+                );
+            }
+        }
+        assert_eq!(name.as_str(), Some("Host A+B/#"));
+        for value in [
+            Value::Null,
+            Value::String(String::new()),
+            Value::String("  ".to_string()),
+        ] {
+            assert_eq!(
+                cell_link_href("hostname", &value, &links, Locale::en),
+                None
+            );
+        }
+        assert_eq!(cell_link_href("other", &name, &links, Locale::en), None);
+    }
 
     #[test]
     fn discovery_method_abbreviation_is_display_only() {
