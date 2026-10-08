@@ -1,5 +1,75 @@
 # Changelog
 
+## 2026-10-08 — catalog default value abbreviations
+
+- Shorten discovery-method and localized mass headings and wide discovery-method values, retain immediate explanatory tooltips, and align the compact filter input with the first column.
+- Task `0013-catalog-default-value-abbreviations`
+
+## 2026-10-08 — seo audit fixes
+
+- Fix detail trailing-slash/malformed-path handling and URL consistency, remove duplicate description/lang tags, and emit record metadata only for successful profiles.
+- Task `0012-seo-audit-fixes`; source: https://github.com/oiwn/exodata/issues/159
+
+## 2026-10-08 — homepage counter links
+
+- Make the homepage Stellar Systems and Exoplanets counter cards clickable links to their locale-aware catalogs, with visible keyboard focus.
+- Task `0011-homepage-counter-links`; source: https://github.com/oiwn/exodata/issues/156
+
+## 2026-10-08 — catalog detail error pages
+
+- Render branded 404 pages for missing stellar hosts and exoplanets and branded 500 pages for internal loading failures, with correct SSR status and no raw server error text.
+- Task `0010-catalog-detail-error-pages`; source: https://github.com/oiwn/exodata/issues/155
+
+## 2026-10-08 — homepage planet title glyph
+
+- Replace the homepage galaxy glyph with a decorative ringed planet outside the gradient title text in all locales.
+- Task `0009-homepage-planet-title-glyph`; source: https://github.com/oiwn/exodata/issues/154
+
+## 2026-10-08 — exoplanet table localized headings
+
+- Localize the eight default exoplanet display headings while preserving scientific column identifiers and custom headings. Include translated catalog controls, locale-preserving navigation, and single-line table text.
+- Task `0008-exoplanet-table-localized-headings`; source: https://github.com/oiwn/exodata/issues/153
+
+## 2026-10-08 — stellarhost radius caption
+
+- Use parentheses for the stellar radius comparison caption's scaling remark.
+- Task `0007-stellarhost-radius-caption`; source: https://github.com/oiwn/exodata/issues/152
+
+## 2026-10-08 — stellarhost radius comparison layout
+
+- Show the stellar radius comparison in one shared dark panel by removing the individual star card decoration.
+- Task `0006-stellarhost-radius-comparison-layout`; source: https://github.com/oiwn/exodata/issues/151
+
+## 2026-10-08 — stellarhost source text contrast
+
+- Make stellar-host summary source labels and the empty-source message readable against the dark detail background.
+- Task `0005-stellarhost-source-text-contrast`; source: https://github.com/oiwn/exodata/issues/150
+
+## 2026-10-08 — detail color label contrast
+
+- Improve stellar-host color badge contrast with black text and an opaque pale temperature-derived background.
+- Task `0004-detail-color-label-contrast`; source: https://github.com/oiwn/exodata/issues/149
+
+## 2026-10-08 — homepage mcp description
+
+- Replace the homepage MCP manual with a brief localized introduction and setup link, and improve homepage discovery metadata.
+- Task `0003-homepage-mcp-description`; source: https://github.com/oiwn/exodata/issues/148
+
+## 2026-10-08 — exoplanets mcp seo research
+
+- Research exoplanet MCP discovery and implement specific guide metadata, verified setup, data provenance answers, and MCP sitemap coverage.
+- Task `0002-exoplanets-mcp-seo-research`; source: https://github.com/oiwn/exodata/issues/146
+
+## 2026-10-08 — exoplanets default date sort
+
+- Default the exoplanets website to newest update dates first, with an Updated column, undated records last, stable ties, and preserved sort and column URL state.
+- Task `0001-exoplanets-default-date-sort`; source: https://github.com/oiwn/exodata/issues/143
+
+## 2026-10-08 — exoplanet host star links
+
+- Link Host star values in the exoplanet table to locale-aware stellarhost profiles while preserving planet links and plain missing-value cells.
+- Task `0014-exoplanet-host-star-links`
+
 ## 2026-09-17
 
 - Generated the full v10 stellar-host description catalog: 4,768/4,768

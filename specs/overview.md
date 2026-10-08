@@ -19,13 +19,17 @@ The website exposes the catalog through browsable, shareable routes:
 - `/exoplanets/:pl_name` - exoplanet detail page
 - [Insights](/insights) and `/insights/:slug` - curated rankings and dataset views
 - [Docs](/docs), [CLI](/docs/cli), [API](/docs/api), and [MCP](/docs/mcp) - rendered public documentation
-- [About](/about) - project information
+- [About](/about) - redirects to the documentation overview
 - [Swagger UI](/swagger-ui) - interactive OpenAPI documentation
 
 ^^^ this should be valid relative urls, i want them to be rendered on server, maybe render component can generate links according to the router?
 &&& Public routes are documented as root-relative paths (for example, `/exoplanets`). The Leptos router renders those routes during SSR; it does not generate link destinations from route declarations. UI links should use the existing locale-aware path helper so that a link preserves the active locale and URL state.
 
 The table routes preserve query state in the URL so sorted, filtered, and column-customized views can be shared.
+
+The exoplanet table defaults to update-date descending order and links both planet and host names to their corresponding profiles. The homepage catalog-count cards also link to their tables. Shared catalog controls and the eight default exoplanet headings are localized, with compact display labels and immediate explanatory tooltips; raw values, NASA identifiers, and exports retain their source semantics. See [web-frontend.md](web-frontend.md).
+
+Missing detail records render branded 404 pages; operational failures render 500 pages without raw server error text. Detail trailing-slash redirects preserve locale/query state, generated entity URLs share one encoder, and successful profiles own their unique description/canonical/schema metadata. The locale provider emits one HTML lang attribute. See [web-backend.md](web-backend.md#detail-contracts).
 
 Website pages have English routes without a prefix and aliases under `/zh-CN` and `/ja`. The URL selects the locale. Global navigation and homepage content are translated; the remaining page-specific translation scope is tracked in [localization.md](localization.md). REST, MCP, Swagger, sitemap, and detail export URLs remain unprefixed.
 
@@ -161,6 +165,7 @@ Working notes and internal planning:
 - [ctx.md](ctx.md) - active task context and open decisions
 - [roadmap.md](roadmap.md) - future work and issue-triage notes
 - [ideas.md](ideas.md) - uncommitted product and development-harness ideas
+- [tasks/_index.md](tasks/_index.md) - task queue and archived completion records
 
 ## Development
 

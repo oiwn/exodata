@@ -16,6 +16,7 @@
 .crush/
 
 tmp/
+specs/tasks/done/
 
 # prose related
 content/systems

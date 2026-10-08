@@ -17,10 +17,8 @@ Uncommitted possibilities and remaining gaps. Current behavior belongs in techni
 
 ## Routing and Documentation
 
-- [ ] Preserve locale prefixes throughout table pagination, filters, entity links, and detail back links; reuse existing locale helpers.
-- [ ] Render missing detail entities through the branded 404 treatment (#69).
+- [ ] Preserve locale prefixes on remaining detail back links; catalog pagination/filter/entity navigation already preserves locale.
 - [ ] Add useful facts/insight navigation to the 404 page (#75).
-- [ ] Decide whether `/docs/mcp` and `/about` belong in the static sitemap. Keep localized sitemap additions subject to [localization.md](localization.md).
 - [ ] Add technical documentation pages for architecture, tables, and tooling only when there is a public audience. Existing docs compile Markdown from `docs/`; publishing specs and moving rendering to a server-only path remain separate choices.
 - [ ] Add a navigation progress indicator (#108).
 - [ ] Evaluate API/CLI tabs on the homepage (#82).
@@ -28,7 +26,19 @@ Uncommitted possibilities and remaining gaps. Current behavior belongs in techni
 - [ ] Consider short URLs (#104), arXiv integration (#100), and `llms.txt` (#98) as separate features with explicit acceptance criteria.
 - [ ] Finish page-specific translations and metadata as described in [localization.md](localization.md).
 
+## Remaining SEO Follow-ups
+
+The first routing/head-metadata batch is complete; dated audit evidence and remaining scope are preserved in [task 0012](tasks/done/0012-seo-audit-fixes.md). Select and specify new tasks before implementing these remaining items.
+
+- [ ] Add compatible security headers with deployment-specific verification.
+- [ ] Reduce duplicated metadata payloads and remeasure mobile performance before choosing further optimization.
+- [ ] Enrich Dataset download links, source attribution, and available freshness/citation metadata without inventing dates or provenance.
+- [ ] Serve lightweight responses for unsupported text/XML routes while preserving valid robots and sitemap endpoints.
+- [ ] Evaluate planet prose and project/Organization identity as separate content work. Optional IndexNow and llms.txt remain separate discovery decisions.
+- [ ] Expand localized canonicals/hreflang/sitemaps only when the corresponding page surfaces are translated, per the localization specification.
+
 ## Detail Page Follow-ups
+
 
 - [ ] Decide whether planet hero and comparison should consume the canonical payload rather than separately deriving values from records. Include mass fallback consistency and stable/categorical selections in that decision.
 - [ ] Consider separate `identity`, `visual`, and `provenance` payload fields only when a consumer needs them: hostname identity, deterministic visual inputs, and reference/measurement summaries. Reuse shared summary types; do not add parallel formatting models speculatively.

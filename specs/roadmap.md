@@ -1,6 +1,6 @@
 # Roadmap
 
-Committed follow-up work. The active generation task remains in [ctx.md](ctx.md); uncommitted possibilities live in [ideas.md](ideas.md).
+Committed follow-up work. Selected work is tracked in [ctx.md](ctx.md); uncommitted possibilities, including remaining SEO scope, live in [ideas.md](ideas.md).
 
 ## Prose Out of Git — Upload Channel (Round A2, deferred)
 
