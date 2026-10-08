@@ -22,8 +22,7 @@ The website exposes the catalog through browsable, shareable routes:
 - [About](/about) - redirects to the documentation overview
 - [Swagger UI](/swagger-ui) - interactive OpenAPI documentation
 
-^^^ this should be valid relative urls, i want them to be rendered on server, maybe render component can generate links according to the router?
-&&& Public routes are documented as root-relative paths (for example, `/exoplanets`). The Leptos router renders those routes during SSR; it does not generate link destinations from route declarations. UI links should use the existing locale-aware path helper so that a link preserves the active locale and URL state.
+Public routes use root-relative paths. The Leptos router renders them during SSR but does not generate link destinations from route declarations; UI links use the locale-aware path helper to preserve locale and URL state.
 
 The table routes preserve query state in the URL so sorted, filtered, and column-customized views can be shared.
 
@@ -64,15 +63,6 @@ The workspace includes the `exodata` package in `crates/exo-cli`, which builds t
 
 Third-party oriented commands are top-level. Repository data preparation and VOTable workflows and the local description-regeneration scan live under `exodata dev`.
 
-Examples:
-
-```bash
-cargo run --locked -p exodata -- query "SELECT pl_name, hostname FROM exoplanets LIMIT 10"
-cargo run --locked -p exodata -- insights list
-cargo run --locked -p exodata -- insights run nearest-stellar-hosts
-cargo run --locked -p exodata -- dev view-metadata --path data/exoplanets.vot
-```
-
 See [CLI documentation](../docs/cli.md) and [cli.md](cli.md) for command details.
 
 ## Data Pipeline
@@ -84,15 +74,7 @@ The application uses two NASA Exoplanet Archive exports:
 
 Raw VOTable files are stored under `data/`, converted to Parquet, and loaded into Polars DataFrames at server startup. Column metadata is extracted from the VOTable source and stored as TOML so the website and API can expose names, descriptions, units, and data types. The CLI owns VOTable parsing and conversion; `exo-core` owns Parquet loading and metadata persistence, and `exo-types` owns the shared metadata type. Use the [Justfile](../Justfile) download and conversion recipes; see [data-management.md](data-management.md) for the workflow.
 
-Runtime data files expected by the server:
-
-```text
-data/
-├── stellarhosts.parquet
-├── exoplanets.parquet
-├── stellarhosts-metadata.toml
-└── exoplanets-metadata.toml
-```
+Runtime files are `stellarhosts.parquet`, `exoplanets.parquet`, `stellarhosts-metadata.toml`, and `exoplanets-metadata.toml`.
 
 The server reads these four files from `EXO_DATA_DIR`, defaulting to `data`. Missing or invalid runtime files prevent startup. Refreshing the files requires a server restart to load them. See [column-metadata.md](column-metadata.md) for the metadata specification.
 
@@ -111,30 +93,11 @@ The website uses Leptos server functions for UI data loading. REST and MCP share
 
 ## Main Modules
 
-```text
-src/
-├── app.rs                         # Leptos shell, routing, and layout
-├── main.rs                        # Axum/Leptos server startup
-├── locale.rs                      # URL locale selection and path helpers
-├── metadata.rs                    # shared UI metadata store and hydration
-├── server.rs                      # shared/server-only module boundaries
-├── server/
-│   ├── handlers.rs                # REST API, OpenAPI, sitemap
-│   ├── mcp.rs                     # hosted MCP tools
-│   ├── functions.rs + functions/  # shared payloads and Leptos server functions
-│   ├── data.rs + data/            # tables, details, insights, SQL, exports
-│   ├── cache.rs                   # runtime caches
-│   ├── stellarhost_canonical.rs   # host record summaries
-│   └── exoplanet_canonical.rs     # planet record summaries
-├── table.rs + table/              # shared table state, navigation, rendering
-└── components.rs + components/    # website pages and feature components
-
-crates/
-├── exo-core/                      # data loading, metadata, insights, table logic
-├── exo-cli/                       # CLI backends, VOTable conversion, dev commands
-├── exo-prose/                     # stellar-host description generation pipeline
-└── exo-types/                     # shared serializable types
-```
+- [app.rs](../src/app.rs) and [main.rs](../src/main.rs) — Leptos shell/routes and Axum startup.
+- [locale.rs](../src/locale.rs) and [metadata.rs](../src/metadata.rs) — URL locale helpers and shared metadata hydration.
+- [server.rs](../src/server.rs) and `server/` — REST/MCP, detail routing, server functions, data queries/exports, caches, and canonical record summaries.
+- [table.rs](../src/table.rs) and [components.rs](../src/components.rs), with their child directories — shared table state/rendering and feature-owned website UI.
+- `crates/exo-core`, `exo-cli`, `exo-prose`, and `exo-types` — data/query logic, CLI/conversion, prose generation, and shared serializable types.
 
 Feature styles live in `style/components/*.css` and are imported by `style/tailwind.css`; see [frontend styling](web-frontend.md#styling-with-tailwind-css).
 

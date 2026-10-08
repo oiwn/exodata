@@ -307,9 +307,9 @@ test("exoplanets date sort defaults survive overrides and hidden columns", async
   await expect(updated).toContainText("↓");
   await expect(page.locator("table tbody tr").first()).toContainText("Kepler");
   await page.goto("/exoplanets?sort=disc_year&order=asc");
-  await expect(page.getByRole("columnheader", { name: /disc_year/ })).toContainText("↑");
+  await expect(page.getByRole("columnheader", { name: /Disc\. year/ })).toContainText("↑");
   await page.reload();
-  await expect(page.getByRole("columnheader", { name: /disc_year/ })).toContainText("↑");
+  await expect(page.getByRole("columnheader", { name: /Disc\. year/ })).toContainText("↑");
   await expectNoClientErrors(page, capture);
 });
 

@@ -17,3 +17,4 @@
 - **0012-seo-audit-fixes** — done — seo audit fixes (https://github.com/oiwn/exodata/issues/159)
 - **0013-catalog-default-value-abbreviations** — done — catalog default value abbreviations
 - **0014-exoplanet-host-star-links** — done — exoplanet host star links
+- **0015-e2e-discovery-year-heading** — done — e2e discovery year heading (https://github.com/oiwn/exodata/pull/158)
