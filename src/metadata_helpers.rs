@@ -1,6 +1,6 @@
 use leptos::serde_json::Value;
 use percent_encoding::{
-    NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode,
+    AsciiSet, NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode,
 };
 
 use crate::server::functions::{ExoplanetDetail, StellarHostDetail};
@@ -8,6 +8,12 @@ use crate::server::functions::{ExoplanetDetail, StellarHostDetail};
 pub const SITE_NAME: &str = "Exodata";
 pub const SITE_URL: &str = "https://exodata.space";
 pub const DEFAULT_DESCRIPTION: &str = "Search confirmed exoplanets and stellar hosts with server-rendered tables, detail pages, and NASA Exoplanet Archive-based data.";
+
+const PATH_SEGMENT_ENCODE_SET: &AsciiSet = &NON_ALPHANUMERIC
+    .remove(b'-')
+    .remove(b'.')
+    .remove(b'_')
+    .remove(b'~');
 
 pub fn title_with_site(title: &str) -> String {
     format!("{title} | {SITE_NAME}")
@@ -22,7 +28,7 @@ pub fn canonical_url(path: &str) -> String {
 }
 
 pub fn encode_path_segment(value: &str) -> String {
-    utf8_percent_encode(value, NON_ALPHANUMERIC).to_string()
+    utf8_percent_encode(value, PATH_SEGMENT_ENCODE_SET).to_string()
 }
 
 pub fn decode_path_segment(value: &str) -> String {
@@ -207,8 +213,17 @@ mod tests {
     fn path_segments_round_trip_reserved_characters() {
         let encoded = encode_path_segment("Kepler-10 b/alpha");
 
-        assert_eq!(encoded, "Kepler%2D10%20b%2Falpha");
+        assert_eq!(encoded, "Kepler-10%20b%2Falpha");
         assert_eq!(decode_path_segment(&encoded), "Kepler-10 b/alpha");
+    }
+
+    #[test]
+    fn path_segments_preserve_unreserved_and_encode_reserved_characters() {
+        assert_eq!(encode_path_segment("a-b.c_d~e"), "a-b.c_d~e");
+        let name = "星 +/%?#";
+        let encoded = encode_path_segment(name);
+        assert_eq!(encoded, "%E6%98%9F%20%2B%2F%25%3F%23");
+        assert_eq!(decode_path_segment(&encoded), name);
     }
 
     #[test]

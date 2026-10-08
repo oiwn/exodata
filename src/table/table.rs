@@ -1,5 +1,6 @@
 use crate::i18n::*;
 use crate::locale::localized_path;
+use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::TableData;
 use crate::table::ColumnGroup;
 use crate::table::TableQueryState;
@@ -222,8 +223,7 @@ pub fn Table(
 
                                     if is_link_column {
                                         let link_value = value.as_str().unwrap_or("");
-                                        // Simple URL encoding for the most common cases
-                                        let encoded = link_value.replace(' ', "%20").replace('#', "%23");
+                                        let encoded = encode_path_segment(link_value);
                                         let href = link_url_base.as_ref()
                                             .map(|base| format!("{}{}", base, encoded))
                                             .unwrap_or_default();

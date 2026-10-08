@@ -1,9 +1,10 @@
 ---
 id: 0011-homepage-counter-links
-status: approval
+status: blocked
 scope: [src/components/overview.rs]
 created: 2026-10-05
 source: https://github.com/oiwn/exodata/issues/156
+blocked_reason: User visually approved homepage counter links and requested task 0012; awaiting shared batch merge
 ---
 # Task: homepage counter links
 
@@ -51,3 +52,4 @@ Make the homepage Stellar Systems and Exoplanets counter cards clickable links t
 - 2026-10-08 advance in-progress/implement → in-progress/verify
 - 2026-10-08 advance in-progress/verify → in-progress/review
 - 2026-10-08 advance in-progress/review → approval
+- 2026-10-08 blocked: User visually approved homepage counter links and requested task 0012; awaiting shared batch merge

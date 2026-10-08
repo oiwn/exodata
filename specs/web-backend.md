@@ -42,6 +42,10 @@ Startup capacities are set in `main.rs`. Host-detail entries are keyed by hostna
 
 ## Detail Contracts
 
+Website GET/HEAD detail paths normalize trailing slashes with 301 redirects preserving locale/query. Malformed percent escapes or UTF-8 return 400; extra literal path segments return 404 before Leptos routing. Exact case and literal + remain significant; valid nonexistent names use the branded 404. This middleware excludes utility/export paths and other methods.
+
+Entity links, profile canonicals, Dataset URLs, export URLs, and entity sitemaps share the same path-segment encoder: ASCII unreserved characters (- . _ ~ and alphanumerics) remain literal; spaces become %20 and reserved/non-ASCII characters are percent-encoded. Equivalent legacy encoded paths remain usable without changing lookup case or introducing new slugs.
+
 The `get_stellar_host_detail` and `get_exoplanet_detail` UI server functions return optional detail payloads: `Ok(None)` for absent objects, `Ok(Some(detail))` for matches, and server errors for operational failures. Internal detail lookups distinguish absence from query/conversion errors without matching error strings. Host/planet pages render the shared branded 404 or 500 and set the corresponding SSR response status; raw server errors remain in logs. Related-planet loading failures render 500. Detail exports retain their existing payload and string error contracts.
 
 All payload types below are defined in [functions.rs](../src/server/functions.rs). Lookups use exact catalog names and retain matching source records; missing entities produce typed absence errors internally and optional payloads at the UI server-function boundary.

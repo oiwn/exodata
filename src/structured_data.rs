@@ -2,8 +2,8 @@ use leptos::prelude::*;
 use leptos::serde_json::{Value, json};
 
 use crate::metadata_helpers::{
-    SITE_NAME, SITE_URL, exoplanet_detail_description, overview_description,
-    stellarhost_detail_description,
+    SITE_NAME, SITE_URL, encode_path_segment, exoplanet_detail_description,
+    overview_description, stellarhost_detail_description,
 };
 use crate::server::functions::{ExoplanetDetail, StellarHostDetail};
 
@@ -59,7 +59,7 @@ pub fn stellarhost_dataset_schema(host: &StellarHostDetail) -> Value {
         "@context": "https://schema.org",
         "@type": "Dataset",
         "name": format!("{} stellar host dataset", host.hostname),
-        "url": absolute_url(&format!("/stellarhosts/{}", encode_segment(&host.hostname))),
+        "url": absolute_url(&format!("/stellarhosts/{}", encode_path_segment(&host.hostname))),
         "description": stellarhost_detail_description(host),
         "isAccessibleForFree": true,
         "keywords": keywords,
@@ -89,7 +89,7 @@ pub fn exoplanet_dataset_schema(detail: &ExoplanetDetail) -> Value {
         "@context": "https://schema.org",
         "@type": "Dataset",
         "name": format!("{} exoplanet dataset", detail.pl_name),
-        "url": absolute_url(&format!("/exoplanets/{}", encode_segment(&detail.pl_name))),
+        "url": absolute_url(&format!("/exoplanets/{}", encode_path_segment(&detail.pl_name))),
         "description": exoplanet_detail_description(detail),
         "isAccessibleForFree": true,
         "keywords": keywords,
@@ -107,14 +107,6 @@ fn absolute_url(path: &str) -> String {
     } else {
         format!("{SITE_URL}{path}")
     }
-}
-
-fn encode_segment(value: &str) -> String {
-    percent_encoding::utf8_percent_encode(
-        value,
-        percent_encoding::NON_ALPHANUMERIC,
-    )
-    .to_string()
 }
 
 #[cfg(test)]
@@ -211,7 +203,7 @@ mod tests {
         assert_eq!(schema["@type"], "Dataset");
         assert_eq!(
             schema["url"],
-            "https://exodata.space/exoplanets/Kepler%2D10%20b"
+            "https://exodata.space/exoplanets/Kepler-10%20b"
         );
         assert!(
             schema["keywords"]

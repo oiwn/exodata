@@ -14,7 +14,7 @@ use super::summary::CanonicalSummarySection;
 use crate::error_template::{AppError, app_error_view};
 use crate::metadata_helpers::{
     canonical_url, decode_path_segment, encode_path_segment,
-    stellarhost_detail_description, stellarhost_detail_title, title_with_site,
+    stellarhost_detail_description, stellarhost_detail_title,
 };
 use crate::server::functions::{
     get_host_description, get_planets_for_host, get_stellar_host_detail,
@@ -43,19 +43,6 @@ pub fn StellarHostDetailPage() -> impl IntoView {
         decode_path_segment(&raw)
     });
 
-    let fallback_title =
-        move || title_with_site(&format!("{} Stellar Host", hostname.get()));
-    let fallback_description = move || {
-        format!(
-            "Explore the stellar host profile, system summary, and planet list for {}.",
-            hostname.get()
-        )
-    };
-    let canonical_href = canonical_url(&format!(
-        "/stellarhosts/{}",
-        encode_path_segment(&hostname.get_untracked())
-    ));
-
     let host_resource = Resource::new(
         move || hostname.get(),
         move |name| async move { get_stellar_host_detail(name).await },
@@ -72,9 +59,6 @@ pub fn StellarHostDetailPage() -> impl IntoView {
     );
 
     view! {
-        <Title text=move || fallback_title()/>
-        <Meta name="description" content=move || fallback_description()/>
-        <Link rel="canonical" href=canonical_href.clone()/>
                 <Suspense fallback=move || {
                     view! {
                         <div class="stellarhost-detail-page">
@@ -98,6 +82,7 @@ pub fn StellarHostDetailPage() -> impl IntoView {
                             (Some(Ok(Some(host))), Some(Ok(planets))) => view! {
                                 <Title text=stellarhost_detail_title(&host)/>
                                 <Meta name="description" content=stellarhost_detail_description(&host)/>
+                                <Link rel="canonical" href=canonical_url(&format!("/stellarhosts/{}", encode_path_segment(&host.hostname)))/>
                                 <StructuredData value=stellarhost_dataset_schema(&host)/>
                                 <div class="stellarhost-detail-page">
                                 <div class="stellarhost-detail-page__container">

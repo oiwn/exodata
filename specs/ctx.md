@@ -2,14 +2,15 @@
 
 Latest task: [0008-exoplanet-table-localized-headings](tasks/0008-exoplanet-table-localized-headings.md) — implemented, verified, and visually approved on 2026-10-07; parked pending the shared batch PR merge.
 
-Active task: [0011-homepage-counter-links](tasks/0011-homepage-counter-links.md) — implemented full-card locale-aware catalog links with keyboard focus rings. Split build, live SSR checks in all three locales, formatting, Clippy, and diff checks passed; awaiting click/keyboard visual review.
+Latest approved task: [0012-seo-audit-fixes](tasks/0012-seo-audit-fixes.md) — first-five-fix batch implemented, verified, and visually approved on 2026-10-08; parked pending the user-managed commit/shared batch merge. Production remains undeployed.
 
 ## Next
 
-With `cargo leptos watch --split`, check the counter cards at `http://127.0.0.1:3000/`, `/zh-CN`, and `/ja`: click the full card/padding and use Tab/Enter to open the matching localized table. Next queued task is 0012 (SEO audit fixes).
+User-managed commit/shared batch merge, or select the next task. Remaining SEO audit follow-ups are retained in task 0012 Findings/Coordination; task 0014 (exoplanet host-star links) remains queued.
 
 ## Session handoff
 
+- Task 0011 was visually approved on 2026-10-08 (“ok done!”); parked pending merge. Production remains undeployed; audit findings distinguish current local code from old production behavior.
 - Task 0010 is parked after the user requested task 0011; remaining visual/client-navigation manual checks are not inferred. Commit-hook correction uses a Tokio LocalSet for renderer tests; full workspace/all-features tests and Clippy passed on 2026-10-08.
 - Task 0009's homepage planet icon was visually approved on 2026-10-07 and is parked pending the shared batch merge. Responsive/all-locale manual checklist items remain human-owned.
 - Task 0013's compact headings and filter layout were visually approved on 2026-10-07; it is parked pending the shared batch merge. Manual interaction/locale checklist items remain human-owned.

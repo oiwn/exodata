@@ -12,7 +12,7 @@ use super::summary::PlanetSummarySection;
 use crate::error_template::{AppError, app_error_view};
 use crate::metadata_helpers::{
     canonical_url, decode_path_segment, encode_path_segment,
-    exoplanet_detail_description, exoplanet_detail_title, title_with_site,
+    exoplanet_detail_description, exoplanet_detail_title,
 };
 use crate::server::functions::get_exoplanet_detail;
 use crate::structured_data::{StructuredData, exoplanet_dataset_schema};
@@ -39,29 +39,12 @@ pub fn ExoplanetDetailPage() -> impl IntoView {
         decode_path_segment(&raw)
     });
 
-    let fallback_title =
-        move || title_with_site(&format!("{} Exoplanet", pl_name.get()));
-    let fallback_description = move || {
-        format!(
-            "Explore measurements and source records for the exoplanet {}.",
-            pl_name.get()
-        )
-    };
-    let canonical_href = canonical_url(&format!(
-        "/exoplanets/{}",
-        encode_path_segment(&pl_name.get_untracked())
-    ));
-
     let detail_resource = Resource::new(
         move || pl_name.get(),
         move |name| async move { get_exoplanet_detail(name).await },
     );
 
     view! {
-        <Title text=move || fallback_title()/>
-        <Meta name="description" content=move || fallback_description()/>
-        <Link rel="canonical" href=canonical_href.clone()/>
-
                 <Suspense fallback=move || {
                     view! {
                         <div class="exoplanet-detail-page">
@@ -79,6 +62,7 @@ pub fn ExoplanetDetailPage() -> impl IntoView {
                             Ok(Some(detail)) => view! {
                                 <Title text=exoplanet_detail_title(&detail)/>
                                 <Meta name="description" content=exoplanet_detail_description(&detail)/>
+                                <Link rel="canonical" href=canonical_url(&format!("/exoplanets/{}", encode_path_segment(&detail.pl_name)))/>
                                 <StructuredData value=exoplanet_dataset_schema(&detail)/>
                                 <div class="exoplanet-detail-page">
                                 <div class="exoplanet-detail-page__container">

@@ -66,6 +66,76 @@ async function expectNoDocumentOverflow(page: Page) {
   );
 }
 
+test("SEO detail metadata is clean during client navigation", async ({ page, request }) => {
+  const capture = captureClientErrors(page);
+  const planet = await firstCatalogValue(request, "/rest/exoplanets", "pl_name");
+  const host = await firstCatalogValue(request, "/rest/stellarhosts", "hostname");
+  for (const prefix of ["", "/zh-CN", "/ja"]) {
+    const lang = prefix.slice(1) || "en";
+    for (const [entity, name] of [["exoplanets", planet], ["stellarhosts", host]]) {
+      const validPath = `${prefix}/${entity}/${encodeURIComponent(name)}`;
+      const missingPath = `${prefix}/${entity}/Missing-seo-record`;
+      const response = await page.goto(validPath);
+      expect(response?.status()).toBe(200);
+      const serverHtml = await response!.text();
+      const serverHead = serverHtml.split("</head>")[0];
+      expect(serverHead.match(/name="description"/g)).toHaveLength(1);
+      expect(serverHead.match(/rel="canonical"/g)).toHaveLength(1);
+      const htmlTag = serverHtml.match(/<html\b[^>]*>/)![0];
+      expect(htmlTag.match(/\blang=/g)).toHaveLength(1);
+      expect(htmlTag).toContain(`lang="${lang}"`);
+      await page.waitForFunction(() => !document.documentElement.classList.contains("pre-hydration"));
+      await expect(page.locator("html")).toHaveAttribute("lang", lang);
+      await expect(page.locator('head meta[name="description"]')).toHaveCount(1);
+      await expect(page.locator('head link[rel="canonical"]')).toHaveCount(1);
+      const title = `${name} ${entity === "exoplanets" ? "Exoplanet" : "Stellar Host"} | Exodata`;
+      await expect(page).toHaveTitle(title);
+      const encodedName = encodeURIComponent(name).replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
+      const canonical = `https://exodata.space/${entity}/${encodedName}`;
+      await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute("href", canonical);
+      const schema = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+      expect(schema.url).toBe(canonical);
+      const missingResponse = await request.get(missingPath);
+      expect(missingResponse.status()).toBe(404);
+      const missingHtml = await missingResponse.text();
+      const missingHead = missingHtml.split("</head>")[0];
+      expect(missingHead).toContain("noindex");
+      expect(missingHead).not.toContain('name="description"');
+      expect(missingHead).not.toContain('rel="canonical"');
+      expect(missingHead).not.toContain("Missing-seo-record");
+      expect(missingHtml).not.toContain("application/ld+json");
+      await page.evaluate((href) => {
+        const link = document.createElement("a");
+        link.href = href;
+        link.textContent = "SEO navigation probe";
+        link.id = "seo-navigation-probe";
+        document.body.append(link);
+      }, missingPath);
+      await page.locator("#seo-navigation-probe").click();
+      await expect(page).toHaveURL(new RegExp(`${missingPath}$`));
+      await expect(page.getByRole("heading", { name: "Not Found", exact: true })).toBeVisible();
+      await expect(page).toHaveTitle("Not Found | Exodata");
+      await expect(page.locator('head meta[name="robots"]')).toHaveAttribute("content", "noindex");
+      await expect(page.locator('head meta[name="description"]')).toHaveCount(0);
+      await expect(page.locator('head link[rel="canonical"]')).toHaveCount(0);
+      await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+      await page.evaluate((href) => {
+        const link = document.getElementById("seo-navigation-probe") as HTMLAnchorElement;
+        link.href = href;
+      }, validPath);
+      await page.locator("#seo-navigation-probe").click();
+      await expect(page).toHaveURL(new RegExp(`${prefix}/${entity}/`));
+      await expect(page.locator('head meta[name="description"]')).toHaveCount(1);
+      await expect(page.locator('head link[rel="canonical"]')).toHaveCount(1);
+      await expect(page.locator('head meta[name="robots"]')).toHaveCount(0);
+      await expect(page).toHaveTitle(title);
+      await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+      await page.evaluate(() => document.getElementById("seo-navigation-probe")?.remove());
+    }
+  }
+  await expectNoClientErrors(page, capture);
+});
+
 async function expectTableWrapperContained(page: Page) {
   const wrapper = page.locator(
     ".planet-provenance__table-wrap, .host-provenance__table-wrap",
@@ -89,6 +159,41 @@ async function expectTableWrapperContained(page: Page) {
   expect(dimensions.scrollWidth).toBeGreaterThanOrEqual(dimensions.clientWidth);
   expect(dimensions.overflowX).toBe("auto");
 }
+
+test("SEO detail HTTP variants and sitemap URLs agree", async ({ request }) => {
+  const names: Record<string, string> = {
+    stellarhosts: await firstCatalogValue(request, "/rest/stellarhosts", "hostname"),
+    exoplanets: await firstCatalogValue(request, "/rest/exoplanets", "pl_name"),
+  };
+  const index = await (await request.get("/sitemap-index.xml")).text();
+  const shardPaths = [...index.matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((match) => new URL(match[1]).pathname)
+    .filter((path) => /sitemap-(stellarhosts|exoplanets)-/.test(path));
+  const sitemap = (await Promise.all(shardPaths.map(async (path) => (await request.get(path)).text()))).join("\n");
+  for (const [entity, name] of Object.entries(names)) {
+    const encoded = encodeURIComponent(name).replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
+    expect(sitemap).toContain(`<loc>https://exodata.space/${entity}/${encoded}</loc>`);
+    for (const prefix of ["", "/zh-CN", "/ja"]) {
+      const path = `${prefix}/${entity}/${encoded}`;
+      for (const method of ["GET", "HEAD"]) {
+        const redirect = await request.fetch(`${path}/?filter=a%2Bb`, { method, maxRedirects: 0 });
+        expect(redirect.status()).toBe(301);
+        expect(redirect.headers().location).toBe(`${path}?filter=a%2Bb`);
+      }
+      const legacy = encoded.replace(/-/g, "%2D");
+      const valid = await request.get(`${prefix}/${entity}/${legacy}`);
+      expect(valid.status()).toBe(200);
+      const html = await valid.text();
+      expect(html).toContain(`href="https://exodata.space/${entity}/${encoded}"`);
+      for (const suffix of ["%ZZ", "%FF"]) {
+        expect((await request.get(`${prefix}/${entity}/${suffix}`)).status()).toBe(400);
+      }
+      for (const suffix of ["%3Cscript%3E", "Missing-seo+record", "Missing-seo-record/extra"]) {
+        expect((await request.get(`${prefix}/${entity}/${suffix}`)).status()).toBe(404);
+      }
+    }
+  }
+});
 
 test.beforeEach(async ({ request }) => {
   // cargo-leptos owns server startup; wait until it is reachable.

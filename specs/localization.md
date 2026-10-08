@@ -25,6 +25,7 @@ Traditional Chinese is out of scope unless explicitly requested.
 ## Stable Rules
 
 - The URL is the only locale source. Do not add cookie, browser-language, or `Accept-Language` redirects.
+- The document shell does not hard-code lang; the existing locale provider emits exactly one route-selected HTML lang attribute, including English and error routes.
 - Unprefixed routes always render English; do not introduce `/en/...` routes.
 - Never translate catalog values, entity names, route identifiers, NASA field keys, SQL, commands, API paths, JSON/CSV keys, or scientific units.
 - Keep stable homepage fragments identical across locales: `#mcp-exoplanet-data`, `#catalog-examples-title`, and `#mcp-setup-title`.

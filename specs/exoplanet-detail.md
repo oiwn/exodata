@@ -12,6 +12,8 @@ The page renders a back link, hero, canonical summary, radius comparison, and pr
 
 Error pages render at the route root with their own background, container, and recovery navigation. The successful profile shell and profile back link do not wrap the error template.
 
+Only successful detail payloads emit the record-specific title, one description, one canonical, and Dataset JSON-LD, using the returned catalog name. Pending views emit no fabricated record metadata; 404/500 pages use generic error title/noindex without a record canonical/description/schema. Canonical and Dataset URLs use the shared path-segment encoder, matching sitemaps; localized detail aliases retain English canonicals until translated.
+
 `get_exoplanet_detail` returns `Result<Option<ExoplanetDetail>, ServerFnError>`: `None` means no matching records, and errors indicate operational failures. The shared detail type from [functions.rs](../src/server/functions.rs) is:
 
 ```rust

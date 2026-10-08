@@ -14,7 +14,6 @@ use axum::{
     routing::get,
 };
 use exo_types::metadata::ColumnMetadata;
-use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -23,6 +22,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use super::data::{exports, insights, sql, tables};
 use super::functions::DataStats;
+use crate::metadata_helpers::encode_path_segment;
 use crate::server::cache::{HostDetailCache, InsightCache, TableCache};
 
 #[derive(Debug, Clone)]
@@ -683,37 +683,6 @@ fn build_schema_response(
 
 const SITEMAP_CHUNK_SIZE: usize = 1_000;
 
-const SITEMAP_PATH_SEGMENT_ENCODE_SET: &AsciiSet = &CONTROLS
-    .add(b' ')
-    .add(b'!')
-    .add(b'"')
-    .add(b'#')
-    .add(b'$')
-    .add(b'%')
-    .add(b'&')
-    .add(b'\'')
-    .add(b'(')
-    .add(b')')
-    .add(b'*')
-    .add(b'+')
-    .add(b',')
-    .add(b'/')
-    .add(b':')
-    .add(b';')
-    .add(b'<')
-    .add(b'=')
-    .add(b'>')
-    .add(b'?')
-    .add(b'@')
-    .add(b'[')
-    .add(b'\\')
-    .add(b']')
-    .add(b'^')
-    .add(b'`')
-    .add(b'{')
-    .add(b'|')
-    .add(b'}');
-
 pub struct SitemapSet {
     pub index: String,
     pub static_pages: String,
@@ -858,10 +827,7 @@ fn build_detail_urls(
     Ok(unique_values
         .into_iter()
         .map(|value| {
-            format!(
-                "{site_url}{route_prefix}{}",
-                utf8_percent_encode(&value, SITEMAP_PATH_SEGMENT_ENCODE_SET)
-            )
+            format!("{site_url}{route_prefix}{}", encode_path_segment(&value))
         })
         .collect())
 }
