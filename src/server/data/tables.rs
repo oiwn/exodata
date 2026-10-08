@@ -161,6 +161,54 @@ pub fn get_exoplanets_data(df: &DataFrame, query: TableQuery) -> TableResult {
     )
 }
 
+fn normalize_exoplanets_website_query(mut query: TableQuery) -> TableQuery {
+    if query.sort_by.is_none() {
+        query.sort_by = Some("rowupdate".to_string());
+        query.order = Some("desc".to_string());
+    }
+    query
+}
+
+pub fn get_exoplanets_website_data(
+    df: &DataFrame,
+    query: TableQuery,
+) -> TableResult {
+    let mut query = normalize_exoplanets_website_query(query);
+    let mut df = df.clone();
+    if query.sort_by.as_deref() == Some("rowupdate") {
+        let descending = query.order.as_deref().unwrap_or("asc") == "desc";
+        df = df
+            .sort(
+                ["rowupdate"],
+                SortMultipleOptions::new()
+                    .with_order_descending(descending)
+                    .with_nulls_last(true)
+                    .with_maintain_order(true),
+            )
+            .map_err(|e| format!("Failed to sort update dates: {e}"))?;
+        // The date key can be hidden and null dates must survive projection.
+        query.sort_by = None;
+    }
+    if query.selected_columns.is_none() {
+        query.selected_columns = Some(
+            vec![
+                "pl_name",
+                "hostname",
+                "discoverymethod",
+                "disc_year",
+                "pl_orbper",
+                "pl_rade",
+                "pl_bmasse",
+                "rowupdate",
+            ]
+            .into_iter()
+            .map(str::to_string)
+            .collect(),
+        );
+    }
+    get_exoplanets_data(&df, query)
+}
+
 pub async fn get_stellarhosts_data_cached(
     df: &DataFrame,
     table_cache: &TableCache,
@@ -198,8 +246,35 @@ pub async fn get_exoplanets_data_cached(
     table_cache: &TableCache,
     query: TableQuery,
 ) -> TableResult {
+    get_exoplanets_data_cached_impl(df, table_cache, query, false).await
+}
+
+pub async fn get_exoplanets_website_data_cached(
+    df: &DataFrame,
+    table_cache: &TableCache,
+    query: TableQuery,
+) -> TableResult {
+    get_exoplanets_data_cached_impl(
+        df,
+        table_cache,
+        normalize_exoplanets_website_query(query),
+        true,
+    )
+    .await
+}
+
+async fn get_exoplanets_data_cached_impl(
+    df: &DataFrame,
+    table_cache: &TableCache,
+    query: TableQuery,
+    website: bool,
+) -> TableResult {
     let key = normalize_table_cache_key(
-        TableKind::Exoplanets,
+        if website {
+            TableKind::ExoplanetsWebsite
+        } else {
+            TableKind::Exoplanets
+        },
         query.page,
         query.limit,
         query.sort_by.clone(),
@@ -216,12 +291,15 @@ pub async fn get_exoplanets_data_cached(
     tracing::debug!("exoplanets cache miss: {key:?}");
 
     let df = df.clone();
-    let value =
-        tokio::task::spawn_blocking(move || get_exoplanets_data(&df, query))
-            .await
-            .map_err(|e| {
-                format!("Failed to join exoplanets blocking task: {}", e)
-            })??;
+    let value = tokio::task::spawn_blocking(move || {
+        if website {
+            get_exoplanets_website_data(&df, query)
+        } else {
+            get_exoplanets_data(&df, query)
+        }
+    })
+    .await
+    .map_err(|e| format!("Failed to join exoplanets blocking task: {}", e))??;
 
     table_cache.insert(key, value.clone()).await;
 

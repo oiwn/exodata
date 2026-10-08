@@ -326,6 +326,9 @@ async fn start_server() {
         .layer(axum::middleware::from_fn_with_state(
             api_state,
             server::handlers::detail_export_middleware,
+        ))
+        .layer(axum::middleware::from_fn(
+            server::detail_routes::normalize_detail_route,
         ));
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

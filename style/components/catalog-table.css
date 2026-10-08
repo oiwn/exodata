@@ -15,7 +15,7 @@
 }
 
 .catalog-table-page__title {
-  @apply text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400;
+  @apply pb-1 text-4xl md:text-5xl leading-tight font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400;
 }
 
 .catalog-table-page__subtitle {
@@ -24,6 +24,22 @@
 
 .catalog-table-page__content {
   @apply relative;
+}
+
+.catalog-table-tooltip {
+  @apply pointer-events-none absolute left-0 top-full z-50 mt-1 hidden w-72 max-w-[calc(100vw-2rem)] whitespace-normal rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-left text-xs font-normal leading-relaxed text-slate-200 shadow-xl;
+}
+
+.catalog-table-tooltip--right {
+  left: auto;
+  right: 0;
+}
+
+.catalog-table-heading:hover > .catalog-table-tooltip,
+.catalog-table-heading:focus > .catalog-table-tooltip,
+.catalog-table-abbreviation:hover > .catalog-table-tooltip,
+.catalog-table-abbreviation:focus > .catalog-table-tooltip {
+  display: block;
 }
 
 .catalog-table-loading {

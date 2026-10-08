@@ -95,6 +95,23 @@ impl TableQueryState {
             filter,
         )
     }
+
+    pub fn with_exoplanets_default_sort(mut self) -> Self {
+        if self.sort_col.is_none() {
+            self.sort_col = Some("rowupdate".to_string());
+            self.sort_order = "desc".to_string();
+        }
+        self
+    }
+
+    pub fn with_exoplanets_sort_column(&self, column: String) -> Self {
+        let mut query = self.with_sort_column(column.clone());
+        if column == "rowupdate" && query.sort_col.is_none() {
+            query.sort_col = Some(column);
+            query.sort_order = "asc".to_string();
+        }
+        query.with_exoplanets_default_sort()
+    }
 }
 
 pub fn normalize_table_page(page: usize) -> usize {
@@ -308,6 +325,65 @@ mod tests {
     fn normalize_table_page_maps_zero_to_one() {
         assert_eq!(normalize_table_page(0), 1);
         assert_eq!(normalize_table_page(2), 2);
+    }
+
+    #[test]
+    fn exoplanets_default_sort_preserves_query_and_explicit_overrides() {
+        let query = TableQueryState::new(
+            2,
+            None,
+            "asc".to_string(),
+            vec!["pl_name".to_string()],
+            "Kepler".to_string(),
+        )
+        .with_exoplanets_default_sort();
+        assert_eq!(query.sort_col.as_deref(), Some("rowupdate"));
+        assert_eq!(query.sort_order, "desc");
+        assert_eq!(query.page, 2);
+        assert_eq!(query.columns, ["pl_name"]);
+        assert_eq!(query.filter, "Kepler");
+        assert_eq!(
+            build_table_url("/exoplanets", &query),
+            "/exoplanets?page=2&sort=rowupdate&order=desc&columns=pl_name&filter=Kepler"
+        );
+
+        let explicit = query.with_exoplanets_sort_column("pl_name".to_string());
+        assert_eq!(explicit.sort_col.as_deref(), Some("pl_name"));
+        assert_eq!(explicit.sort_order, "asc");
+        assert_eq!(explicit.clone().with_exoplanets_default_sort(), explicit);
+    }
+
+    #[test]
+    fn exoplanets_clearing_and_column_changes_restore_default_sort() {
+        let query = TableQueryState::new(
+            3,
+            Some("pl_name".to_string()),
+            "desc".to_string(),
+            vec!["pl_name".to_string(), "rowupdate".to_string()],
+            String::new(),
+        );
+        let cleared = query.with_exoplanets_sort_column("pl_name".to_string());
+        assert_eq!(cleared.sort_col.as_deref(), Some("rowupdate"));
+        assert_eq!(cleared.sort_order, "desc");
+        assert_eq!(cleared.page, 1);
+
+        let ascending =
+            cleared.with_exoplanets_sort_column("rowupdate".to_string());
+        assert_eq!(ascending.sort_order, "asc");
+        assert_eq!(
+            ascending
+                .with_exoplanets_sort_column("rowupdate".to_string())
+                .sort_order,
+            "desc"
+        );
+
+        let hidden = cleared
+            .with_columns(vec!["pl_name".to_string()])
+            .with_exoplanets_default_sort();
+        assert_eq!(hidden.sort_col.as_deref(), Some("rowupdate"));
+        assert_eq!(hidden.sort_order, "desc");
+        assert_eq!(hidden.columns, ["pl_name"]);
+        assert_eq!(query.with_sort_column("pl_name".to_string()).sort_col, None);
     }
 
     #[test]

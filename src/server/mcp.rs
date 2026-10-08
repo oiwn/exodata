@@ -605,7 +605,7 @@ mod tests {
         assert_eq!(content["mime_type"], "application/json; charset=utf-8");
         assert_eq!(
             content["url"],
-            "https://example.com/exoplanets/Kepler%2D22%20b.json"
+            "https://example.com/exoplanets/Kepler-22%20b.json"
         );
         assert!(content["content"].as_str().unwrap().contains("Kepler-22 b"));
     }

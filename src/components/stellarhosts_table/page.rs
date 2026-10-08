@@ -5,6 +5,8 @@ use crate::components::catalog_table::{
 };
 use crate::components::column_selector::ColumnSelector;
 use crate::components::loading_overlay::LoadingOverlay;
+use crate::i18n::*;
+use crate::locale::localized_path;
 use crate::metadata::use_app_metadata_store;
 use crate::server::functions::get_stellarhosts_page;
 use crate::table::{
@@ -25,8 +27,10 @@ fn navigate_stellarhosts(
     navigate: &impl Fn(&str, NavigateOptions),
     query: &TableQueryState,
     options: NavigateOptions,
+    locale: Locale,
 ) {
-    navigate_table_query(navigate, STELLARHOSTS_BASE_PATH, query, options);
+    let base_path = localized_path(STELLARHOSTS_BASE_PATH, locale);
+    navigate_table_query(navigate, &base_path, query, options);
 }
 
 #[derive(Clone)]
@@ -45,6 +49,7 @@ impl LazyRoute for StellarHostsTableLazy {
 
 #[component]
 pub fn StellarHostsTablePage() -> impl IntoView {
+    let i18n = use_i18n();
     let query_map = use_query_map();
     let navigate = use_navigate();
 
@@ -75,6 +80,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                     scroll: false,
                     ..Default::default()
                 },
+                i18n.get_locale_untracked(),
             );
         });
     }
@@ -180,7 +186,12 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         move |column: String| {
             let query = table_state.query().with_sort_column(column);
             table_state.set_query(query.clone());
-            navigate_stellarhosts(&navigate, &query, Default::default());
+            navigate_stellarhosts(
+                &navigate,
+                &query,
+                Default::default(),
+                i18n.get_locale_untracked(),
+            );
         }
     });
 
@@ -196,6 +207,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                     scroll: false,
                     ..Default::default()
                 },
+                i18n.get_locale_untracked(),
             );
         }
     });
@@ -212,6 +224,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                     scroll: false,
                     ..Default::default()
                 },
+                i18n.get_locale_untracked(),
             );
         }
     });
@@ -221,7 +234,12 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         move |page: usize| {
             let query = table_state.query().with_page(page);
             table_state.set_query(query.clone());
-            navigate_stellarhosts(&navigate, &query, Default::default());
+            navigate_stellarhosts(
+                &navigate,
+                &query,
+                Default::default(),
+                i18n.get_locale_untracked(),
+            );
         }
     });
 
@@ -251,8 +269,8 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         <CatalogTablePageShell>
             <CatalogTablePageHeader
                 icon="⭐"
-                title="Stellar Hosts Catalog"
-                subtitle="Browse the complete database of confirmed stellar host systems"
+                title=t_string!(i18n, table_controls.stellarhosts_title)
+                subtitle=t_string!(i18n, table_controls.stellarhosts_subtitle)
             />
 
             <ColumnSelector
@@ -288,7 +306,7 @@ pub fn StellarHostsTablePage() -> impl IntoView {
                             }.into_any(),
                             Err(err) => view! {
                                 <CatalogTableErrorState
-                                    error_msg=format!("Error loading data: {}", err)
+                                    error_msg=format!("{} {}", t_string!(i18n, table_controls.error_loading), err)
                                 />
                             }
                             .into_any(),
@@ -299,4 +317,39 @@ pub fn StellarHostsTablePage() -> impl IntoView {
         </CatalogTablePageShell>
     }
     .into_any()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+
+    #[test]
+    fn stellarhost_navigation_preserves_locale_and_scientific_query_keys() {
+        let query = TableQueryState::new(
+            2,
+            Some("st_mass".to_string()),
+            "desc".to_string(),
+            vec!["hostname".to_string()],
+            "TRAPPIST".to_string(),
+        );
+        for (locale, prefix) in [
+            (Locale::en, "/stellarhosts?"),
+            (Locale::zh_CN, "/zh-CN/stellarhosts?"),
+            (Locale::ja, "/ja/stellarhosts?"),
+        ] {
+            let captured = RefCell::new(String::new());
+            navigate_stellarhosts(
+                &|url, _| *captured.borrow_mut() = url.to_string(),
+                &query,
+                Default::default(),
+                locale,
+            );
+            let url = captured.into_inner();
+            assert!(url.starts_with(prefix));
+            assert!(url.contains("page=2"));
+            assert!(url.contains("sort=st_mass"));
+            assert!(url.contains("filter=TRAPPIST"));
+        }
+    }
 }

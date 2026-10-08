@@ -1,8 +1,9 @@
-# MCP Server
+# Connect to Exodata's exoplanet MCP server
 
-Exoplanets Catalog exposes a read-only [Model Context Protocol](https://modelcontextprotocol.io)
-endpoint at `/mcp` so coding agents and LLM tooling can query the catalog
-directly.
+Exodata provides hosted [Model Context Protocol](https://modelcontextprotocol.io)
+access to NASA Exoplanet Archive records. Connect an AI agent to inspect catalog
+schemas, run read-only SQL, explore curated insights, and export a planet or
+stellar host as JSON or CSV. Exodata is an independent service, not operated by NASA.
 
 Connection URL:
 
@@ -10,6 +11,69 @@ Connection URL:
 
 Transport: Streamable HTTP in stateless JSON response mode. Simple
 request/response clients do not need to manage MCP session IDs.
+
+## Quick setup for Codex, Claude Code, and OpenCode
+
+Choose your client; no local MCP server or proxy installation is needed.
+
+Codex CLI:
+
+```bash
+codex mcp add exodata --url https://exodata.space/mcp
+```
+
+Claude Code, shared project configuration:
+
+```bash
+claude mcp add --scope project --transport http exodata https://exodata.space/mcp
+```
+
+OpenCode, project configuration:
+
+```bash
+opencode mcp add exodata --url https://exodata.space/mcp
+```
+
+These commands save client configuration. Restart or reconnect your client as
+needed, then ask it to call Exodata's `health` tool to check the connection.
+The server exposes the six tools listed below. Configuration details and other
+HTTP clients are covered under Connecting an Agent.
+
+## Supported data and refresh behavior
+
+### Which NASA Exoplanet Archive tables can I query?
+
+Exodata loads prepared exports of NASA's `stellarhosts` and `ps` tables. Query
+them as `stellarhosts` and `exoplanets` respectively. Inspect available fields,
+descriptions, units, and types with `describe_catalog`; see the
+[NASA PS column definitions](https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html)
+for source field documentation.
+
+### Does each row represent a different planet?
+
+No. `exoplanets` contains PS reference records: multiple rows can describe the
+same planet using different references. `COUNT(*)` counts reference records;
+use `COUNT(DISTINCT pl_name)` to count distinct planet names. Host joins can
+also return multiple matching records. Check the schema and choose the rows
+appropriate for your question before interpreting a comparison or ranking.
+
+### Is the data queried live from NASA?
+
+No. Queries run against the prepared catalog loaded at Exodata server startup,
+not against NASA's live service. New exports require conversion and a server
+restart before they appear. Exodata does not promise a daily refresh schedule.
+Record fields such as `rowupdate` describe source rows, not the service's last
+refresh date.
+
+### Can I use SQL and download results?
+
+Use `query_catalog` for a single read-only SQL `SELECT`, including supported
+joins and aggregations. This is Exodata's SQL interface, not an upstream NASA
+ADQL endpoint. Query responses are bounded by the limits below; `download_detail`
+exports one named planet or host as JSON or CSV, rather than an unlimited query
+result. Browse the [catalog](https://exodata.space/exoplanets),
+[stellar hosts](https://exodata.space/stellarhosts), or [REST API guide](api.md)
+for related access paths.
 
 ## Tools
 
@@ -55,6 +119,10 @@ Example `describe_catalog` arguments:
 
 Example `query_catalog` arguments:
 
+Ask for reference records with planet radii between 0.8 and 1.2 Earth radii.
+Inspect the returned records rather than treating this radius filter as a
+habitability assessment; one planet may occur more than once.
+
 ```json
 {
   "sql": "SELECT pl_name, hostname, pl_rade FROM exoplanets WHERE pl_rade BETWEEN 0.8 AND 1.2 ORDER BY pl_rade",
@@ -71,6 +139,8 @@ Join example:
 ```
 
 Aggregate example:
+
+This counts reference records by discovery method, not distinct planets.
 
 ```json
 {
@@ -101,13 +171,18 @@ slightly different config file name and key.
 
 ### Claude Code
 
-Run from the project root, or `--scope user` for global:
+Run from the project root with explicit project scope:
 
 ```bash
-claude mcp add --transport http exodata https://exodata.space/mcp
+claude mcp add --scope project --transport http exodata https://exodata.space/mcp
 ```
 
-That writes `.mcp.json` (project scope) or `~/.claude.json` (user scope):
+That writes `.mcp.json`. Replace `--scope project` with `--scope user` for
+global configuration in `~/.claude.json`. Omitting `--scope` defaults to a
+private local-project entry in `~/.claude.json`, not `.mcp.json`.
+See [Claude Code's MCP guide](https://code.claude.com/docs/en/mcp).
+
+Project configuration:
 
 ```json
 {
@@ -122,7 +197,15 @@ That writes `.mcp.json` (project scope) or `~/.claude.json` (user scope):
 
 ### Crush
 
-`.crush.json` in the project root or `~/.config/crush/crush.json`:
+Add this to `crushrc` in the project root or `~/.config/crush/crushrc`,
+following the [Crush configuration guide](https://github.com/charmbracelet/crush/tree/main/docs/config):
+
+```bash
+mcp add exodata --type http --url https://exodata.space/mcp
+```
+
+Existing JSON configurations (`.crush.json`, `crush.json`, or
+`~/.config/crush/crush.json`) remain supported as a legacy format:
 
 ```json
 {
@@ -138,7 +221,11 @@ That writes `.mcp.json` (project scope) or `~/.claude.json` (user scope):
 
 ### OpenCode
 
-`opencode.json` in the project root or `~/.config/opencode/opencode.json`:
+The quick-setup command writes to project configuration. Add `--global` to
+write to global configuration instead. Alternatively, add a remote entry to
+`opencode.json` in the project root or
+`~/.config/opencode/opencode.json`, following the
+[OpenCode MCP guide](https://opencode.ai/docs/mcp-servers/):
 
 ```json
 {
@@ -155,8 +242,9 @@ That writes `.mcp.json` (project scope) or `~/.claude.json` (user scope):
 
 ### Codex CLI
 
-Codex speaks Streamable HTTP natively. The `codex mcp add` CLI only covers
-stdio servers, so configure HTTP servers directly in `~/.codex/config.toml`:
+Codex supports Streamable HTTP natively. The quick-setup command above adds
+the hosted URL to `~/.codex/config.toml`. You can instead add the entry directly,
+following the [official Codex MCP guide](https://developers.openai.com/codex/mcp):
 
 ```toml
 [mcp_servers.exodata]

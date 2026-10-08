@@ -36,8 +36,8 @@ pub static PAGES: &[DocPage] = &[
     },
     DocPage {
         slug: "mcp",
-        title: "MCP Server",
-        description: "Connect coding agents to the Exodata read-only MCP server for catalog schema and SQL access. Includes Claude Code, Crush, OpenCode, and Codex CLI configuration.",
+        title: "Exoplanet MCP Server: NASA Data, SQL & Setup",
+        description: "Connect Claude Code, Codex, or another HTTP MCP client to query NASA Exoplanet Archive records. Inspect schemas, run read-only SQL, and export JSON/CSV details.",
         keywords: &[
             "Exodata MCP",
             "Model Context Protocol",

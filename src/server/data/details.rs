@@ -14,6 +14,34 @@ use std::collections::{BTreeMap, HashMap};
 pub type HostPlanetsResult =
     Result<(Vec<Value>, Vec<String>, HashMap<String, ColumnMetadata>), String>;
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum DetailLookupError {
+    NotFound(String),
+    Internal(String),
+}
+
+impl std::fmt::Display for DetailLookupError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotFound(message) | Self::Internal(message) => {
+                f.write_str(message)
+            }
+        }
+    }
+}
+
+impl From<String> for DetailLookupError {
+    fn from(message: String) -> Self {
+        Self::Internal(message)
+    }
+}
+
+impl From<DetailLookupError> for String {
+    fn from(error: DetailLookupError) -> Self {
+        error.to_string()
+    }
+}
+
 pub fn get_stellar_host_by_name(
     df: &DataFrame,
     all_metadata: &HashMap<String, ColumnMetadata>,
@@ -39,7 +67,8 @@ pub async fn get_stellar_host_detail_cached(
     host_detail_cache: &HostDetailCache,
     all_metadata: &HashMap<String, ColumnMetadata>,
     hostname: &str,
-) -> Result<(StellarHostDetail, HashMap<String, ColumnMetadata>), String> {
+) -> Result<(StellarHostDetail, HashMap<String, ColumnMetadata>), DetailLookupError>
+{
     if let Some(cached) = host_detail_cache.get(hostname).await {
         return Ok((cached, all_metadata.clone()));
     }
@@ -52,7 +81,10 @@ pub async fn get_stellar_host_detail_cached(
         .map_err(|e| format!("Failed to filter by hostname: {}", e))?;
 
     if filtered.height() == 0 {
-        return Err(format!("Stellar host '{}' not found", hostname));
+        return Err(DetailLookupError::NotFound(format!(
+            "Stellar host '{}' not found",
+            hostname
+        )));
     }
 
     let canonical = build_canonical_host(hostname, &filtered, all_metadata)?;
@@ -125,7 +157,7 @@ pub fn get_exoplanet_by_name(
     df: &DataFrame,
     all_metadata: &HashMap<String, ColumnMetadata>,
     pl_name: &str,
-) -> Result<(Vec<Value>, HashMap<String, ColumnMetadata>), String> {
+) -> Result<(Vec<Value>, HashMap<String, ColumnMetadata>), DetailLookupError> {
     let filtered = df
         .clone()
         .lazy()
@@ -134,7 +166,10 @@ pub fn get_exoplanet_by_name(
         .map_err(|e| format!("Failed to filter by planet name: {}", e))?;
 
     if filtered.height() == 0 {
-        return Err(format!("Exoplanet '{}' not found", pl_name));
+        return Err(DetailLookupError::NotFound(format!(
+            "Exoplanet '{}' not found",
+            pl_name
+        )));
     }
 
     let rows = dataframe_to_json(&filtered)?;
@@ -296,7 +331,47 @@ mod tests {
         let error =
             get_exoplanet_by_name(&df, &HashMap::new(), "Missing b").unwrap_err();
 
-        assert!(error.contains("Exoplanet 'Missing b' not found"));
+        assert!(matches!(&error, DetailLookupError::NotFound(_)));
+        assert!(
+            error
+                .to_string()
+                .contains("Exoplanet 'Missing b' not found")
+        );
+    }
+
+    #[test]
+    fn detail_lookup_schema_failure_is_not_a_missing_planet() {
+        let df = df! { "wrong_column" => &["Missing b"] }.unwrap();
+        let error =
+            get_exoplanet_by_name(&df, &HashMap::new(), "Missing b").unwrap_err();
+        assert!(matches!(error, DetailLookupError::Internal(_)));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn detail_lookup_distinguishes_missing_host_and_schema_failure() {
+        let cache = crate::server::cache::build_host_detail_cache(2);
+        let df = df! { "hostname" => &["Kepler-10"] }.unwrap();
+        let error = get_stellar_host_detail_cached(
+            &df,
+            &cache,
+            &HashMap::new(),
+            "Missing",
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(&error, DetailLookupError::NotFound(_)));
+        assert_eq!(String::from(error), "Stellar host 'Missing' not found");
+
+        let df = df! { "wrong_column" => &["Missing"] }.unwrap();
+        let error = get_stellar_host_detail_cached(
+            &df,
+            &cache,
+            &HashMap::new(),
+            "Missing",
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(error, DetailLookupError::Internal(_)));
     }
 
     #[test]

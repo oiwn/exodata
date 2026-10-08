@@ -396,7 +396,7 @@ mod tests {
         });
         let href = href_for_column("sy_name", &json!("Kepler-90"), &row);
 
-        assert_eq!(href.as_deref(), Some("/stellarhosts/Kepler%2D90"));
+        assert_eq!(href.as_deref(), Some("/stellarhosts/Kepler-90"));
     }
 
     #[test]

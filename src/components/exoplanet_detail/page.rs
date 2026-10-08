@@ -9,9 +9,10 @@ use super::comparison::ScaleComparisonSection;
 use super::hero::PlanetHeroSection;
 use super::records::PlanetRecordsSection;
 use super::summary::PlanetSummarySection;
+use crate::error_template::{AppError, app_error_view};
 use crate::metadata_helpers::{
     canonical_url, decode_path_segment, encode_path_segment,
-    exoplanet_detail_description, exoplanet_detail_title, title_with_site,
+    exoplanet_detail_description, exoplanet_detail_title,
 };
 use crate::server::functions::get_exoplanet_detail;
 use crate::structured_data::{StructuredData, exoplanet_dataset_schema};
@@ -38,53 +39,37 @@ pub fn ExoplanetDetailPage() -> impl IntoView {
         decode_path_segment(&raw)
     });
 
-    let fallback_title =
-        move || title_with_site(&format!("{} Exoplanet", pl_name.get()));
-    let fallback_description = move || {
-        format!(
-            "Explore measurements and source records for the exoplanet {}.",
-            pl_name.get()
-        )
-    };
-    let canonical_href = canonical_url(&format!(
-        "/exoplanets/{}",
-        encode_path_segment(&pl_name.get_untracked())
-    ));
-
     let detail_resource = Resource::new(
         move || pl_name.get(),
         move |name| async move { get_exoplanet_detail(name).await },
     );
 
     view! {
-        <Title text=move || fallback_title()/>
-        <Meta name="description" content=move || fallback_description()/>
-        <Link rel="canonical" href=canonical_href.clone()/>
-
-        <div class="exoplanet-detail-page">
-            <div class="exoplanet-detail-page__container">
-                <A
-                    href="/exoplanets"
-                    attr:class="exoplanet-detail-page__back-link"
-                >
-                    <span>"←"</span>
-                    <span>"Back to Exoplanets"</span>
-                </A>
-
                 <Suspense fallback=move || {
                     view! {
+                        <div class="exoplanet-detail-page">
+                        <div class="exoplanet-detail-page__container">
                         <div class="exoplanet-detail-page__loading">
                             <div class="exoplanet-detail-page__loading-spinner"></div>
                             <p class="exoplanet-detail-page__loading-label">"Loading exoplanet profile"</p>
+                        </div>
+                        </div>
                         </div>
                     }
                 }>
                     {move || {
                         detail_resource.get().map(|result| match result {
-                            Ok(detail) => view! {
+                            Ok(Some(detail)) => view! {
                                 <Title text=exoplanet_detail_title(&detail)/>
                                 <Meta name="description" content=exoplanet_detail_description(&detail)/>
+                                <Link rel="canonical" href=canonical_url(&format!("/exoplanets/{}", encode_path_segment(&detail.pl_name)))/>
                                 <StructuredData value=exoplanet_dataset_schema(&detail)/>
+                                <div class="exoplanet-detail-page">
+                                <div class="exoplanet-detail-page__container">
+                                    <A href="/exoplanets" attr:class="exoplanet-detail-page__back-link">
+                                        <span>"←"</span>
+                                        <span>"Back to Exoplanets"</span>
+                                    </A>
 
                                 <div class="exoplanet-detail-page__content">
                                     <PlanetHeroSection detail=detail.clone() />
@@ -92,19 +77,14 @@ pub fn ExoplanetDetailPage() -> impl IntoView {
                                     <ScaleComparisonSection detail=detail.clone() />
                                     <PlanetRecordsSection detail=detail />
                                 </div>
-                            }
-                            .into_any(),
-                            Err(err) => view! {
-                                <div class="exoplanet-detail-page__error">
-                                    <h2 class="exoplanet-detail-page__error-title">"Error Loading Planet"</h2>
-                                    <p class="exoplanet-detail-page__error-message">{err.to_string()}</p>
+                                </div>
                                 </div>
                             }
                             .into_any(),
+                            Ok(None) => app_error_view(AppError::NotFound),
+                            Err(_) => app_error_view(AppError::InternalServerError),
                         })
                     }}
                 </Suspense>
-            </div>
-        </div>
     }
 }

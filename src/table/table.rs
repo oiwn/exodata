@@ -1,3 +1,6 @@
+use crate::i18n::*;
+use crate::locale::localized_path;
+use crate::metadata_helpers::encode_path_segment;
 use crate::server::functions::TableData;
 use crate::table::ColumnGroup;
 use crate::table::TableQueryState;
@@ -5,6 +8,7 @@ use exo_types::metadata::ColumnMetadata;
 use leptos::ev::KeyboardEvent;
 use leptos::prelude::*;
 use leptos::serde_json::Value;
+use leptos_i18n::td_string;
 use leptos_router::components::A;
 use std::collections::HashMap;
 
@@ -22,8 +26,8 @@ fn MeasurementCell(
     };
 
     view! {
-        <td class=format!("px-6 py-4 text-sm text-gray-300 font-mono border-l border-transparent {}", lim_class)>
-            <div class="flex items-center gap-2">
+        <td class=format!("px-3 py-4 text-sm text-gray-300 font-mono border-l border-transparent {}", lim_class)>
+            <div class="flex items-center gap-1">
                 <div class="flex flex-col text-[10px] leading-none text-gray-400 min-w-[2.25rem] text-right">
                     {err1.as_ref().map(|v| {
                         view! { <span class="-translate-y-0.5">{"+"}{v.clone()}</span> }
@@ -45,20 +49,23 @@ pub fn Table(
     current_sort_column: Option<String>,
     current_sort_order: String,
     column_metadata: HashMap<String, ColumnMetadata>,
+    /// Localize only the eight default exoplanet display headings.
+    #[prop(optional)]
+    exoplanet_headings: bool,
     #[prop(optional)] column_descriptions: Option<HashMap<String, String>>,
     #[prop(optional)] display_columns: Option<Vec<String>>,
     #[prop(optional)] column_groups: Option<HashMap<String, ColumnGroup>>,
     #[prop(optional)] filter_input: Option<ReadSignal<String>>,
     #[prop(optional)] set_filter_input: Option<WriteSignal<String>>,
     #[prop(optional)] on_filter_commit: Option<Callback<String>>,
-    /// Column name to render as a link (e.g., "hostname")
+    /// Column-to-route mapping; cell names are appended as encoded path segments.
     #[prop(optional)]
-    link_column: Option<String>,
-    /// Base URL for the link (e.g., "/stellarhosts/") - column value will be appended
-    #[prop(optional)]
-    link_base: Option<String>,
+    column_links: HashMap<String, String>,
 ) -> impl IntoView {
     let columns = display_columns.unwrap_or_else(|| data.columns.clone());
+    let i18n = use_i18n();
+    let locale = i18n.get_locale_untracked();
+    let exoplanet_locale = exoplanet_headings.then_some(locale);
     let groups = column_groups.unwrap_or_default();
     let show_filter = filter_input.is_some()
         && set_filter_input.is_some()
@@ -66,12 +73,12 @@ pub fn Table(
 
     view! {
         <div class="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-sm">
-            <table class="w-full border-collapse">
+            <table class="w-full whitespace-nowrap border-collapse">
                 <thead class="bg-slate-900/50 sticky top-0">
                     <tr>
-                        {columns.iter().map(|col| {
+                        {columns.iter().enumerate().map(|(column_idx, col)| {
                             let col_name = col.clone();
-                            let col_display = format_column_name(&col_name);
+                            let col_display = format_column_name(&col_name, exoplanet_locale);
                             let is_sorted = current_sort_column.as_ref() == Some(&col_name);
                             let sort_indicator = if is_sorted {
                                 if current_sort_order == "asc" {
@@ -89,6 +96,11 @@ pub fn Table(
                                 .and_then(|descs| descs.get(&col_name))
                                 .cloned()
                                 .or_else(|| {
+                                    exoplanet_locale
+                                        .and_then(|locale| default_exoplanet_description(&col_name, locale))
+                                        .map(str::to_owned)
+                                })
+                                .or_else(|| {
                                     column_metadata
                                         .get(&col_name)
                                         .and_then(|m| m.description.clone())
@@ -96,21 +108,37 @@ pub fn Table(
                             let unit = column_metadata
                                 .get(&col_name)
                                 .and_then(|m| m.unit.clone());
-                            let title = build_column_title(description.clone(), unit);
+                            let title = build_column_title(description.clone(), unit)
+                                .map(|title| format!("{col_name}: {title}"));
+                            let tooltip_id = title.as_ref().map(|_| format!("catalog-column-{col_name}-tooltip"));
+                            let tooltip_describedby = tooltip_id.clone();
+                            let tooltip_class = if column_idx >= columns.len() / 2 {
+                                "catalog-table-tooltip catalog-table-tooltip--right"
+                            } else {
+                                "catalog-table-tooltip"
+                            };
 
                             let col_for_click = col_name.clone();
+                            let col_for_key = col_name.clone();
                             let on_click = move |_| {
                                 on_sort.run(col_for_click.clone());
                             };
 
                             view! {
                                 <th
-                                    class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white hover:bg-slate-800/50 transition-colors select-none group relative"
+                                    class="catalog-table-heading px-3 py-3 border-r border-b border-slate-700/60 last:border-r-0 text-left text-xs font-semibold text-gray-300 cursor-pointer hover:text-white hover:bg-slate-800/50 transition-colors select-none group relative"
                                     on:click=on_click
-                                    title=title
+                                    tabindex="0"
+                                    aria-describedby=tooltip_describedby
+                                    on:keydown=move |event: KeyboardEvent| {
+                                        if event.key() == "Enter" || event.key() == " " {
+                                            event.prevent_default();
+                                            on_sort.run(col_for_key.clone());
+                                        }
+                                    }
                                 >
-                                    <div class="flex items-center gap-2">
-                                        <span>{col_display}</span>
+                                    <div class="flex items-center gap-1">
+                                        <span class="whitespace-nowrap">{col_display}</span>
                                         {if is_sorted {
                                             view! { <span class="text-purple-400">{sort_indicator}</span> }.into_any()
                                         } else {
@@ -122,6 +150,9 @@ pub fn Table(
                                             view! { <span></span> }.into_any()
                                         }}
                                     </div>
+                                    {title.map(|text| view! {
+                                        <span id=tooltip_id role="tooltip" class=tooltip_class>{text}</span>
+                                    })}
                                 </th>
                             }
                         }).collect::<Vec<_>>()}
@@ -139,11 +170,11 @@ pub fn Table(
                                 {columns.iter().enumerate().map(|(idx, _)| {
                                     if idx == 0 {
                                         view! {
-                                            <th class="px-6 py-3">
+                                            <th class="px-3 py-2 border-r border-b border-slate-700/60 last:border-r-0 text-left font-normal">
                                                 <input
                                                     type="text"
-                                                    class="w-full px-3 py-2 rounded-md bg-slate-900/50 border border-slate-700 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-                                                    placeholder="Filter..."
+                                                    class="block w-32 max-w-full px-2 py-1 rounded-md bg-slate-900/50 border border-slate-700 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                                    placeholder=t_string!(i18n, table_controls.filter)
                                                     prop:value=move || filter_input.get()
                                                     on:input=move |e| {
                                                         set_filter_input.set(event_target_value(&e));
@@ -158,7 +189,7 @@ pub fn Table(
                                             </th>
                                         }.into_any()
                                     } else {
-                                        view! { <th class="px-6 py-3"></th> }.into_any()
+                                        view! { <th class="px-3 py-2 border-r border-b border-slate-700/60 last:border-r-0"></th> }.into_any()
                                     }
                                 }).collect::<Vec<_>>()}
                             </tr>
@@ -175,27 +206,17 @@ pub fn Table(
                             "bg-slate-800/10"
                         };
 
-                        let link_col = link_column.clone();
-                        let link_url_base = link_base.clone();
-
                         view! {
                             <tr class=format!("{} hover:bg-slate-700/50 transition-colors", row_class)>
                                 {columns.iter().map(|col| {
                                     let value = row.get(col).unwrap_or(&Value::Null);
-                                    let formatted_value = format_cell_value(value);
-                                    let is_link_column = link_col.as_ref() == Some(col);
+                                    let formatted_value = format_display_cell_value(col, value);
+                                    let link_href = cell_link_href(col, value, &column_links, locale);
                                     let group = groups.get(col);
 
-                                    if is_link_column {
-                                        let link_value = value.as_str().unwrap_or("");
-                                        // Simple URL encoding for the most common cases
-                                        let encoded = link_value.replace(' ', "%20").replace('#', "%23");
-                                        let href = link_url_base.as_ref()
-                                            .map(|base| format!("{}{}", base, encoded))
-                                            .unwrap_or_default();
-
+                                    if let Some(href) = link_href {
                                         view! {
-                                            <td class="px-6 py-4 text-sm font-mono">
+                                            <td class="px-3 py-4 text-sm font-mono">
                                                 <A
                                                     href=href
                                                     attr:class="text-purple-400 hover:text-purple-300 hover:underline transition-colors"
@@ -223,9 +244,26 @@ pub fn Table(
                                             />
                                         }.into_any()
                                     } else {
+                                        let full_method = if col == "discoverymethod" {
+                                            value.as_str()
+                                                .filter(|method| discovery_method_abbreviation(method).is_some())
+                                                .map(str::to_owned)
+                                        } else {
+                                            None
+                                        };
+                                        let tooltip_id = format!("catalog-method-{idx}-tooltip");
+                                        let tooltip_describedby = tooltip_id.clone();
                                         view! {
-                                            <td class="px-6 py-4 text-sm text-gray-300 font-mono">
-                                                {formatted_value}
+                                            <td class="px-3 py-4 text-sm text-gray-300 font-mono">
+                                                {match full_method {
+                                                    Some(full_method) => view! {
+                                                        <span class="catalog-table-abbreviation relative inline-block cursor-help" tabindex="0" aria-describedby=tooltip_describedby>
+                                                            {formatted_value}
+                                                            <span id=tooltip_id role="tooltip" class="catalog-table-tooltip">{full_method}</span>
+                                                        </span>
+                                                    }.into_any(),
+                                                    None => formatted_value.into_any(),
+                                                }}
                                             </td>
                                         }.into_any()
                                     }
@@ -240,7 +278,7 @@ pub fn Table(
                 view! {
                     <div class="text-center py-12 text-gray-400">
                         <div class="text-4xl mb-4">"🌌"</div>
-                        <p class="text-lg">"No data available"</p>
+                        <p class="text-lg">{t!(i18n, table_controls.no_data)}</p>
                     </div>
                 }.into_any()
             } else {
@@ -281,14 +319,68 @@ pub fn build_table_query(query: &TableQueryState) -> String {
 }
 
 /// Format column name for display
-fn format_column_name(col: &str) -> String {
+fn format_column_name(col: &str, exoplanet_locale: Option<Locale>) -> String {
+    if let Some(locale) = exoplanet_locale {
+        let label = match col {
+            "pl_name" => Some(td_string!(locale, exoplanet_columns.pl_name)),
+            "hostname" => Some(td_string!(locale, exoplanet_columns.hostname)),
+            "discoverymethod" => {
+                Some(td_string!(locale, exoplanet_columns.discoverymethod))
+            }
+            "disc_year" => Some(td_string!(locale, exoplanet_columns.disc_year)),
+            "pl_orbper" => Some(td_string!(locale, exoplanet_columns.pl_orbper)),
+            "pl_rade" => Some(td_string!(locale, exoplanet_columns.pl_rade)),
+            "pl_bmasse" => Some(td_string!(locale, exoplanet_columns.pl_bmasse)),
+            "rowupdate" => Some(td_string!(locale, exoplanet_columns.rowupdate)),
+            _ => None,
+        };
+        if let Some(label) = label {
+            return label.to_string();
+        }
+    }
+
     match col {
         "hostname" => "Star Name".to_string(),
         "sy_dist" => "Distance (pc)".to_string(),
         "st_teff" => "Temperature (K)".to_string(),
         "st_mass" => "Mass (M☉)".to_string(),
         "sy_pnum" => "Planets".to_string(),
+        "rowupdate" => "Updated".to_string(),
         _ => col.to_string(),
+    }
+}
+
+fn default_exoplanet_description(
+    col: &str,
+    locale: Locale,
+) -> Option<&'static str> {
+    match col {
+        "pl_name" => {
+            Some(td_string!(locale, exoplanet_column_descriptions.pl_name))
+        }
+        "hostname" => {
+            Some(td_string!(locale, exoplanet_column_descriptions.hostname))
+        }
+        "discoverymethod" => Some(td_string!(
+            locale,
+            exoplanet_column_descriptions.discoverymethod
+        )),
+        "disc_year" => {
+            Some(td_string!(locale, exoplanet_column_descriptions.disc_year))
+        }
+        "pl_orbper" => {
+            Some(td_string!(locale, exoplanet_column_descriptions.pl_orbper))
+        }
+        "pl_rade" => {
+            Some(td_string!(locale, exoplanet_column_descriptions.pl_rade))
+        }
+        "pl_bmasse" => {
+            Some(td_string!(locale, exoplanet_column_descriptions.pl_bmasse))
+        }
+        "rowupdate" => {
+            Some(td_string!(locale, exoplanet_column_descriptions.rowupdate))
+        }
+        _ => None,
     }
 }
 
@@ -321,6 +413,21 @@ fn encode_query_value(value: &str) -> String {
         .replace('?', "%3F")
 }
 
+fn cell_link_href(
+    column: &str,
+    value: &Value,
+    column_links: &HashMap<String, String>,
+    locale: Locale,
+) -> Option<String> {
+    let base = column_links.get(column)?;
+    let name = value.as_str().filter(|name| !name.trim().is_empty())?;
+    Some(format!(
+        "{}{}",
+        localized_path(base, locale),
+        encode_path_segment(name)
+    ))
+}
+
 fn format_error_value(value: &Value) -> Option<String> {
     let formatted = format_cell_value(value);
     if formatted == "—" {
@@ -338,6 +445,28 @@ fn format_error_value(value: &Value) -> Option<String> {
 }
 
 /// Format cell value for display
+fn format_display_cell_value(column: &str, value: &Value) -> String {
+    if column == "discoverymethod"
+        && let Some(abbreviation) =
+            value.as_str().and_then(discovery_method_abbreviation)
+    {
+        return abbreviation.to_string();
+    }
+    format_cell_value(value)
+}
+
+fn discovery_method_abbreviation(method: &str) -> Option<&'static str> {
+    match method {
+        "Radial Velocity" => Some("RV"),
+        "Transit Timing Variations" => Some("TTV"),
+        "Eclipse Timing Variations" => Some("ETV"),
+        "Pulsation Timing Variations" => Some("PTV"),
+        "Orbital Brightness Modulation" => Some("OBM"),
+        "Disk Kinematics" => Some("DK"),
+        _ => None,
+    }
+}
+
 fn format_cell_value(value: &Value) -> String {
     match value {
         Value::Null => "—".to_string(),
@@ -356,5 +485,189 @@ fn format_cell_value(value: &Value) -> String {
             }
         }
         _ => value.to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn table_detail_links_use_column_destinations_locale_and_encoded_names() {
+        let links = HashMap::from([
+            ("pl_name".to_string(), "/exoplanets/".to_string()),
+            ("hostname".to_string(), "/stellarhosts/".to_string()),
+        ]);
+        let name = Value::String("Host A+B/#".to_string());
+        for (locale, prefix) in [
+            (Locale::en, ""),
+            (Locale::zh_CN, "/zh-CN"),
+            (Locale::ja, "/ja"),
+        ] {
+            for (column, route) in
+                [("pl_name", "exoplanets"), ("hostname", "stellarhosts")]
+            {
+                assert_eq!(
+                    cell_link_href(column, &name, &links, locale),
+                    Some(format!("{prefix}/{route}/Host%20A%2BB%2F%23"))
+                );
+            }
+        }
+        assert_eq!(name.as_str(), Some("Host A+B/#"));
+        for value in [
+            Value::Null,
+            Value::String(String::new()),
+            Value::String("  ".to_string()),
+        ] {
+            assert_eq!(
+                cell_link_href("hostname", &value, &links, Locale::en),
+                None
+            );
+        }
+        assert_eq!(cell_link_href("other", &name, &links, Locale::en), None);
+    }
+
+    #[test]
+    fn discovery_method_abbreviation_is_display_only() {
+        for (method, abbreviation) in [
+            ("Radial Velocity", "RV"),
+            ("Transit Timing Variations", "TTV"),
+            ("Eclipse Timing Variations", "ETV"),
+            ("Pulsation Timing Variations", "PTV"),
+            ("Orbital Brightness Modulation", "OBM"),
+            ("Disk Kinematics", "DK"),
+        ] {
+            let value = Value::String(method.to_string());
+            assert_eq!(
+                format_display_cell_value("discoverymethod", &value),
+                abbreviation
+            );
+            assert_eq!(format_display_cell_value("other_column", &value), method);
+            assert_eq!(value.as_str(), Some(method));
+            assert_eq!(discovery_method_abbreviation(method), Some(abbreviation));
+        }
+        for method in [
+            "Transit",
+            "Imaging",
+            "Microlensing",
+            "Astrometry",
+            "Pulsar Timing",
+            "Unknown method",
+        ] {
+            assert_eq!(discovery_method_abbreviation(method), None);
+            assert_eq!(
+                format_display_cell_value(
+                    "discoverymethod",
+                    &Value::String(method.to_string())
+                ),
+                method
+            );
+        }
+        assert_eq!(
+            format_display_cell_value("discoverymethod", &Value::Null),
+            "—"
+        );
+    }
+
+    #[test]
+    fn default_exoplanet_tooltips_work_without_source_descriptions() {
+        for locale in [Locale::en, Locale::zh_CN, Locale::ja] {
+            for column in [
+                "pl_name",
+                "hostname",
+                "discoverymethod",
+                "disc_year",
+                "pl_orbper",
+                "pl_rade",
+                "pl_bmasse",
+                "rowupdate",
+            ] {
+                let description = default_exoplanet_description(column, locale)
+                    .expect("default column description");
+                assert!(!description.trim().is_empty());
+                assert!(
+                    build_column_title(Some(description.to_string()), None)
+                        .is_some()
+                );
+            }
+            let mass =
+                default_exoplanet_description("pl_bmasse", locale).unwrap();
+            assert!(mass.contains("M sin i"));
+            assert!(mass.contains("pl_bmassprov"));
+        }
+        assert!(default_exoplanet_description("pl_eqt", Locale::en).is_none());
+    }
+
+    #[test]
+    fn default_tooltips_retain_metadata_units() {
+        let description =
+            default_exoplanet_description("pl_rade", Locale::en).unwrap();
+        let title = build_column_title(
+            Some(description.to_string()),
+            Some("Rearth".to_string()),
+        )
+        .unwrap();
+        assert!(title.contains(description));
+        assert!(title.ends_with("[Rearth]"));
+    }
+
+    #[test]
+    fn default_exoplanet_headings_use_the_selected_locale() {
+        assert_eq!(
+            format_column_name("discoverymethod", Some(Locale::en)),
+            "Disc. method"
+        );
+        for column in [
+            "pl_name",
+            "hostname",
+            "discoverymethod",
+            "disc_year",
+            "pl_orbper",
+            "pl_rade",
+            "pl_bmasse",
+            "rowupdate",
+        ] {
+            let english = format_column_name(column, Some(Locale::en));
+            assert_ne!(english, column);
+            for locale in [Locale::zh_CN, Locale::ja] {
+                let translated = format_column_name(column, Some(locale));
+                assert!(!translated.is_empty());
+                assert_ne!(translated, column);
+                assert_ne!(translated, english);
+            }
+        }
+        assert_eq!(
+            format_column_name("pl_name", Some(Locale::en)),
+            "Planet name"
+        );
+        assert_eq!(
+            format_column_name("pl_name", Some(Locale::zh_CN)),
+            "行星名称"
+        );
+        assert_eq!(format_column_name("pl_name", Some(Locale::ja)), "惑星名");
+        for (locale, heading) in [
+            (Locale::en, "Mass"),
+            (Locale::zh_CN, "质量"),
+            (Locale::ja, "質量"),
+        ] {
+            assert_eq!(format_column_name("pl_bmasse", Some(locale)), heading);
+        }
+    }
+
+    #[test]
+    fn other_headings_preserve_scientific_keys_and_existing_aliases() {
+        for locale in [Locale::en, Locale::zh_CN, Locale::ja] {
+            assert_eq!(format_column_name("pl_eqt", Some(locale)), "pl_eqt");
+            assert_eq!(
+                format_column_name("future_column", Some(locale)),
+                "future_column"
+            );
+            assert_eq!(
+                format_column_name("sy_dist", Some(locale)),
+                "Distance (pc)"
+            );
+        }
+        assert_eq!(format_column_name("pl_name", None), "pl_name");
+        assert_eq!(format_column_name("hostname", None), "Star Name");
     }
 }

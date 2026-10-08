@@ -41,10 +41,10 @@ pub fn CanonicalSummarySection(host: StellarHostDetail) -> impl IntoView {
 
             {match selected {
                 Some(row) => view! {
-                    <p>"Stellar source: "<ProvenanceCell column="st_refname".to_string() value=row["st_refname"].clone()/>
+                    <p class="host-detail-section__source">"Stellar source: "<ProvenanceCell column="st_refname".to_string() value=row["st_refname"].clone()/>
                         " • System source: "<ProvenanceCell column="sy_refname".to_string() value=row["sy_refname"].clone()/></p>
                 }.into_any(),
-                None => view! { <p>"No source row contains usable summary measurements."</p> }.into_any(),
+                None => view! { <p class="host-detail-section__source">"No source row contains usable summary measurements."</p> }.into_any(),
             }}
 
             <div class="host-detail-summary-grid">

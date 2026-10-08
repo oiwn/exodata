@@ -1,190 +1,150 @@
 # Changelog
 
+## 2026-10-08 — e2e discovery year heading
+
+- Fix the date-sort E2E test to locate the abbreviated Discovery year heading while preserving scientific sort keys.
+- Task `0015-e2e-discovery-year-heading`; source: https://github.com/oiwn/exodata/pull/158
+
+## 2026-10-08 — catalog default value abbreviations
+
+- Shorten discovery-method and localized mass headings and wide discovery-method values, retain immediate explanatory tooltips, and align the compact filter input with the first column.
+- Task `0013-catalog-default-value-abbreviations`
+
+## 2026-10-08 — seo audit fixes
+
+- Fix detail trailing-slash/malformed-path handling and URL consistency, remove duplicate description/lang tags, and emit record metadata only for successful profiles.
+- Task `0012-seo-audit-fixes`; source: https://github.com/oiwn/exodata/issues/159
+
+## 2026-10-08 — homepage counter links
+
+- Make the homepage Stellar Systems and Exoplanets counter cards clickable links to their locale-aware catalogs, with visible keyboard focus.
+- Task `0011-homepage-counter-links`; source: https://github.com/oiwn/exodata/issues/156
+
+## 2026-10-08 — catalog detail error pages
+
+- Render branded 404 pages for missing stellar hosts and exoplanets and branded 500 pages for internal loading failures, with correct SSR status and no raw server error text.
+- Task `0010-catalog-detail-error-pages`; source: https://github.com/oiwn/exodata/issues/155
+
+## 2026-10-08 — homepage planet title glyph
+
+- Replace the homepage galaxy glyph with a decorative ringed planet outside the gradient title text in all locales.
+- Task `0009-homepage-planet-title-glyph`; source: https://github.com/oiwn/exodata/issues/154
+
+## 2026-10-08 — exoplanet table localized headings
+
+- Localize the eight default exoplanet display headings while preserving scientific column identifiers and custom headings. Include translated catalog controls, locale-preserving navigation, and single-line table text.
+- Task `0008-exoplanet-table-localized-headings`; source: https://github.com/oiwn/exodata/issues/153
+
+## 2026-10-08 — stellarhost radius caption
+
+- Use parentheses for the stellar radius comparison caption's scaling remark.
+- Task `0007-stellarhost-radius-caption`; source: https://github.com/oiwn/exodata/issues/152
+
+## 2026-10-08 — stellarhost radius comparison layout
+
+- Show the stellar radius comparison in one shared dark panel by removing the individual star card decoration.
+- Task `0006-stellarhost-radius-comparison-layout`; source: https://github.com/oiwn/exodata/issues/151
+
+## 2026-10-08 — stellarhost source text contrast
+
+- Make stellar-host summary source labels and the empty-source message readable against the dark detail background.
+- Task `0005-stellarhost-source-text-contrast`; source: https://github.com/oiwn/exodata/issues/150
+
+## 2026-10-08 — detail color label contrast
+
+- Improve stellar-host color badge contrast with black text and an opaque pale temperature-derived background.
+- Task `0004-detail-color-label-contrast`; source: https://github.com/oiwn/exodata/issues/149
+
+## 2026-10-08 — homepage mcp description
+
+- Replace the homepage MCP manual with a brief localized introduction and setup link, and improve homepage discovery metadata.
+- Task `0003-homepage-mcp-description`; source: https://github.com/oiwn/exodata/issues/148
+
+## 2026-10-08 — exoplanets mcp seo research
+
+- Research exoplanet MCP discovery and implement specific guide metadata, verified setup, data provenance answers, and MCP sitemap coverage.
+- Task `0002-exoplanets-mcp-seo-research`; source: https://github.com/oiwn/exodata/issues/146
+
+## 2026-10-08 — exoplanets default date sort
+
+- Default the exoplanets website to newest update dates first, with an Updated column, undated records last, stable ties, and preserved sort and column URL state.
+- Task `0001-exoplanets-default-date-sort`; source: https://github.com/oiwn/exodata/issues/143
+
+## 2026-10-08 — exoplanet host star links
+
+- Link Host star values in the exoplanet table to locale-aware stellarhost profiles while preserving planet links and plain missing-value cells.
+- Task `0014-exoplanet-host-star-links`
+
 ## 2026-09-17
 
-- Generated the full v10 stellar-host description catalog: 4,768/4,768
-  systems, zero failures, 7,091,608 recorded tokens (stats snapshot at
-  `content/stats/v10.json`). Plain measurement values throughout: 6
-  ordinary `about` uses remain corpus-wide, zero Earth-year
-  comparisons, zero raw `M sin i`.
-- Algorithmic-bolding fix: thousands-grouped numbers now bold whole
-  (`**1,410 light-years**`) instead of splitting at the comma, and
-  `dev descriptions normalize` repairs previously split spans in
-  stored articles (148 instances across 110 files cleaned).
-- Post-batch copy-edits: repaired `an mean density` grammar in 8
-  articles; moved the shared guide to `content/stellarhost_guide.toml`
-  (specs already described it at `content/` root).
-- Descriptions ship to production via a mounted volume instead of the
-  Docker image: new `just ansible-upload-descriptions` rsyncs only
-  `description.md` files to the droplet, `deploy.yml` mounts them at
-  `/app/content/systems:ro`, and the runtime `COPY` of gitignored
-  content was removed so GitHub Actions builds succeed from a clean
-  checkout. Prose updates no longer require an image rebuild.
+- Generated the full v10 stellar-host description catalog: 4,768/4,768 systems, zero failures, 7,091,608 recorded tokens (stats snapshot at `content/stats/v10.json`). Plain measurement values throughout: 6 ordinary `about` uses remain corpus-wide, zero Earth-year comparisons, zero raw `M sin i`.
+- Algorithmic-bolding fix: thousands-grouped numbers now bold whole (`**1,410 light-years**`) instead of splitting at the comma, and `dev descriptions normalize` repairs previously split spans in stored articles (148 instances across 110 files cleaned).
+- Post-batch copy-edits: repaired `an mean density` grammar in 8 articles; moved the shared guide to `content/stellarhost_guide.toml` (specs already described it at `content/` root).
+- Descriptions ship to production via a mounted volume instead of the Docker image: new `just ansible-upload-descriptions` rsyncs only `description.md` files to the droplet, `deploy.yml` mounts them at `/app/content/systems:ro`, and the runtime `COPY` of gitignored content was removed so GitHub Actions builds succeed from a clean checkout. Prose updates no longer require an image rebuild.
 
 ## 2026-09-12
 
-- Split the descriptions pipeline into the new `exodata-prose` crate
-  (`crates/exo-prose`); exo-cli keeps CLI wiring only.
-  `dataframe_to_json` moved to `exo_core::json`.
-- Built the `dev descriptions analyze` suite: `text`, `summary`,
-  `ngrams --openers`, `templates` (number/unit-masked), `tropes`,
-  `metadata`, `anomalies` (outliers, cross-system duplicate sentences,
-  unbolded measurements), `compare --baseline-dir`, `report
-  --output-path`, and `snapshot --output-path` (machine-readable stats
-  under gitignored `content/stats/`; pristine pass-1 recorded as
-  `content/stats/pass1.json`).
-- De-monotonization round 1: prepare gates the Earth-year comparison to
-  year extremes (≤10 days / ≥3 years); drafter prompt requires varied
-  inventory phrasing, at most one discovery-method explanation per
-  article, planet grouping, selective comparisons, folded rankings,
-  varied rhythm, and no recap endings; request wording no longer
-  teaches "associated".
-- Rebuilt the pipeline to draft-style, fingerprint v5: the JSON critic
-  was removed (13.5% of prompt tokens, mostly false-positive findings);
-  the editor became a compact draft-only style pass under
-  `content/stellarhost_style_prompt.txt`; metadata records
-  draft/style stages.
-- Deterministic narrative gates with gates-as-critic flow: the draft
-  retries only on fact gates; all narrative violations (opener share
-  40%/8, sentence-length spread ≥2.0, numeric density ≤2.5, banned
-  machine phrasings, number+unit reuse) are forwarded to the style pass
-  as an explicit defect list; only style exhaustion fails the system.
-- Extended the mechanical post-pass: em dashes/double hyphens become
-  single hyphens, repeated `about` collapses, planet names and spectral
-  labels are auto-bolded outside strong spans; the corresponding gates
-  are backstops. `times Earth` repair consumes typographic possessives.
-- Baseline-15 calibration across four runs reached 15/15 with all
-  failure classes resolved (year anchors licensed-only, TRAPPIST-1
-  openers fixed via forwarded defects, hostname/spectral/365 reuse
-  false positives exempt, Kepler-11 value-collision class fixed by
-  number+unit pair keying). Call economics: ~2 calls/system, ~4-6k
-  tokens/system vs 8.4k pass 1.
+- Split the descriptions pipeline into the new `exodata-prose` crate (`crates/exo-prose`); exo-cli keeps CLI wiring only. `dataframe_to_json` moved to `exo_core::json`.
+- Built the `dev descriptions analyze` suite: `text`, `summary`, `ngrams --openers`, `templates` (number/unit-masked), `tropes`, `metadata`, `anomalies` (outliers, cross-system duplicate sentences, unbolded measurements), `compare --baseline-dir`, `report --output-path`, and `snapshot --output-path` (machine-readable stats under gitignored `content/stats/`; pristine pass-1 recorded as `content/stats/pass1.json`).
+- De-monotonization round 1: prepare gates the Earth-year comparison to year extremes (≤10 days / ≥3 years); drafter prompt requires varied inventory phrasing, at most one discovery-method explanation per article, planet grouping, selective comparisons, folded rankings, varied rhythm, and no recap endings; request wording no longer teaches "associated".
+- Rebuilt the pipeline to draft-style, fingerprint v5: the JSON critic was removed (13.5% of prompt tokens, mostly false-positive findings); the editor became a compact draft-only style pass under `content/stellarhost_style_prompt.txt`; metadata records draft/style stages.
+- Deterministic narrative gates with gates-as-critic flow: the draft retries only on fact gates; all narrative violations (opener share 40%/8, sentence-length spread ≥2.0, numeric density ≤2.5, banned machine phrasings, number+unit reuse) are forwarded to the style pass as an explicit defect list; only style exhaustion fails the system.
+- Extended the mechanical post-pass: em dashes/double hyphens become single hyphens, repeated `about` collapses, planet names and spectral labels are auto-bolded outside strong spans; the corresponding gates are backstops. `times Earth` repair consumes typographic possessives.
+- Baseline-15 calibration across four runs reached 15/15 with all failure classes resolved (year anchors licensed-only, TRAPPIST-1 openers fixed via forwarded defects, hostname/spectral/365 reuse false positives exempt, Kepler-11 value-collision class fixed by number+unit pair keying). Call economics: ~2 calls/system, ~4-6k tokens/system vs 8.4k pass 1.
 
 ## 2026-09-10
 
-- Completed the full-catalog prose generation for #116: all 4,768
-  preparable systems described (~39.9M recorded tokens including retry
-  passes; one permanent skip, 2MASS J11011926-7732383, with no usable
-  stellar-host summary row). The first pass produced 4,494 systems; the
-  remaining 274 gate failures cleared across `--failed` retry passes.
-- Algorithmic formatting: stage outputs now pass a normalizer that bolds
-  measurement phrases (number+unit, full `times Earth's` forms, spectral
-  label) outside strong spans and repairs the density possessive before
-  the gates; the bolding gate is a backstop only. Bolding failures were
-  67% of first-pass gate failures.
-- Added `dev descriptions normalize` to re-apply the normalizers to
-  stored descriptions (retro-fix rewrote 258 files; zero possessive
-  slips remain).
-- Per-system commands (`generate-batch`, `status`, `prepare`,
-  `normalize`) default to a compact single-line `lines` output;
-  table/json/csv remain available via `--output`. Batch outcome rows now
-  include attempts.
-- Prose pipeline for this pass: draft → JSON-mode critic → editor with
-  deterministic gates (Markdown structure, licensing-aware banned
-  phrases, numeric allowlist, fact preservation), fingerprint v4.
-- Curated licensed facts: per-planet `circumbinary` (NASA `cb_flag`),
-  star `host_kind = "pulsar"`, `age_class = "very young"` (<0.1 Gyr), and
-  "No orbital period is reported" facts, each with guide entries; label
-  bans lift only with their facts.
-- Preparation scale-up: `Catalog` loads source Parquet files once;
-  `prepare --all` enumerates all hostnames, `--dry-run` validates without
-  writing; 4,769-system dry run classified failures and diagnostics.
-- Generation operations: `generate-batch --failed` retries failed systems
-  over matching fingerprints; new `dev descriptions status` summarizes
-  per-system state, usage, and failures with aggregate totals.
-- Per-system manual notes channel: tracked optional `notes.toml`
-  (`facts` merge into publishable comparisons, `guidance` into silent
-  constraints); fingerprint covers the merge, so edited notes regenerate.
-- Content layout for catalog scale: tracked set slimmed to
-  `description.md` + `notes.toml`; request/metadata/evidence/draft/fail
-  files ignored.
-- Tooling alignment: repo alias `cargo lx` (clippy
-  --workspace --all-targets --all-features) shared by prek hook, Justfile,
-  and rust-analyzer; prek test hook fixed to `--workspace` (previously ran
-  only the root package's tests); ~27 clippy warnings fixed.
-- Verified each round with the workspace suites (62 CLI lib tests,
-  integration, 137 web) and live baseline regenerations.
+- Completed the full-catalog prose generation for #116: all 4,768 preparable systems described (~39.9M recorded tokens including retry passes; one permanent skip, 2MASS J11011926-7732383, with no usable stellar-host summary row). The first pass produced 4,494 systems; the remaining 274 gate failures cleared across `--failed` retry passes.
+- Algorithmic formatting: stage outputs now pass a normalizer that bolds measurement phrases (number+unit, full `times Earth's` forms, spectral label) outside strong spans and repairs the density possessive before the gates; the bolding gate is a backstop only. Bolding failures were 67% of first-pass gate failures.
+- Added `dev descriptions normalize` to re-apply the normalizers to stored descriptions (retro-fix rewrote 258 files; zero possessive slips remain).
+- Per-system commands (`generate-batch`, `status`, `prepare`, `normalize`) default to a compact single-line `lines` output; table/json/csv remain available via `--output`. Batch outcome rows now include attempts.
+- Prose pipeline for this pass: draft → JSON-mode critic → editor with deterministic gates (Markdown structure, licensing-aware banned phrases, numeric allowlist, fact preservation), fingerprint v4.
+- Curated licensed facts: per-planet `circumbinary` (NASA `cb_flag`), star `host_kind = "pulsar"`, `age_class = "very young"` (<0.1 Gyr), and "No orbital period is reported" facts, each with guide entries; label bans lift only with their facts.
+- Preparation scale-up: `Catalog` loads source Parquet files once; `prepare --all` enumerates all hostnames, `--dry-run` validates without writing; 4,769-system dry run classified failures and diagnostics.
+- Generation operations: `generate-batch --failed` retries failed systems over matching fingerprints; new `dev descriptions status` summarizes per-system state, usage, and failures with aggregate totals.
+- Per-system manual notes channel: tracked optional `notes.toml` (`facts` merge into publishable comparisons, `guidance` into silent constraints); fingerprint covers the merge, so edited notes regenerate.
+- Content layout for catalog scale: tracked set slimmed to `description.md` + `notes.toml`; request/metadata/evidence/draft/fail files ignored.
+- Tooling alignment: repo alias `cargo lx` (clippy --workspace --all-targets --all-features) shared by prek hook, Justfile, and rust-analyzer; prek test hook fixed to `--workspace` (previously ran only the root package's tests); ~27 clippy warnings fixed.
+- Verified each round with the workspace suites (62 CLI lib tests, integration, 137 web) and live baseline regenerations.
 
 ## 2026-09-06
 
-- Merged PR #142: added a single app-wide `<main>` landmark around routed
-  content, including error pages, and replaced page-level landmarks in the
-  overview, about, and docs components to avoid duplicates. PR CI passed
-  formatting, Clippy, tests, coverage, typos, and Playwright smoke checks.
-- Archived the completed Rust dependency upgrade and hardening task: updated
-  canonical dependency requirements and the lockfile, adapted source code to
-  upgraded APIs, and enforced locked resolution across build and CI entry points.
-- Added Cargo Audit policy with scoped exceptions for `RUSTSEC-2026-0194`
-  (trusted offline VOTable input) and `RUSTSEC-2026-0195` (unused Polars cloud
-  XML paths), while keeping informational advisories visible.
-- Retained Serde at exactly `1.0.228` for VOTable `0.7.0` compatibility;
-  documented the constraint in the technical overview. Updated `h2` to
-  `0.4.19` and `chacha20` to `0.10.2`.
-- Dependency-task verification recorded before archival: locked compile,
-  CI-scope Clippy, 175 workspace tests, release cargo-leptos build, coverage,
-  six Playwright smoke tests, formatting, and workflow validation passed.
-  Cargo Audit passed with accepted Bincode, Paste, and proc-macro-error2
-  informational warnings.
+- Merged PR #142: added a single app-wide `<main>` landmark around routed content, including error pages, and replaced page-level landmarks in the overview, about, and docs components to avoid duplicates. PR CI passed formatting, Clippy, tests, coverage, typos, and Playwright smoke checks.
+- Archived the completed Rust dependency upgrade and hardening task: updated canonical dependency requirements and the lockfile, adapted source code to upgraded APIs, and enforced locked resolution across build and CI entry points.
+- Added Cargo Audit policy with scoped exceptions for `RUSTSEC-2026-0194` (trusted offline VOTable input) and `RUSTSEC-2026-0195` (unused Polars cloud XML paths), while keeping informational advisories visible.
+- Retained Serde at exactly `1.0.228` for VOTable `0.7.0` compatibility; documented the constraint in the technical overview. Updated `h2` to `0.4.19` and `chacha20` to `0.10.2`.
+- Dependency-task verification recorded before archival: locked compile, CI-scope Clippy, 175 workspace tests, release cargo-leptos build, coverage, six Playwright smoke tests, formatting, and workflow validation passed. Cargo Audit passed with accepted Bincode, Paste, and proc-macro-error2 informational warnings.
 
 ## 2026-09-04
 
-- Added the OpenCode GitHub Actions integration, preserving explicit `/oc` and
-  `/opencode` commands on issues, pull requests, and inline review comments.
-- Added an automatic scanner for same-repository `todos/**` pull requests that
-  converts new actionable `TODO`/`FIXME`/`NOTE`/`HACK` comments into labeled
-  GitHub issues with stable source fingerprints and semantic deduplication.
-- Constrained automatic scans to issue creation with read-only repository
-  access, restricted OpenCode tools, per-PR concurrency, and private sessions;
-  granted pull-request write access only for the action's required reaction and
-  summary comment.
-- Verified the workflow end to end: qualifying PRs create appropriate issues
-  and PR summaries, repeat scans remain idempotent, and explicit issue commands
-  can produce separately reviewable implementation PRs.
+- Added the OpenCode GitHub Actions integration, preserving explicit `/oc` and `/opencode` commands on issues, pull requests, and inline review comments.
+- Added an automatic scanner for same-repository `todos/**` pull requests that converts new actionable `TODO`/`FIXME`/`NOTE`/`HACK` comments into labeled GitHub issues with stable source fingerprints and semantic deduplication.
+- Constrained automatic scans to issue creation with read-only repository access, restricted OpenCode tools, per-PR concurrency, and private sessions; granted pull-request write access only for the action's required reaction and summary comment.
+- Verified the workflow end to end: qualifying PRs create appropriate issues and PR summaries, repeat scans remain idempotent, and explicit issue commands can produce separately reviewable implementation PRs.
 - Recorded the successful rollout on GitHub issue #133 and closed it.
-- Added a Cargo dependency-audit workflow that runs weekly, supports manual
-  dispatch, and checks Rust manifest or lockfile changes on pull requests and
-  pushes to `main`; the initial audit surfaced five existing lockfile
-  vulnerabilities for follow-up.
-- Added server-computed canonical summaries to exoplanet details, deriving
-  adopted numeric values from all records with disagreement ranges, counts,
-  and provenance while preserving categorical and stable-field evidence.
-- Updated the exoplanet summary cards and detail JSON export to use the
-  canonical payload, documented the mass fallback and field mappings, removed
-  the first-row summary fallback, and verified the change with focused tests,
-  formatting, Clippy, and the workspace test suite.
+- Added a Cargo dependency-audit workflow that runs weekly, supports manual dispatch, and checks Rust manifest or lockfile changes on pull requests and pushes to `main`; the initial audit surfaced five existing lockfile vulnerabilities for follow-up.
+- Added server-computed canonical summaries to exoplanet details, deriving adopted numeric values from all records with disagreement ranges, counts, and provenance while preserving categorical and stable-field evidence.
+- Updated the exoplanet summary cards and detail JSON export to use the canonical payload, documented the mass fallback and field mappings, removed the first-row summary fallback, and verified the change with focused tests, formatting, Clippy, and the workspace test suite.
 
 ## 2026-08-12
 
-- Added localized explanatory names for stellar spectral classes on the
-  overview, including conventional yellow-, orange-, and red-dwarf names.
-- Localized planet-size categories, orbital-period units, temperature bands,
-  and known discovery methods in English, Simplified Chinese, and Japanese,
-  while preserving scientific units, proper names, and unknown source labels.
-- Verified the overview localization with focused tests, Rust formatting, and
-  manual checks of all supported locales.
-- Implemented #126 as a separate pull-request and manually dispatched GitHub
-  Actions workflow for the existing Chromium smoke suite.
-- Upgraded Playwright to 1.62.1, TypeScript to 7.0.2, and Node typings to the
-  Node 24 line, resolving the previous high-severity npm audit findings.
-- Added deterministic fixture staging and an `EXO_DATA_DIR` server override so
-  E2E runs use small repository fixtures instead of downloading live data.
-- Documented the local and CI workflows, including the `fsevents` install-script
-  decision and required lazy-route WASM splitting.
+- Added localized explanatory names for stellar spectral classes on the overview, including conventional yellow-, orange-, and red-dwarf names.
+- Localized planet-size categories, orbital-period units, temperature bands, and known discovery methods in English, Simplified Chinese, and Japanese, while preserving scientific units, proper names, and unknown source labels.
+- Verified the overview localization with focused tests, Rust formatting, and manual checks of all supported locales.
+- Implemented #126 as a separate pull-request and manually dispatched GitHub Actions workflow for the existing Chromium smoke suite.
+- Upgraded Playwright to 1.62.1, TypeScript to 7.0.2, and Node typings to the Node 24 line, resolving the previous high-severity npm audit findings.
+- Added deterministic fixture staging and an `EXO_DATA_DIR` server override so E2E runs use small repository fixtures instead of downloading live data.
+- Documented the local and CI workflows, including the `fsevents` install-script decision and required lazy-route WASM splitting.
 - Added the standalone Tailwind CLI required by Cargo Leptos to the E2E runner.
-- Verified all six Playwright smoke tests locally, plus TypeScript checking,
-  npm audit, Rust formatting, and workflow YAML parsing.
-- Completed #115: added a semantic `<main>` landmark to the homepage without
-  changing page layout or creating nested landmarks on documentation pages.
+- Verified all six Playwright smoke tests locally, plus TypeScript checking, npm audit, Rust formatting, and workflow YAML parsing.
+- Completed #115: added a semantic `<main>` landmark to the homepage without changing page layout or creating nested landmarks on documentation pages.
 - Verified with `cargo check --features ssr` and a manual homepage check.
 
 ## 2026-07-21
 
-- Consolidated catalog-table query transitions and successful-result rendering
-  while retaining separate stellar-host and exoplanet routes with local data
-  resources.
+- Consolidated catalog-table query transitions and successful-result rendering while retaining separate stellar-host and exoplanet routes with local data resources.
 - Added transition coverage and documented shared catalog-table behavior.
-- Verified with `cargo clippy --all --workspace`, `cargo test --all --workspace`,
-  and manual checks of interactions, browser history, and 404 handling.
+- Verified with `cargo clippy --all --workspace`, `cargo test --all --workspace`, and manual checks of interactions, browser history, and 404 handling.
 
 ## 2026-07-20
 
@@ -196,17 +156,12 @@
 
 ## 2026-06-28
 
-- Added a rounded homepage manual section sourced from `docs/index.md` and
-  rendered through the shared docs Markdown renderer.
-- Added homepage links for stable host/planet examples, JSON/CSV exports, REST
-  API docs, MCP docs, CLI docs, and Swagger UI.
-- Added hosted MCP setup command boxes with copy buttons for Codex, Claude Code,
-  OpenCode, and MCP Inspector, plus a compact CLI/MCP interaction card.
-- Completed #119: moved the manual below the detailed homepage statistics and
-  linked the hero subtitle to its in-page anchor.
+- Added a rounded homepage manual section sourced from `docs/index.md` and rendered through the shared docs Markdown renderer.
+- Added homepage links for stable host/planet examples, JSON/CSV exports, REST API docs, MCP docs, CLI docs, and Swagger UI.
+- Added hosted MCP setup command boxes with copy buttons for Codex, Claude Code, OpenCode, and MCP Inspector, plus a compact CLI/MCP interaction card.
+- Completed #119: moved the manual below the detailed homepage statistics and linked the hero subtitle to its in-page anchor.
 - Removed the local MCP URL from the public MCP connection summary.
-- Verified with `cargo clippy --all --workspace`, `cargo test --workspace`, and
-  manual browser checks of layout and copy behavior.
+- Verified with `cargo clippy --all --workspace`, `cargo test --workspace`, and manual browser checks of layout and copy behavior.
 
 ## 2026-06-27
 
@@ -214,291 +169,78 @@
   - `.json` suffix downloads return the full detail payload used by the page
   - `.csv` suffix downloads return matching source-table rows
   - export responses include attachment filenames and content types
-- Wired the existing detail-page provenance download buttons to real JSON/CSV
-  links with tooltips and native download behavior.
-- Added MCP `download_detail(entity, name, format)` for read-only JSON/CSV
-  detail exports, returning filename, MIME type, content, and URL.
-- Documented detail export usage in `docs/api.md`, `docs/mcp.md`, `docs/about.md`,
-  and the CLI README MCP summary.
+- Wired the existing detail-page provenance download buttons to real JSON/CSV links with tooltips and native download behavior.
+- Added MCP `download_detail(entity, name, format)` for read-only JSON/CSV detail exports, returning filename, MIME type, content, and URL.
+- Documented detail export usage in `docs/api.md`, `docs/mcp.md`, `docs/about.md`, and the CLI README MCP summary.
 - Captured the implementation plan and TOON deferral in `specs/ctx.md`.
-- Verified with manual browser checks, `cargo clippy --all --workspace`, and
-  `cargo test --all --workspace`.
+- Verified with manual browser checks, `cargo clippy --all --workspace`, and `cargo test --all --workspace`.
 
 ## 2026-06-15
 
-- Completed #120: added distinct-planet best-mass distribution bands and the
-  five most common stellar spectral classes to the second detailed-statistics
-  row on the homepage.
-- Added coverage for the canonical aggregation data and homepage statistics
-  display.
+- Completed #120: added distinct-planet best-mass distribution bands and the five most common stellar spectral classes to the second detailed-statistics row on the homepage.
+- Added coverage for the canonical aggregation data and homepage statistics display.
 
 ## 2026-05-25
 
-- Split MCP docs into a dedicated `docs/mcp.md` page (`/docs/mcp`) with
-  a "Connecting an Agent" section covering Claude Code, Crush, OpenCode,
-  and Codex CLI; `docs/api.md` now links out.
-- Added `crates/exo-cli/README.md` and crates.io metadata
-  (`readme`/`keywords`/`categories`); bumped `exodata` to `0.1.1`.
-- Workspace dependency cleanup: removed dead deps and orphaned
-  `examples/` folder; added `[workspace.dependencies]` for `polars`,
-  `serde`, `serde_json`, `toml`; dropped vestigial `sqlparser` feature.
-- Replaced `anyhow` with `thiserror` in `exo-core` so the library stops
-  leaking opaque errors through its public API; `exo-cli` keeps `anyhow`.
+- Published dedicated MCP setup documentation and CLI README/crates.io metadata; released exodata 0.1.1.
+- Consolidated workspace dependencies, removed obsolete dependencies/examples, and replaced exo-core's anyhow errors with thiserror.
 
 ## 2026-05-24
 
-- Made the hosted MCP server agent-ready for direct catalog querying:
-  - added MCP tool `describe_catalog(table, columns)` so agents can inspect
-    column descriptions, units, and data types before writing SQL
-  - added MCP tool `query_catalog(sql, limit)` accepting a single read-only
-    SQL `SELECT` against `stellarhosts` and `exoplanets`, default 100 rows
-    and capped at 1000
-  - updated MCP server instructions to point agents at the
-    describe-then-query flow
-- Extracted SQL validation/execution into a shared `src/server/data/sql.rs`
-  helper used by both REST `/rest/query` and MCP `query_catalog`:
-  - single table registration site for `stellarhosts` and `exoplanets`
-  - shared `validate_sql_select_only` now inspects `SetExpr` and rejects
-    `VALUES` and non-SELECT set operations that the prior REST-local check
-    let through
-  - shared `CatalogSqlError` / `CatalogSchemaError` with per-transport
-    status mappers (HTTP vs. MCP)
-- Folded REST `/rest/{table}/schema` onto the same shared
-  `sql::describe_catalog` helper used by MCP `describe_catalog`, removing
-  the last duplicate column-metadata builder
-- Added `source_datatype` (the type declared in column metadata TOML) to
-  the REST `SchemaResponse.columns[]` shape — additive, OpenAPI-compatible
-- Documented MCP connection URLs (local and hosted) and added agent-flow
-  examples in `docs/api.md` (basic query, join, aggregate, schema
-  discovery); refreshed `specs/cli.md` with the current tool surface
-- Added tests for tool listing, `describe_catalog`, `query_catalog`,
-  invalid SQL, non-`SELECT`, multiple statements, unknown table, and limit
-  capping
-- Verified with `cargo clippy --features ssr` and targeted `cargo test
-  --features ssr` runs for handlers, sql, and mcp suites
+- Added MCP describe_catalog and query_catalog for schema discovery and read-only SELECT queries (default 100 rows, capped at 1000).
+- Shared SQL validation/execution and schema discovery between REST and MCP; rejected VALUES/non-SELECT set operations and added source_datatype to REST schema metadata.
+- Updated agent connection/query documentation and verified tool listing, SQL/schema errors, and limit handling with focused tests and Clippy.
 
 ## 2026-05-04
 
-- Expanded focused test coverage for release readiness:
-  - added CLI config and output conversion tests
-  - added metadata helper and structured data schema tests
-  - added server data row conversion, detail lookup, and summary transform tests
-  - added table column model and pagination state tests
-- Added LLM/agent integration surfaces:
-  - added the `exodata` agent skill so coding agents can install project-specific dataset instructions
-  - added a hosted MCP server exposing read-only `exodata` tools for dataset-aware reasoning
-  - enabled LLM clients to inspect catalog health, list insights, and run curated insights against the dataset
-- Improved local CI-style coverage from 34.73% to 47.55% line coverage with the existing `cargo-llvm-cov` workflow settings
-- Verified with `cargo fmt --check`, `cargo test --workspace`, and the CI-style `cargo llvm-cov --workspace --summary-only` command
+- Expanded CLI, metadata/schema, server data, and table-state tests; added the public exodata agent skill and hosted read-only MCP tools. CI-style line coverage increased from 34.73% to 47.55%; formatting, workspace tests, and coverage checks passed.
 
 ## 2026-04-22
 
-- Consolidated insight definitions around shared SQL execution:
-  - moved SQL-backed insight execution into `exo-core::insights`
-  - added lightweight shared insight metadata in `exo-types`
-  - kept hydrate/frontend insight metadata free of `exo-core` dependencies
-  - switched web insight details to one generic `get_insight(slug)` server function
-  - kept CLI insight commands on the same registry/executor as web SSR
-  - prewarmed all registered insight cache entries at startup
-- Simplified table and insight cache payload handling:
-  - changed table data operations to return `TableResult = Result<TableCacheValue, String>`
-  - removed tuple destructuring helpers for table payloads
-  - deleted stale table/server modules that were no longer used
-- Fixed insight table link-helper handling:
-  - system insights now return display `sy_name` separately from `host_link_hostname`
-  - hidden helper columns are filtered explicitly
-  - `sy_name` links now require `host_link_hostname` instead of falling back to displayed host text
-- Canonicalized table page-zero behavior:
-  - `page=0` is treated as page 1 for table data, REST responses, and Leptos server functions
-  - browser table routes replace `?page=0` and `?page=1` with canonical URLs that omit `page`
-  - sort, order, columns, and filter query parameters are preserved during canonicalization
-  - pagination links and table navigation omit `page` for page 1
-- Updated `specs/ctx.md` to summarize the completed refactor and current architecture
-- Verified with SSR/hydrate checks and focused tests for insight registry parity, canonical table URLs, and REST `page=0` normalization
+- Unified SQL-backed insights across core, web, and CLI with shared metadata, generic detail loading, startup prewarming, and simpler cached payloads.
+- Separated insight display names from explicit host-link columns and hid helper columns. Normalized browser page 0/1 URLs to omit page while preserving query state; backend page 0 uses page 1. Focused SSR/hydration, registry, REST, and URL checks passed.
 
 ## 2026-04-13
 
-- Refactored the exoplanet detail page into a feature-owned module and aligned it with the stellar-host detail design family:
-  - added `specs/exoplanet-detail.md` to define page architecture, visual direction, and the target backend contract
-  - converted `src/components/exoplanet_detail.rs` into `src/components/exoplanet_detail/` with `page.rs`, `hero.rs`, `comparison.rs`, `summary.rs`, `records.rs`, and shared formatting helpers
-  - added semantic exoplanet detail styling in `style/components/exoplanet-detail.css` and imported it through `style/tailwind.css`
-  - replaced the old emoji-heavy page shell with a planet hero, generated planet visual, and a dedicated Earth/Jupiter radius comparison section
-  - corrected comparison scaling to use linear radius proportions while still filling the available comparison space
-  - replaced the one-card-per-record records section with a provenance-style summary + dense table layout modeled on stellar-host detail
-- Refactored the exoplanets table page to match the current stellar-hosts table architecture:
-  - converted `src/components/exoplanets_table.rs` into a feature module with `mod.rs`, `page.rs`, and `sections.rs`
-  - extracted page shell, header, loading, error, and pagination UI into smaller exoplanets-specific section components
-  - aligned exoplanets page-level styling with semantic feature classes in `style/components/exoplanets-table.css`
-  - imported the exoplanets feature stylesheet through `style/tailwind.css`
-- Expanded shared table-page infrastructure in `src/table/`:
-  - added `TablePaginationState` for repeated pagination view state
-  - added `TableQuerySignals` to group shared query-related signals and query snapshot helpers
-  - applied the shared pagination/query state abstractions across both table pages
-- Verified the refactor with `cargo fmt`, `cargo check`, `cargo clippy --all-features --workspace -- -D warnings`, and manual browser validation
+- Refactored planet details and the exoplanet table into feature-owned modules with semantic styles, shared pagination/query signals, and provenance summaries/tables. Added measured planet visuals and linear Earth/Jupiter radius comparisons; formatting, compile, Clippy, and manual checks passed.
 
 ## 2026-04-12
 
-- Refactored the stellar hosts table page into smaller, feature-owned pieces:
-  - introduced shared table query state + navigation helpers in `src/table/query_navigation.rs`
-  - moved both table pages and pagination links onto `TableQueryState`
-  - added focused query-navigation tests
-  - split `stellarhosts_table` into a dedicated module with `page.rs` and `sections.rs`
-  - extracted page shell, header, loading, error, and pagination UI into smaller components
-  - centralized stellar-hosts table page transitions through a single route-specific navigation path
-- Added feature-scoped semantic styling for the stellar hosts table page:
-  - created `style/components/stellarhosts-table.css`
-  - imported it from the active Tailwind entrypoint `style/tailwind.css`
-  - moved page-level shell/header/loading/error/pagination styling out of inline Rust class strings
-- Verified the refactor with `cargo fmt`, `cargo check`, targeted query-navigation tests, and manual browser validation
+- Extracted shared TableQueryState/navigation and split stellarhost table rendering into feature-owned sections with semantic CSS. Verified transitions with focused tests, compile/format checks, and manual navigation.
 
 ## 2026-04-06
 
-- Fixed overview entity totals and breakdown semantics:
-  - changed overview stellar host / exoplanet totals to count distinct `hostname` and `pl_name` instead of raw row counts (`crates/exo-core/src/tables/overview.rs`, `src/main.rs`)
-  - replaced the exoplanet overview card subtitle with `Distinct planets in the catalog` (`src/components/overview.rs`)
-  - reworked overview discovery-method and radius-classification sections to use one canonical value per planet instead of counting all records
-  - added overview sections for distinct planets by earliest discovery year and canonical orbital-period bucket
-  - added focused overview aggregation tests covering distinct totals, canonical method selection, canonical radius selection, earliest discovery year, and orbital-period bucketing
-- Improved global shell/UI polish:
-  - added GitHub repository link to the navbar on desktop and mobile (`src/components/navbar.rs`)
-  - added compile-time build timestamp to the footer via `build.rs` and rendered it as `Updated` next to the version badge (`build.rs`, `src/components/footer.rs`)
-  - replaced the default plain 404 output with a branded not-found page matching the site visual style (`src/error_template.rs`)
-- Added agent guidance clarifying that test fixtures are sample material for tests and not source-of-truth dataset values (`AGENTS.md`)
+- Corrected distinct-host/planet totals and canonical overview distributions; added earliest-discovery-year and period buckets with aggregation tests. Added the navbar GitHub link, build timestamp, branded 404, and guidance that fixtures are samples rather than dataset truth.
 
 ## 2026-04-05
 
-- Added baseline SEO infrastructure for crawlability and metadata:
-  - added static `robots.txt` in `public/robots.txt` with open crawling and sitemap reference
-  - added startup-built, in-memory cached `GET /sitemap.xml` served by Axum (`src/main.rs`, `src/server/handlers.rs`, `src/server/mod.rs`)
-  - sitemap includes canonical static pages plus distinct stellar host and exoplanet detail URLs
-  - added sitemap route test coverage in `src/server/tests.rs`
-- Added page-level SSR-friendly metadata across the app:
-  - introduced shared metadata helpers for titles, descriptions, canonical URLs, and percent encoding/decoding (`src/metadata_helpers.rs`)
-  - added per-page `title`, `meta description`, and canonical tags for overview, about, stellar hosts table, exoplanets table, stellar host detail, and exoplanet detail pages
-  - detail-page metadata now derives from the same SSR resource data used to render page content
-  - removed duplicate global description tag from the app shell so each page emits a single description
-- Replaced manual route param decoding for detail pages with proper percent decoding (`percent-encoding` in `Cargo.toml`)
-- Added structured data / JSON-LD for SEO without a dedicated schema crate:
-  - introduced `src/structured_data.rs` to build `serde_json` schema payloads and render SSR `application/ld+json` scripts
-  - added `WebSite` schema to `/`, `CollectionPage` schema to `/stellarhosts` and `/exoplanets`, and `Dataset` schema to stellar host and exoplanet detail pages
-- Fixed detail-page hydration warnings caused by reading SSR resources in head tags outside suspense:
-  - moved resource-backed `Title`, meta description, and JSON-LD emission into the successful `<Suspense/>` branch on detail pages
-  - switched detail-page canonical href generation to non-reactive values to avoid unnecessary reactive read warnings during hydrate
+- Added open robots.txt crawling, cached static/detail sitemaps, shared metadata/URL helpers, percent-decoded detail routes, and WebSite/CollectionPage/Dataset JSON-LD.
+- Moved resource-backed detail metadata into successful Suspense branches to address hydration warnings and removed the duplicate global description.
 
 ## 2026-04-03
 
-- Reworked stellar host detail into a canonical host profile instead of a `first row wins` record view:
-  - added per-`hostname` canonicalization for identity, stable system values, median-based numeric summaries, categorical summaries, and provenance (`src/server/stellarhost_canonical.rs`, `src/server/common.rs`, `src/server/functions.rs`)
-  - added host-detail caching in server state (`src/server/cache.rs`, `src/server/handlers.rs`, `src/main.rs`)
-  - redesigned the detail page around hero, canonical summary, planets, and provenance sections
-  - converted provenance reference markup into real outbound links with `nofollow`
-- Refactored stellar host detail UI into a dedicated submodule:
-  - route container in `src/components/stellarhost_detail/page.rs`
-  - section files for hero, star visual, summary, planets, provenance, and shared formatting helpers
-- Added illustrative star-color rendering driven by canonical `st_teff`:
-  - introduced curated temperature-to-color mapping and derived hero visual tokens (`src/components/stellarhost_detail/star_color.rs`)
-  - wired hero star rendering to canonical temperature with neutral fallback when missing
+- Introduced cached canonical stellarhost profiles with identity, initial median-based numeric summaries, categorical evidence, related planets, and provenance links. Split detail UI into sections and added temperature-derived star colors with a missing-value fallback.
 
 ## 2026-03-29
 
-- Added `tracing` instrumentation to server-side data path (Task 1):
-  - Added `tracing-subscriber` with `env-filter` feature, gated behind `ssr` (`Cargo.toml`)
-  - Initialized subscriber in `src/main.rs` (defaults to `info`, overridable via `RUST_LOG`)
-  - Replaced `println!` with `tracing::info!` in `src/main.rs`
-  - Added entry/exit `info!` and error-path `error!` to all 6 server functions (`src/server/functions.rs`)
-  - Added cache hit/miss `debug!` to both `get_stellarhosts_data_cached` and `get_exoplanets_data_cached` (`src/server/common.rs`)
-- Reduced WASM initial load by 55% (1.2 MB → 535 KB) via lazy route code splitting:
-  - Switched `hydrate_body` → `hydrate_lazy` (`src/lib.rs`)
-  - Added `#[lazy_route]` wrappers for all 6 routes (`src/components/*.rs`)
-  - Updated route declarations to `Lazy::<X>::new()` (`src/app.rs`)
-  - Build command now uses `--split` flag (`infrastructure/docker/Dockerfile`)
-- Added code coverage via `cargo-llvm-cov` + Codecov (`.github/workflows/coverage.yml`):
-  - Runs on push/PR to `main` and manual dispatch
-  - Uses `codecov/codecov-action@v5` with `CODECOV_TOKEN` secret
-  - Excludes frontend components, app shell, and metadata from coverage
+- Added configurable server tracing, lazy-route WASM splitting (initial load reduced from 1.2MB to 535KB), and cargo-llvm-cov/Codecov reporting for main pushes, PRs, and manual runs.
 
 ## 2026-03-11
 
-- Fixed hydration gap (Issue #26): users could interact with SSR content before WASM hydration completed
-  - Added inline `<script>` to `shell()` head that sets `pre-hydration` class on `<html>` before body parses (`src/app.rs`)
-  - CSS blocks interaction and shows dark overlay + spinner via `body::before` / `body::after` while class is present (`style/tailwind.css`)
-  - WASM removes the class after `hydrate_body()` completes (`src/lib.rs`)
-  - Added `web-sys` dependency scoped to `hydrate` feature only (`Cargo.toml`)
-- **Fixed SSR streaming deadlock on 1-vCPU servers**:
-  - Root cause: Tokio defaulted to 1 worker thread on 1-vCPU droplet; Leptos SSR + `spawn_blocking` caused worker thread starvation
-  - Fix: forced `worker_threads = 4` in `#[tokio::main]` (`src/main.rs`) so OS scheduler can interleave threads
-  - Also changed `SsrMode::Async` → `SsrMode::OutOfOrder` for table routes (`src/app.rs`) to stream HTML shell immediately
-- Updated Polars from 0.52 to 0.53 (`Cargo.toml`)
-  - aligned `[dependencies]` and `[dev-dependencies]` to 0.53 with consistent feature flags
-  - replaced removed `get_column_names_str()` with `get_column_names()` in `src/stellarhosts.rs`
+- Fixed the pre-hydration interaction gap (#26) and single-vCPU SSR starvation using an interaction overlay and four Tokio workers. Switched table routes to out-of-order streaming at that time and upgraded Polars 0.52 → 0.53 with API adaptations.
 
 ## 2026-02-18 (Update 2)
 
-- Adjusted SSR mode for table pages in `src/app.rs`:
-  - set `/stellarhosts` route to `SsrMode::Async`
-  - set `/exoplanets` route to `SsrMode::Async`
-- Updated GitHub Actions flow:
-  - `tests.yml` and `code-quality.yml` now run on `pull_request` (to `main`) and manual dispatch
-  - `deploy.yml` now runs on `push` to `main` and manual dispatch
-  - deploy remains gated by version bump detection in `Cargo.toml`
+- Restored Async table SSR and moved test/quality checks to PR/manual triggers; Docker builds run on main pushes/manual dispatch with Cargo.toml version-bump gating.
 
 ## 2026-02-18
 
-- Added `tokio::task::spawn_blocking` for table cache-miss data requests in `src/server/common.rs`:
-  - `get_stellarhosts_data_cached`
-  - `get_exoplanets_data_cached`
-- Improved footer readability and content in `src/components/footer.rs`:
-  - increased contrast and updated version badge styling
-  - added `Developed by imscraping.ninja` link
-  - removed link underline
-- Removed redundant overview CTA (`Browse Stellar Hosts Catalog`) from `src/components/overview.rs` to keep navigation centered in the floating header.
-- Simplified and reorganized GitHub Actions workflows:
-  - `tests.yml` now runs only `cargo test`
-  - `code-quality.yml` handles formatting, clippy, and typos checks
-  - `deploy.yml` now runs as the final stage after successful `Tests` and `Code Quality` workflows for the same `main` commit SHA
-- Added typos dictionary config in `.typos.toml` to allow domain/tooling terms
-- Resolved strict clippy warnings across the workspace and verified with:
-  - `cargo clippy --all-features --workspace -- -D warnings`
+- Moved table cache misses to spawn_blocking, improved footer readability, removed a redundant homepage CTA, separated test/quality/deploy workflows, added the typos dictionary, and resolved strict workspace Clippy warnings.
 
 ## 2026-02-13
 
-- Resolved metadata delivery overhead (Issue #15) by moving table metadata to one-time global hydration:
-  - Added shared metadata store/context in `src/metadata.rs`.
-  - Injected metadata JSON in SSR shell and initialized store app-wide (`src/app.rs`, `src/main.rs`).
-  - Kept metadata available across client navigation (including `/` -> table pages).
-- Converted table request path to data-only payloads:
-  - Removed metadata from `TableData` responses in `src/server/functions.rs`.
-  - Removed metadata from cached table values in `src/server/cache.rs`.
-  - Updated shared table loaders and REST handlers for data-only tuples (`src/server/common.rs`, `src/server/handlers.rs`).
-  - Updated table/selector components to read metadata from global store instead of per-response payloads.
-- Fixed hydration mismatch caused by metadata script placement:
-  - moved metadata script injection into `<head>` to avoid body hydration marker conflicts.
-- Added local Playwright e2e baseline:
-  - Added smoke suite (`end2end/tests/smoke.spec.ts`) with 3 flows:
-    - SSR + hydration `/stellarhosts`
-    - SSR + hydration `/exoplanets`
-    - `/` -> client navigation to `/stellarhosts` with metadata-backed column selector
-  - Added server readiness guard to avoid startup race (`ERR_CONNECTION_REFUSED`).
-  - Simplified local Playwright config to deterministic baseline (`chromium`, single worker, sequential).
-- Documented e2e setup/run/report workflow in `README.md`.
-- Added build-version footer for deployment verification:
-  - added a small global footer showing `CARGO_PKG_VERSION` on all routes
-  - enables quick confirmation that production is running the expected image/version
-  - in `src/components/footer.rs`, `src/components/mod.rs`, `src/app.rs`
+- Delivered table metadata once through the global hydration store (#15), removed metadata from table responses/caches, and fixed metadata-script placement. Added sequential Chromium SSR/navigation smoke tests with readiness polling and documented their workflow; added the build-version footer.
 
 ## 2026-02-12
 
-- Added backend cache wiring for overview and table responses:
-  - Added server cache module (`src/server/cache.rs`) and exported it from `src/server/mod.rs`.
-  - Added `overview_stats` and `table_cache` to `ApiState`.
-  - Updated startup to precompute overview stats and initialize table cache.
-  - Switched server functions and REST handlers to cached table loaders.
-- Added cache test coverage in `src/server/common.rs`:
-  - miss->hit behavior for normalized keys
-  - prewarm key population checks
-  - restart semantics with fresh cache
-- Fixed `cargo leptos build` failure on wasm by enabling `uuid` JS RNG support in `Cargo.toml`.
-- Fixed table-page SSR instability by preventing no-op metadata signal writes in:
-  - `src/components/exoplanets_table.rs`
-  - `src/components/stellarhosts_table.rs`
-- Added `PartialEq`/`Eq` derive for `ColumnMetadata` in `src/server/functions.rs` to support metadata equality checks.
+- Added overview/table caches and cache lifecycle tests, enabled UUID JS support for WASM builds, avoided no-op metadata writes that destabilized SSR, and made ColumnMetadata comparable.

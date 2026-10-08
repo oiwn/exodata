@@ -31,7 +31,7 @@ pub fn StarScaleComparisonSection(host: StellarHostDetail) -> impl IntoView {
                     <h2 class="host-detail-section__title">"Radius against the Sun"</h2>
                 </div>
                 <p class="host-detail-section__description host-detail-section__description--comparison">
-                    {format!("Current adopted radius: {} R☉ • circles scaled linearly by radius", format_number(host_radius))}
+                    {format!("Current adopted radius: {} R☉ (circles scaled linearly by radius)", format_number(host_radius))}
                 </p>
             </div>
 

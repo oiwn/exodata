@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use leptos_meta::{Link, Meta, Title};
 use leptos_router::LazyRoute;
+use leptos_router::components::A;
 use leptos_router::lazy_route;
 
 use crate::metadata_helpers::{SITE_URL, canonical_url, title_with_site};
@@ -51,8 +52,11 @@ pub fn OverviewPage() -> impl IntoView {
 
                 <div class="container mx-auto px-4 py-16 relative">
                     <div class="text-center space-y-4">
-                        <h1 class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-pulse">
-                            {t!(i18n, home.hero_title)}
+                        <h1 class="text-5xl md:text-6xl font-bold text-white animate-pulse">
+                            <span aria-hidden="true">"🪐 "</span>
+                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
+                                {t!(i18n, home.hero_title)}
+                            </span>
                         </h1>
                         <a
                             href="#mcp-exoplanet-data"
@@ -65,7 +69,7 @@ pub fn OverviewPage() -> impl IntoView {
             </div>
 
             // Main content
-            <div class="container mx-auto px-4 pb-16">
+            <div class="container mx-auto px-4 pb-6">
                 <Suspense
                     fallback=move || {
                         view! {
@@ -86,9 +90,11 @@ pub fn OverviewPage() -> impl IntoView {
                     {move || {
                         stats_resource.get().map(|result| match result {
                             Ok(stats) => leptos::either::Either::Left(view! {
-                                <div class="space-y-10">
-                                    <StatsOverview stats=stats.clone()/>
-                                    <DetailedStats stats=stats/>
+                                <div class="space-y-6">
+                                    <div class="space-y-10">
+                                        <StatsOverview stats=stats.clone()/>
+                                        <DetailedStats stats=stats/>
+                                    </div>
                                     <HomepageManual/>
                                 </div>
                             }),
@@ -117,8 +123,13 @@ pub fn OverviewPage() -> impl IntoView {
 #[component]
 fn StatsOverview(stats: DataStats) -> impl IntoView {
     let i18n = use_i18n();
+    let locale = i18n.get_locale_untracked();
     view! {
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <A
+                href=localized_path("/stellarhosts", locale)
+                attr:class="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-900"
+            >
             <StatCard
                 title=t_string!(i18n, home.stellar_systems)
                 value=stats.stellarhosts_total.to_string()
@@ -126,6 +137,11 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
                 subtitle=t_string!(i18n, home.host_stars_catalogued)
                 gradient="from-blue-600 to-cyan-500"
             />
+            </A>
+            <A
+                href=localized_path("/exoplanets", locale)
+                attr:class="block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-900"
+            >
             <StatCard
                 title=t_string!(i18n, home.exoplanets)
                 value=stats.exoplanets_total.to_string()
@@ -133,6 +149,7 @@ fn StatsOverview(stats: DataStats) -> impl IntoView {
                 subtitle=t_string!(i18n, home.distinct_planets)
                 gradient="from-purple-600 to-pink-500"
             />
+            </A>
             <StatCard
                 title=t_string!(i18n, home.average_temperature)
                 value=format!("{:.0} K", stats.avg_stellar_temp)
@@ -372,7 +389,7 @@ fn StatCard(
 ) -> impl IntoView {
     let i18n = use_i18n();
     view! {
-        <div class="group relative overflow-hidden rounded-2xl bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-6 transition-all duration-300 hover:scale-105 hover:border-slate-500 hover:shadow-2xl hover:shadow-purple-500/20">
+        <div class="group relative h-full overflow-hidden rounded-2xl bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-6 transition-all duration-300 hover:scale-105 hover:border-slate-500 hover:shadow-2xl hover:shadow-purple-500/20">
             // Gradient overlay
             <div class=format!("absolute inset-0 bg-gradient-to-br {} opacity-0 group-hover:opacity-10 transition-opacity duration-300", gradient)></div>
 

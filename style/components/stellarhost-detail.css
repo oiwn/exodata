@@ -126,11 +126,11 @@
 }
 
 .star-visual__badge-label {
-  @apply text-xs uppercase tracking-[0.18em] text-slate-400;
+  @apply text-xs uppercase tracking-[0.18em] text-black;
 }
 
 .star-visual__badge-value {
-  @apply text-sm text-white;
+  @apply text-sm text-black;
 }
 
 .host-detail-section {
@@ -177,6 +177,10 @@
   @apply text-slate-300;
 }
 
+.host-detail-section__source {
+  @apply text-slate-300;
+}
+
 .host-detail-summary-grid {
   @apply grid gap-4 md:grid-cols-2 xl:grid-cols-3;
 }
@@ -186,7 +190,7 @@
 }
 
 .host-comparison__card {
-  @apply flex min-h-[21rem] flex-col items-center justify-end rounded-[1.25rem] border border-white/8 bg-white/4 px-4 py-6 text-center;
+  @apply flex min-h-[21rem] flex-col items-center justify-end px-4 py-6 text-center;
 }
 
 .host-comparison__body-wrap {
