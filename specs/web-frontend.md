@@ -46,6 +46,8 @@ The English discovery headings are “Disc. year” and “Disc. method”. The 
 
 The homepage h1 renders a shared decorative 🪐 span with normal text color outside the gradient text span. The three localized `home.hero_title` strings contain only title text; the icon is aria-hidden and does not inherit transparent gradient text styling.
 
+The complete Stellar Systems and Exoplanets count cards are Leptos links to the locale-aware stellarhost/exoplanet tables, including their padding areas. They retain their visual styling and equal grid height and expose a visible keyboard focus ring. The average-temperature and average-distance cards remain informational.
+
 `OverviewPage` fetches precomputed `DataStats` using `get_stats`. It renders summary cards and paired distribution blocks:
 
 1. Planet classifications / orbital periods

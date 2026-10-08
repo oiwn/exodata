@@ -3,11 +3,10 @@
 
 ## Active
 
-- **0010-catalog-detail-error-pages** — approval — catalog detail error pages (https://github.com/oiwn/exodata/issues/155)
+- **0011-homepage-counter-links** — approval — homepage counter links (https://github.com/oiwn/exodata/issues/156)
 
 ## Draft
 
-- **0011-homepage-counter-links** — draft — homepage counter links (https://github.com/oiwn/exodata/issues/156)
 - **0012-seo-audit-fixes** — draft — seo audit fixes (https://github.com/oiwn/exodata/issues/159)
 - **0014-exoplanet-host-star-links** — draft — exoplanet host star links
 
@@ -22,4 +21,5 @@
 - **0007-stellarhost-radius-caption** — blocked — stellarhost radius caption (https://github.com/oiwn/exodata/issues/152)
 - **0008-exoplanet-table-localized-headings** — blocked — exoplanet table localized headings (https://github.com/oiwn/exodata/issues/153)
 - **0009-homepage-planet-title-glyph** — blocked — homepage planet title glyph (https://github.com/oiwn/exodata/issues/154)
+- **0010-catalog-detail-error-pages** — blocked — catalog detail error pages (https://github.com/oiwn/exodata/issues/155)
 - **0013-catalog-default-value-abbreviations** — blocked — catalog default value abbreviations

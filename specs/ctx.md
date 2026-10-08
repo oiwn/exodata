@@ -2,14 +2,15 @@
 
 Latest task: [0008-exoplanet-table-localized-headings](tasks/0008-exoplanet-table-localized-headings.md) — implemented, verified, and visually approved on 2026-10-07; parked pending the shared batch PR merge.
 
-Active task: [0010-catalog-detail-error-pages](tasks/0010-catalog-detail-error-pages.md) — branded 404/500 detail errors now render outside the profile shell after screenshot feedback. Latest split build and live checks passed: missing pages have one back link, no nested profile wrapper, and HTTP 404; valid host retains its shell/back link and HTTP 200. Earlier detail/error tests and locale checks passed. Awaiting corrected-layout visual review.
+Active task: [0011-homepage-counter-links](tasks/0011-homepage-counter-links.md) — implemented full-card locale-aware catalog links with keyboard focus rings. Split build, live SSR checks in all three locales, formatting, Clippy, and diff checks passed; awaiting click/keyboard visual review.
 
 ## Next
 
-Inspect `http://127.0.0.1:3000/stellarhosts/fdfdsfsdfs` and `/exoplanets/fdfdsfsdfs`, plus valid profiles and client navigation. Task 0010 is ready for visual review; next queued task is 0011 (homepage counter links).
+With `cargo leptos watch --split`, check the counter cards at `http://127.0.0.1:3000/`, `/zh-CN`, and `/ja`: click the full card/padding and use Tab/Enter to open the matching localized table. Next queued task is 0012 (SEO audit fixes).
 
 ## Session handoff
 
+- Task 0010 is parked after the user requested task 0011; remaining visual/client-navigation manual checks are not inferred. Commit-hook correction uses a Tokio LocalSet for renderer tests; full workspace/all-features tests and Clippy passed on 2026-10-08.
 - Task 0009's homepage planet icon was visually approved on 2026-10-07 and is parked pending the shared batch merge. Responsive/all-locale manual checklist items remain human-owned.
 - Task 0013's compact headings and filter layout were visually approved on 2026-10-07; it is parked pending the shared batch merge. Manual interaction/locale checklist items remain human-owned.
 - Tasks 0001-0008 have their implementations parked for the shared batch merge; review evidence and remaining human-owned manual checks live in each task file. Do not mark tasks done/archive them before merge or infer unreported manual checks.

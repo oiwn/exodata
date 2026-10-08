@@ -1,10 +1,11 @@
 ---
 id: 0010-catalog-detail-error-pages
-status: approval
+status: blocked
 scope: [src/components/**/*.rs, src/server/**/*.rs, src/error_template.rs, src/table/table.rs, locales/*.json]
 created: 2026-10-05
 source: https://github.com/oiwn/exodata/issues/155
 attempts: 1
+blocked_reason: User requested continuing with task 0011; implementation and commit-hook corrections verified, remaining manual review/shared batch merge pending
 ---
 # Task: catalog detail error pages
 
@@ -68,3 +69,4 @@ Render branded 404 pages for missing stellar hosts and exoplanets and branded 50
 - 2026-10-08 advance in-progress/fix → in-progress/verify
 - 2026-10-08 advance in-progress/verify → in-progress/review
 - 2026-10-08 advance in-progress/review → approval
+- 2026-10-08 blocked: User requested continuing with task 0011; implementation and commit-hook corrections verified, remaining manual review/shared batch merge pending
