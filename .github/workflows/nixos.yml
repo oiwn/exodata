@@ -1,0 +1,30 @@
+name: NixOS baseline
+
+on:
+  push:
+    paths:
+      - flake.nix
+      - flake.lock
+      - infrastructure/nix/**
+      - .github/workflows/nixos.yml
+  pull_request:
+    paths:
+      - flake.nix
+      - flake.lock
+      - infrastructure/nix/**
+      - .github/workflows/nixos.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Evaluate pinned configuration
+        run: nix flake check --no-build --no-update-lock-file
+      - name: Build baseline (no activation)
+        run: nix build .#nixosConfigurations.nixos-vps.config.system.build.toplevel --no-link --print-out-paths --no-update-lock-file

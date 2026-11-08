@@ -21,6 +21,10 @@ Deferred 2026-09-11 until Round B content generation improves (see [ctx.md](ctx.
 - [ ] Define the prose translation pipeline after pass-2 content lands.
 - [ ] B5: deploy after content generation through the existing Round A2 upload channel above.
 
+## Infrastructure Direction
+
+- [ ] Migrate to the prepaid Hostinger NixOS VPS: implementation in [task 0017](tasks/0017-hostinger-nixos-deployment.md), general direction in [infrastructure.md](infrastructure.md). The maintainer handles DigitalOcean retirement after cutover. This supersedes the Ubuntu tarball/Ansible direction and the nginx part of the #43 issue-review item.
+
 ## Update tailwind
 
 ```
