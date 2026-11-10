@@ -182,7 +182,7 @@ just ansible-status
 just ansible-logs
 ```
 
-See [DEPLOY.md](../DEPLOY.md) for the full deployment guide.
+See [DEPLOY.md](../DEPLOY.md) for the full deployment guide. Planned direction (release tarball + systemd, Ferron, MCP subdomain, monitoring) is in [infrastructure.md](infrastructure.md).
 
 ## Publishing Notes
 
