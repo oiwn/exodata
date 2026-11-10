@@ -124,3 +124,13 @@ nix-deploy rev:
 # Return the VPS to its previous NixOS generation.
 nix-rollback:
   ssh {{nix_host}} "nixos-rebuild switch --rollback"
+
+# Upload Parquet data and metadata TOML files, then restart the app.
+nix-upload-data:
+  rsync -rtv data/*.parquet data/*.toml {{nix_host}}:/var/lib/exodata/data/
+  ssh {{nix_host}} "systemctl restart exodata"
+
+# Upload generated stellar-host descriptions (description.md only), then restart the app.
+nix-upload-descriptions:
+  rsync -rtv --include='*/' --include='description.md' --exclude='*' content/systems/ {{nix_host}}:/var/lib/exodata/content/
+  ssh {{nix_host}} "systemctl restart exodata"

@@ -3,6 +3,7 @@
   imports = [
     ../providers/hostinger.nix
     ../modules/base.nix
+    ../modules/exodata.nix
   ];
 
   # Keep SSH login exactly as installed.
