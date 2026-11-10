@@ -98,6 +98,8 @@ craneLib.buildPackage (
     BUILD_TIMESTAMP = "${lib.substring 0 4 buildDate}-${lib.substring 4 2 buildDate}-${lib.substring 6 2 buildDate} ${lib.substring 8 2 buildDate}:${lib.substring 10 2 buildDate} UTC";
 
     buildPhaseCargoCommand = "cargo leptos build --release --split";
+    # cargo-leptos builds, so crane has no cargo log to install from; we install below.
+    doNotPostBuildInstallCargoBinaries = true;
     installPhaseCommand = ''
       install -Dm755 target/release/exodata-web $out/bin/exodata
       mkdir -p $out/share/exodata
