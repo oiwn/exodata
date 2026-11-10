@@ -121,6 +121,12 @@ nix-deploy rev:
     --option extra-substituters https://exodata.cachix.org \
     --option extra-trusted-public-keys {{cachix_key}}"
 
+# Copy local Grafana credentials (Git-ignored) to the VPS as a root-only file.
+nix-push-secrets:
+  test -f infrastructure/nix/alloy.env
+  ssh {{nix_host}} 'install -d -m 700 /var/lib/secrets && umask 077 && cat > /var/lib/secrets/alloy.env' < infrastructure/nix/alloy.env
+  ssh {{nix_host}} 'systemctl try-restart alloy'
+
 # Return the VPS to its previous NixOS generation.
 nix-rollback:
   ssh {{nix_host}} "nixos-rebuild switch --rollback"

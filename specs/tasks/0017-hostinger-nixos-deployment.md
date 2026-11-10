@@ -120,6 +120,18 @@ grade: huge
 
 ### 7. Host, HTTP, and MCP observability
 
+- Implemented:
+  - **Alloy:** `infrastructure/nix/modules/alloy.nix` uses the nixpkgs `services.alloy` module (Alloy 1.16.0, `DynamicUser` in `systemd-journal`).
+  - **Metrics:** `prometheus.exporter.unix` → scrape every 60s with `job="integrations/node_exporter"` and `instance="exodata-vps"` (labels used by the Grafana Cloud Linux Server dashboards) → `prometheus.remote_write`.
+  - **Logs:** journal entries for `exodata`, `ferron` and `alloy` units, labelled `unit`, `level` and `host` → `loki.write`.
+- Credentials: `/var/lib/secrets/alloy.env` (root 0600, systemd `EnvironmentFile`) provides `GRAFANA_PROM_URL`, `GRAFANA_PROM_USER`, `GRAFANA_LOKI_URL`, `GRAFANA_LOKI_USER` and `GRAFANA_TOKEN`.
+  - It is pushed from the Git-ignored `infrastructure/nix/alloy.env` by `just nix-push-secrets`. The template is `alloy.env.example`.
+  - The Alloy config reads them with `sys.env`.
+- Ferron access log: `log_format "{method} {path} {status_code} {content_length} \"{header:User-Agent}\""`, with no client IP and no query string.
+- MCP: `ExodataMcp::call_tool` (`src/server/mcp.rs`) wraps the tool router and logs one `event="mcp_tool_call"` per call.
+  - Fields: `tool` (a known name or `unknown`), `outcome` (`ok` | `tool_error` | `invalid_params` | `error`) and `duration_ms`.
+  - Arguments, SQL and results are never logged.
+
 - Current tracing output covers operational logs; MCP has no explicit per-tool usage/timing instrumentation. Add it as part of this step.
 - Alloy collects host CPU/load, RAM/swap, disk, and network metrics through its Unix exporter and forwards them to Grafana Cloud metrics. It ships Exodata's journal plus proxy access/error logs to Loki; pin collection settings to the installed service versions.
 - Host metrics describe server resources. Proxy logs describe HTTP request counts, status, bytes, and latency where available, grouped by bounded route families such as website, REST, and MCP. They do not identify tool calls or establish unique human users.

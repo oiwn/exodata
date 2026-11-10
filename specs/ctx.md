@@ -1,19 +1,17 @@
 # Current Task Context
 
-Current focus: [0017-hostinger-nixos-deployment](tasks/0017-hostinger-nixos-deployment.md) (draft), step 6. Decisions recorded in its steps 2–6.
+Current focus: [0017-hostinger-nixos-deployment](tasks/0017-hostinger-nixos-deployment.md) (draft), step 7. Decisions recorded in its steps 2–7.
 
 ## catchup
 
-- Root SSH as installed; no deploy user, no SOPS. Target is `exodata-vps` (194.113.64.241).
-- CI (`nixos.yml`, manual dispatch) builds the app and host and pushes them to Cachix. `just nix-deploy <rev>` / `nix-rollback` / `nix-upload-data` / `nix-upload-descriptions`.
-- Steps 4–5 deployed: the app ran publicly on :3000.
-- Step 6 written, not deployed: Ferron (`modules/ferron.nix`) on 80/443 with LE HTTP-01; the app moved to 127.0.0.1:3000; `mcp.exodata.space` gets a Host rewrite.
-- DNS: Cloudflare, proxied, Full (strict). DO stays up until the maintainer removes it.
-- Never evaluate with `path:.`.
+- Live on the NixOS VPS (194.113.64.241): Ferron + LE certificates behind the Cloudflare proxy (Full strict); MCP at `mcp.exodata.space` (`/mcp` returns 308). DO is still up.
+- Deploy: CI `nixos.yml` (manual) → `just nix-deploy <rev>`. Data: `just nix-upload-data` / `nix-upload-descriptions`.
+- Step 7 written, not deployed: Alloy (`modules/alloy.nix`), IP/SQL-free Ferron log, MCP `mcp_tool_call` events. Secrets: `just nix-push-secrets` from the Git-ignored `infrastructure/nix/alloy.env`.
+- Never evaluate with `path:.`. The agent must not read `*.env` files.
 
 ## Next
 
-1. User: commit, push to `dev`, run CI, then `just nix-deploy <rev>`. Then `systemctl is-active ferron exodata`.
-2. Cutover per spec step 6: grey-cloud A records → wait for certificates → orange cloud.
-3. Verify `/data/`, wasm compression, MCP on both hosts, port 3000 closed, ACME renewal path.
-4. Step 7: Alloy.
+1. User: fill in `alloy.env`, `git check-ignore -v` it, `just nix-push-secrets`, commit/push, CI, `just nix-deploy`.
+2. Verify Alloy has no auth errors; Explore shows `node_load1{instance="exodata-vps"}` and `{unit="ferron.service"}`; test MCP calls appear.
+3. Grafana UI: Linux Server integration dashboards, MCP panels, alerts, synthetic checks.
+4. Step 8: DEPLOY.md, handoff.

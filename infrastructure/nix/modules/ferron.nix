@@ -9,6 +9,8 @@ let
         auto_tls_cache "/var/lib/ferron/acme"
         log_stdout #true
         error_log_stderr #true
+        // No client IP and no query string (it can carry SQL); logs ship to Grafana.
+        log_format "{method} {path} {status_code} {content_length} \"{header:User-Agent}\""
     }
 
     exodata.space {
