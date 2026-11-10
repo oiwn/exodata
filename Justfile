@@ -105,3 +105,22 @@ ansible-ssh:
 # Run arbitrary ansible command
 ansible-run cmd:
   cd {{ansible_dir}} && ansible all {{ansible_args}} -m shell -a "{{cmd}}"
+
+# =============================================================================
+# NixOS (exodata-vps)
+# =============================================================================
+nix_host := "root@exodata-vps"
+cachix_key := "exodata.cachix.org-1:pgrrFg4Ejd8QJWtEpXwV2U3tXKaDtwnGFI7s05BLQiU="
+
+# Deploy a pushed, CI-built commit, e.g. `just nix-deploy $(git rev-parse HEAD)`.
+# The options repeat base.nix settings so the first deploy works before they exist.
+nix-deploy rev:
+  ssh {{nix_host}} "nixos-rebuild switch \
+    --flake github:oiwn/exodata/{{rev}}#exodata-vps \
+    --option experimental-features 'nix-command flakes' \
+    --option extra-substituters https://exodata.cachix.org \
+    --option extra-trusted-public-keys {{cachix_key}}"
+
+# Return the VPS to its previous NixOS generation.
+nix-rollback:
+  ssh {{nix_host}} "nixos-rebuild switch --rollback"

@@ -77,9 +77,9 @@ grade: huge
 
 ### 4. Cache retrieval, activation, and rollback
 
-- VPS configuration trusts `exodata.cachix.org` (`nix.settings.substituters` and `trusted-public-keys`) and sets `nix.settings.max-jobs = 0`, so it never builds: an output missing from the caches fails the deploy instead of compiling.
-- The installed system does not trust the cache yet; the first activation passes the cache as `--option extra-substituters` / `extra-trusted-public-keys` on the command line.
-- Proposed deploy, from the Mac after CI succeeds for commit `<rev>`: `ssh root@exodata-vps 'nixos-rebuild switch --flake github:oiwn/exodata/<rev>#exodata-vps'`. deploy-rs (`remoteBuild = true`, run from the Mac) remains an optional later addition for automatic rollback. CI holds no SSH credential to the server.
+- `modules/base.nix` enables `nix-command flakes`, adds `exodata.cachix.org` via `nix.settings.extra-substituters` / `extra-trusted-public-keys`, and sets `max-jobs = 0` with `always-allow-substitutes = true`, so the VPS never builds: an output missing from the caches fails the deploy instead of compiling.
+- The installed system had flakes disabled and no Cachix trust; `just nix-deploy <rev>` always passes `experimental-features`, `extra-substituters`, and `extra-trusted-public-keys` as `--option`, so the first activation works too.
+- Deploy, from the Mac after CI succeeds for a pushed commit: `just nix-deploy <rev>` (runs `nixos-rebuild switch --flake github:oiwn/exodata/<rev>#exodata-vps` over SSH). Rollback: `just nix-rollback`. deploy-rs (`remoteBuild = true`, run from the Mac) remains an optional later addition for automatic rollback. CI holds no SSH credential to the server.
 - Just recipes will wrap CI triggering/inspection, manifest retrieval, SSH activation, status, journal logs, uploads, smoke checks, and rollback. Final recipe names and executable commands go into `DEPLOY.md` as they are implemented.
 - Retain the current and previous system/application closures in both cache and host garbage-collection roots. Activation handles service changes; verify SSH and HTTP afterward. Select the previous generation to roll back, then test restoration of the new one. Kernel changes require a separately verified reboot.
 
