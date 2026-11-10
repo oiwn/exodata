@@ -2,17 +2,24 @@ name: NixOS baseline
 
 on:
   push:
-    paths:
+    paths: &build-paths
       - flake.nix
       - flake.lock
       - infrastructure/nix/**
       - .github/workflows/nixos.yml
+      # Application sources packaged by infrastructure/nix/packages/exodata.nix
+      - Cargo.toml
+      - Cargo.lock
+      - .cargo/**
+      - src/**
+      - crates/**
+      - docs/**
+      - style/**
+      - public/**
+      - locales/**
+      - content/**
   pull_request:
-    paths:
-      - flake.nix
-      - flake.lock
-      - infrastructure/nix/**
-      - .github/workflows/nixos.yml
+    paths: *build-paths
   workflow_dispatch:
 
 permissions:
@@ -23,8 +30,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
       - uses: cachix/install-nix-action@v31
+      # Pulls from and pushes every built path to exodata.cachix.org.
+      - uses: cachix/cachix-action@v17
+        with:
+          name: exodata
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Evaluate pinned configuration
         run: nix flake check --no-build --no-update-lock-file
-      - name: Build baseline (no activation)
+      - name: Build application
+        run: nix build .#exodata --no-link --print-out-paths --print-build-logs --keep-going --no-update-lock-file
+      - name: Build host (no activation)
         run: nix build .#nixosConfigurations.exodata-vps.config.system.build.toplevel --no-link --print-out-paths --no-update-lock-file

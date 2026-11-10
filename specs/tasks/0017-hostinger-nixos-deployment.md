@@ -64,11 +64,15 @@ grade: huge
 ### 3. GitHub CI builds and published outputs
 
 - Use an x86_64 Linux GitHub runner with Nix and the repository's `flake.lock`. CI runs `nix flake check --no-build`, then builds the host generation; once the app module is enabled, that build includes the application package.
-- Define the application derivation with pinned Rust including the WASM target, cargo-leptos, Tailwind, native libraries, and Cargo.lock-based dependency vendoring. Run `cargo leptos build --release --split` inside the build and install the server plus the entire generated `site/` tree.
-- Separate dependency preparation from source compilation so source-only changes can reuse dependency work. Validate the chosen Rust/WASM caching approach with a second source-only CI build; Nix alone does not guarantee incremental Cargo caching.
+- Application derivation: `infrastructure/nix/packages/exodata.nix`, exposed as `packages.x86_64-linux.exodata` (and `default`). Built with crane (v0.24.0) and rust-overlay Rust 1.99.0 with the `wasm32-unknown-unknown` target; inputs pinned in `flake.lock`.
+- Build tools come from Nix on PATH, which cargo-leptos 0.3.6 prefers over downloading: `cargo-leptos`, `wasm-bindgen-cli` 0.2.127 (built with `buildWasmBindgenCli`; must match `Cargo.lock`, pinned nixpkgs stops at 0.2.126), `binaryen`, `tailwindcss_4`. Native build inputs: `pkg-config`, `cmake`, `perl`.
+- Source is a fileset of tracked `Cargo.toml`, `Cargo.lock`, `.cargo`, `src`, `crates`, `docs`, `style`, `public`, `locales`, `content`. `BUILD_DATE`/`BUILD_TIMESTAMP` derive from the flake's commit time. Tests are not run in this build (`doCheck = false`); existing workflows cover them.
+- `cargo leptos build --release --split` output: `$out/bin/exodata` (from `exodata-web`) and `$out/share/exodata/site`.
+- `buildDepsOnly` mirrors cargo-leptos's server build and WASM build (`--target-dir=target/front`, `wasm-release`, `RUSTFLAGS=-Clink-args=--emit-relocs`) so source-only changes reuse cached dependency builds. Validate with a second source-only CI build.
+- CI (`.github/workflows/nixos.yml`) also triggers on application source paths, frees runner disk, and builds `.#exodata` before the host. The `wasm-bindgen-cli` vendor hash starts as `lib.fakeHash`; the first CI run reports the real value.
 - Fetch standard packages from `cache.nixos.org`. CI pushes our application and system outputs to the public Cachix cache `exodata` (`https://exodata.cachix.org`, Cachix-managed signing, public key `exodata.cachix.org-1:pgrrFg4Ejd8QJWtEpXwV2U3tXKaDtwnGFI7s05BLQiU=`) via `cachix/cachix-action` with GitHub secret `CACHIX_AUTH_TOKEN` (created by the maintainer). Keep compiler/build-only dependencies out of the deployed runtime closure.
 - The deployed revision is the Git commit; CI's successful build of that commit defines the system store path. No secrets enter derivations or public logs.
-- No Docker on the NixOS host. The existing Docker/GHCR workflow keeps serving DigitalOcean until its retirement.
+- No Docker on the NixOS host. The Docker/GHCR image workflow is disabled (`.github/workflows/deploy.yml.disabled`) at the maintainer's request; DigitalOcean keeps running its last image until retirement.
 - Neither the Mac nor VPS compiles anything. The first baseline build can run before app packaging is finished, so host adoption does not depend on completing the full release pipeline.
 
 ### 4. Cache retrieval, activation, and rollback
