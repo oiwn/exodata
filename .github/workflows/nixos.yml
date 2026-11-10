@@ -27,4 +27,4 @@ jobs:
       - name: Evaluate pinned configuration
         run: nix flake check --no-build --no-update-lock-file
       - name: Build baseline (no activation)
-        run: nix build .#nixosConfigurations.nixos-vps.config.system.build.toplevel --no-link --print-out-paths --no-update-lock-file
+        run: nix build .#nixosConfigurations.exodata-vps.config.system.build.toplevel --no-link --print-out-paths --no-update-lock-file
