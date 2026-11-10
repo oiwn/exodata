@@ -107,10 +107,11 @@ grade: huge
   - Ferron rewrites every path on that host to the app's `/mcp`, and replaces `Host` with `exodata.space`, the only public host `allowed_hosts` (`src/server/mcp.rs`) accepts.
   - `exodata.space/mcp` (and `/mcp/...`) answers `308` to `https://mcp.exodata.space/`. 308 keeps POST, but clients that don't follow redirects must update their URL.
   - Public docs (`docs/mcp.md`, `docs/api.md`, `docs/about.md`, `crates/exo-cli/README.md`) use the subdomain.
-- Unverified against Ferron docs; verify on the server:
-  - `root` inside `location "/data" remove_base=#true`
-  - the `Host` replacement
-  - whether `dynamic_compressed` covers proxied WASM
+- Verified on the server, 2026-11-10:
+  - LE certificates were issued for both hosts.
+  - The `Host` replacement and the `/mcp` 308 (POST followed) work.
+  - Proxied WASM is served with `content-encoding: br`.
+- Ferron locations inherit host-level directives. A host-level `proxy` therefore shadowed `location "/data"` with a 404 from the app, so the proxy now lives in a sibling `location "/"` block. `/data/` serves `exo download` (`crates/exo-cli/src/download.rs`).
 - `www.exodata.space` is not served (same as the old nginx).
 - Proxy `exodata.space` to loopback, expose only intended runtime download files under `/data/`, configure `/pkg/` caching and WASM compression, and allow startup/prewarm to complete before declaring health.
 - Route `mcp.exodata.space/` internally to `/mcp`; preserve the main site's `/mcp`. Verify forwarded Host/Origin behavior against the app's MCP allowed-host checks rather than assuming a subdomain works automatically.

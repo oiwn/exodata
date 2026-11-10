@@ -14,14 +14,18 @@ let
     exodata.space {
         // MCP moved to its own subdomain; 308 keeps POST and its body.
         status 308 regex="^/mcp(?:$|[/#?])" location="https://mcp.exodata.space/"
+        // Runtime downloads for `exo download`. Sibling of "/" so it does not
+        // inherit the proxy (Ferron locations inherit host-level directives).
         location "/data" remove_base=#true {
             root "/var/lib/exodata/data"
             directory_listing #false
             file_cache_control "public, max-age=3600"
         }
-        proxy "http://127.0.0.1:3000"
-        header_replace "Cache-Control" "no-cache"
-        dynamic_compressed #true
+        location "/" {
+            proxy "http://127.0.0.1:3000"
+            header_replace "Cache-Control" "no-cache"
+            dynamic_compressed #true
+        }
     }
 
     mcp.exodata.space {
