@@ -78,14 +78,14 @@ Persistent config lives at the platform config directory (e.g.
 
 ## Agent Integration
 
-The catalog also exposes a hosted MCP server at `https://exodata.space/mcp`
+The catalog also exposes a hosted MCP server at `https://mcp.exodata.space`
 (Streamable HTTP, stateless JSON) with six read-only tools: `health`,
 `list_insights`, `run_insight`, `describe_catalog`, `query_catalog`,
 `download_detail`. Most MCP-aware agents can connect natively — for example,
 Claude Code:
 
 ```bash
-claude mcp add --transport http exodata https://exodata.space/mcp
+claude mcp add --transport http exodata https://mcp.exodata.space
 ```
 
 See [the MCP docs](https://github.com/oiwn/exodata/blob/main/docs/mcp.md#connecting-an-agent)

@@ -93,7 +93,25 @@ grade: huge
 
 ### 6. Ferron, HTTPS, and public cutover
 
-- Pin the selected Ferron version/module and validate its configuration against that version's documentation. Declare firewall access for SSH and HTTP/HTTPS; keep application and telemetry listeners private.
+- Implemented in `infrastructure/nix/modules/ferron.nix`:
+  - Ferron 2.7.0 from pinned nixpkgs (no NixOS module exists), with a hand-written unit: `DynamicUser`, `StateDirectory=ferron`, `CAP_NET_BIND_SERVICE`. The KDL config is in the Nix store and holds no secrets or contact email.
+  - Firewall opens 80/443. The app listens on `127.0.0.1:3000` and port 3000 is closed. Access/error logs go to journald.
+- TLS: Cloudflare stays proxied in Full (strict) mode. Ferron obtains Let's Encrypt certificates via `auto_tls_challenge "http-01"`, because TLS-ALPN-01 cannot pass the proxy. The cache is `/var/lib/ferron/acme`.
+- First issuance happens at cutover:
+  1. Point the A records for `exodata.space` and `mcp` at the VPS with the proxy off.
+  2. Wait for `journalctl -u ferron` to report both certificates.
+  3. Re-enable the proxy.
+- Rollback: point the A record back at DigitalOcean.
+- Renewal runs through Cloudflare. Check that `/.well-known/acme-challenge/` reaches Ferron over HTTPS, or exempt it from Cloudflare's "Always Use HTTPS".
+- MCP moves to `https://mcp.exodata.space`:
+  - Ferron rewrites every path on that host to the app's `/mcp`, and replaces `Host` with `exodata.space`, the only public host `allowed_hosts` (`src/server/mcp.rs`) accepts.
+  - `exodata.space/mcp` (and `/mcp/...`) answers `308` to `https://mcp.exodata.space/`. 308 keeps POST, but clients that don't follow redirects must update their URL.
+  - Public docs (`docs/mcp.md`, `docs/api.md`, `docs/about.md`, `crates/exo-cli/README.md`) use the subdomain.
+- Unverified against Ferron docs; verify on the server:
+  - `root` inside `location "/data" remove_base=#true`
+  - the `Host` replacement
+  - whether `dynamic_compressed` covers proxied WASM
+- `www.exodata.space` is not served (same as the old nginx).
 - Proxy `exodata.space` to loopback, expose only intended runtime download files under `/data/`, configure `/pkg/` caching and WASM compression, and allow startup/prewarm to complete before declaring health.
 - Route `mcp.exodata.space/` internally to `/mcp`; preserve the main site's `/mcp`. Verify forwarded Host/Origin behavior against the app's MCP allowed-host checks rather than assuming a subdomain works automatically.
 - Test real MCP initialization/tool calls, streaming/disconnect behavior, TLS for both hosts, static downloads, and compression. HTTP success alone is insufficient for MCP compatibility.

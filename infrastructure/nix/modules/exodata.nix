@@ -19,8 +19,8 @@
       LEPTOS_OUTPUT_NAME = "exodata";
       LEPTOS_SITE_ROOT = "${exodata}/share/exodata/site";
       LEPTOS_SITE_PKG_DIR = "pkg";
-      # Temporary: public on :3000 until the proxy (step 6) moves it to 127.0.0.1.
-      LEPTOS_SITE_ADDR = "0.0.0.0:3000";
+      # Only Ferron (ferron.nix) reaches the app.
+      LEPTOS_SITE_ADDR = "127.0.0.1:3000";
       LEPTOS_ENV = "PROD";
       EXO_DATA_DIR = "/var/lib/exodata/data";
       EXO_CONTENT_DIR = "/var/lib/exodata/content";
@@ -34,6 +34,4 @@
       RestartSec = 5;
     };
   };
-
-  networking.firewall.allowedTCPPorts = [ 3000 ];
 }

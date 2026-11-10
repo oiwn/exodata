@@ -55,7 +55,7 @@ See [API documentation](../docs/api.md) for request parameters and examples.
 
 ### MCP
 
-The Axum application mounts a read-only Streamable HTTP MCP server at `/mcp`. Its tools are `health`, `list_insights`, `run_insight`, `describe_catalog`, `query_catalog`, and `download_detail`. It uses the server's in-memory catalog state and shared SQL/export functions. See [MCP documentation](../docs/mcp.md) for tool contracts and client configuration.
+The Axum application mounts a read-only Streamable HTTP MCP server at `/mcp`, published as `https://mcp.exodata.space` (the proxy maps it; `exodata.space/mcp` redirects there). Its tools are `health`, `list_insights`, `run_insight`, `describe_catalog`, `query_catalog`, and `download_detail`. It uses the server's in-memory catalog state and shared SQL/export functions. See [MCP documentation](../docs/mcp.md) for tool contracts and client configuration.
 
 ### CLI
 

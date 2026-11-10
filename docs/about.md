@@ -26,7 +26,7 @@ See [REST API](api.md) for parameters and examples.
 ## MCP
 
 A read-only Model Context Protocol endpoint is hosted at
-`https://exodata.space/mcp` so coding agents can query the catalog directly.
+`https://mcp.exodata.space` so coding agents can query the catalog directly.
 Tools: `health`, `list_insights`, `run_insight`, `describe_catalog`,
 `query_catalog`, `download_detail`.
 

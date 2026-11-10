@@ -7,7 +7,9 @@ stellar host as JSON or CSV. Exodata is an independent service, not operated by 
 
 Connection URL:
 
-- Hosted: `https://exodata.space/mcp`
+- Hosted: `https://mcp.exodata.space`
+
+The former `https://exodata.space/mcp` URL redirects there (HTTP 308).
 
 Transport: Streamable HTTP in stateless JSON response mode. Simple
 request/response clients do not need to manage MCP session IDs.
@@ -19,19 +21,19 @@ Choose your client; no local MCP server or proxy installation is needed.
 Codex CLI:
 
 ```bash
-codex mcp add exodata --url https://exodata.space/mcp
+codex mcp add exodata --url https://mcp.exodata.space
 ```
 
 Claude Code, shared project configuration:
 
 ```bash
-claude mcp add --scope project --transport http exodata https://exodata.space/mcp
+claude mcp add --scope project --transport http exodata https://mcp.exodata.space
 ```
 
 OpenCode, project configuration:
 
 ```bash
-opencode mcp add exodata --url https://exodata.space/mcp
+opencode mcp add exodata --url https://mcp.exodata.space
 ```
 
 These commands save client configuration. Restart or reconnect your client as
@@ -174,7 +176,7 @@ slightly different config file name and key.
 Run from the project root with explicit project scope:
 
 ```bash
-claude mcp add --scope project --transport http exodata https://exodata.space/mcp
+claude mcp add --scope project --transport http exodata https://mcp.exodata.space
 ```
 
 That writes `.mcp.json`. Replace `--scope project` with `--scope user` for
@@ -189,7 +191,7 @@ Project configuration:
   "mcpServers": {
     "exodata": {
       "type": "http",
-      "url": "https://exodata.space/mcp"
+      "url": "https://mcp.exodata.space"
     }
   }
 }
@@ -201,7 +203,7 @@ Add this to `crushrc` in the project root or `~/.config/crush/crushrc`,
 following the [Crush configuration guide](https://github.com/charmbracelet/crush/tree/main/docs/config):
 
 ```bash
-mcp add exodata --type http --url https://exodata.space/mcp
+mcp add exodata --type http --url https://mcp.exodata.space
 ```
 
 Existing JSON configurations (`.crush.json`, `crush.json`, or
@@ -213,7 +215,7 @@ Existing JSON configurations (`.crush.json`, `crush.json`, or
   "mcp": {
     "exodata": {
       "type": "http",
-      "url": "https://exodata.space/mcp"
+      "url": "https://mcp.exodata.space"
     }
   }
 }
@@ -233,7 +235,7 @@ write to global configuration instead. Alternatively, add a remote entry to
   "mcp": {
     "exodata": {
       "type": "remote",
-      "url": "https://exodata.space/mcp",
+      "url": "https://mcp.exodata.space",
       "enabled": true
     }
   }
@@ -248,7 +250,7 @@ following the [official Codex MCP guide](https://developers.openai.com/codex/mcp
 
 ```toml
 [mcp_servers.exodata]
-url = "https://exodata.space/mcp"
+url = "https://mcp.exodata.space"
 ```
 
 After configuration, the agent should see six tools: `health`, `list_insights`,

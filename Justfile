@@ -127,10 +127,10 @@ nix-rollback:
 
 # Upload Parquet data and metadata TOML files, then restart the app.
 nix-upload-data:
-  rsync -rtv data/*.parquet data/*.toml {{nix_host}}:/var/lib/exodata/data/
+  rsync -rtpv --chmod=Fu=rw,Fgo=r data/*.parquet data/*.toml {{nix_host}}:/var/lib/exodata/data/
   ssh {{nix_host}} "systemctl restart exodata"
 
 # Upload generated stellar-host descriptions (description.md only), then restart the app.
 nix-upload-descriptions:
-  rsync -rtv --include='*/' --include='description.md' --exclude='*' content/systems/ {{nix_host}}:/var/lib/exodata/content/
+  rsync -rtpv --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r --include='*/' --include='description.md' --exclude='*' content/systems/ {{nix_host}}:/var/lib/exodata/content/
   ssh {{nix_host}} "systemctl restart exodata"
