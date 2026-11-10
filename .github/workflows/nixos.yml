@@ -1,25 +1,7 @@
 name: NixOS baseline
 
+# Manual only: gh workflow run nixos.yml --ref dev
 on:
-  push:
-    paths: &build-paths
-      - flake.nix
-      - flake.lock
-      - infrastructure/nix/**
-      - .github/workflows/nixos.yml
-      # Application sources packaged by infrastructure/nix/packages/exodata.nix
-      - Cargo.toml
-      - Cargo.lock
-      - .cargo/**
-      - src/**
-      - crates/**
-      - docs/**
-      - style/**
-      - public/**
-      - locales/**
-      - content/**
-  pull_request:
-    paths: *build-paths
   workflow_dispatch:
 
 permissions:
