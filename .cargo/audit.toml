@@ -4,6 +4,12 @@ ignore = [
     "RUSTSEC-2026-0194",
     # Polars' vulnerable cloud XML paths are not enabled or used by this project.
     "RUSTSEC-2026-0195",
+    # zip 3 is a build-only dependency of utoipa-swagger-ui 9, which unpacks
+    # its own bundled Swagger UI archive. Drop these with utoipa 6 / swagger-ui 10.
+    "RUSTSEC-2026-0367",
+    "RUSTSEC-2026-0368",
+    "RUSTSEC-2026-0369",
+    "RUSTSEC-2026-0429",
 ]
 informational_warnings = ["unmaintained", "unsound", "notice"]
 

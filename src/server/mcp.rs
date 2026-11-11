@@ -6,7 +6,7 @@ use rmcp::{
     handler::server::{tool::ToolCallContext, wrapper::Parameters},
     model::{
         CallToolRequestParams, CallToolResponse, CallToolResult, ErrorCode,
-        Implementation, ServerCapabilities, ServerInfo,
+        Implementation, ServerCapabilities, ServerConfig,
     },
     schemars,
     service::RequestContext,
@@ -263,8 +263,8 @@ impl ExodataMcp {
 
 #[tool_handler]
 impl ServerHandler for ExodataMcp {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new(
                 "exodata",
                 env!("CARGO_PKG_VERSION"),
