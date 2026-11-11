@@ -1,7 +1,10 @@
 name: NixOS baseline
 
-# Manual only: gh workflow run nixos.yml --ref dev
+# Runs on version tags (git tag v0.4.2 && git push origin v0.4.2) or manually:
+# gh workflow run nixos.yml --ref dev. Never deploys; deploy is `just nix-deploy`.
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:

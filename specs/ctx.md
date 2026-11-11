@@ -1,17 +1,16 @@
 # Current Task Context
 
-Current focus: [0017-hostinger-nixos-deployment](tasks/0017-hostinger-nixos-deployment.md) (draft), step 7. Decisions recorded in its steps 2–7.
+Current focus: [0017-hostinger-nixos-deployment](tasks/0017-hostinger-nixos-deployment.md) (draft), steps 7–8. Decisions recorded in its steps 2–7.
 
 ## catchup
 
-- Live on the NixOS VPS (194.113.64.241): Ferron + LE certificates behind the Cloudflare proxy (Full strict); MCP at `mcp.exodata.space` (`/mcp` returns 308). DO is still up.
-- Deploy: CI `nixos.yml` (manual) → `just nix-deploy <rev>`. Data: `just nix-upload-data` / `nix-upload-descriptions`.
-- Step 7 written, not deployed: Alloy (`modules/alloy.nix`), IP/SQL-free Ferron log, MCP `mcp_tool_call` events. Secrets: `just nix-push-secrets` from the Git-ignored `infrastructure/nix/alloy.env`.
+- Live on the NixOS VPS (194.113.64.241): Ferron + LE certificates behind the Cloudflare proxy (Full strict). MCP is at `mcp.exodata.space` (`/mcp` returns 308). DO is still up.
+- CI `nixos.yml` runs on `v*` tags or by hand and pushes to Cachix; it never deploys. Deploy: `just nix-deploy <rev>`. Data: `just nix-upload-data` / `nix-upload-descriptions`. Secrets: `just nix-push-secrets`.
+- Step 7 is deployed: Alloy sends host metrics and journal logs to Grafana Cloud (no errors). The Ferron log has no IPs or query strings. MCP `mcp_tool_call` events are verified.
 - Never evaluate with `path:.`. The agent must not read `*.env` files.
 
 ## Next
 
-1. User: fill in `alloy.env`, `git check-ignore -v` it, `just nix-push-secrets`, commit/push, CI, `just nix-deploy`.
-2. Verify Alloy has no auth errors; Explore shows `node_load1{instance="exodata-vps"}` and `{unit="ferron.service"}`; test MCP calls appear.
-3. Grafana UI: Linux Server integration dashboards, MCP panels, alerts, synthetic checks.
-4. Step 8: DEPLOY.md, handoff.
+1. User: PR `dev` → `main`, merge; then `git tag vX.Y.Z && git push origin vX.Y.Z` to confirm the tag-triggered build.
+2. Grafana: the dashboard in `tmp/exodata-vps-dashboard.json` (v2 format, default data sources) has empty Ferron panels. Check the data source and the `{unit="ferron.service"}` lines. Add alerts and uptime checks.
+3. Step 8: DEPLOY.md, handoff, and the DO shutdown decision.
