@@ -1,6 +1,6 @@
 # REST API
 
-Exoplanets Catalog exposes NASA Exoplanet Archive data through JSON endpoints under `/rest`. It also exposes a read-only hosted MCP endpoint at `/mcp` for agent clients.
+Exoplanets Catalog exposes NASA Exoplanet Archive data through JSON endpoints under `/rest`. It also exposes a read-only hosted MCP endpoint at `https://mcp.exodata.space` for agent clients.
 
 Interactive OpenAPI documentation is available at <a href="/swagger-ui" rel="external">/swagger-ui</a>. The OpenAPI JSON document is available at <a href="/rest/openapi.json" rel="external">/rest/openapi.json</a>.
 
@@ -259,7 +259,7 @@ Response shape:
 ## MCP Endpoint
 
 The catalog also exposes a hosted, read-only [Model Context Protocol](https://modelcontextprotocol.io)
-endpoint at `/mcp` for agent clients. It shares the SQL validation and
+endpoint at `https://mcp.exodata.space` for agent clients. It shares the SQL validation and
 execution path with `/rest/query`, but uses agent-friendly defaults
 (100 rows default, 1000 cap) and ships connection snippets for Claude Code,
 Crush, OpenCode, and Codex CLI. MCP also exposes a `download_detail` tool for

@@ -1,10 +1,16 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use rmcp::{
-    ErrorData as McpError, ServerHandler,
-    handler::server::wrapper::Parameters,
-    model::{CallToolResult, Implementation, ServerCapabilities, ServerInfo},
-    schemars, tool, tool_handler, tool_router,
+    ErrorData as McpError, RoleServer, ServerHandler,
+    handler::server::{tool::ToolCallContext, wrapper::Parameters},
+    model::{
+        CallToolRequestParams, CallToolResponse, CallToolResult, ErrorCode,
+        Implementation, ServerCapabilities, ServerConfig,
+    },
+    schemars,
+    service::RequestContext,
+    tool, tool_handler, tool_router,
     transport::streamable_http_server::{
         StreamableHttpServerConfig, StreamableHttpService,
         session::local::LocalSessionManager,
@@ -257,8 +263,8 @@ impl ExodataMcp {
 
 #[tool_handler]
 impl ServerHandler for ExodataMcp {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new(
                 "exodata",
                 env!("CARGO_PKG_VERSION"),
@@ -266,6 +272,49 @@ impl ServerHandler for ExodataMcp {
             .with_instructions(
                 "Read-only tools for Exoplanets Catalog. Use describe_catalog to inspect table columns before calling query_catalog with SQL SELECT statements.",
             )
+    }
+
+    // Same dispatch as the #[tool_handler] default, plus one usage event per
+    // call. Only bounded fields are logged: never arguments, SQL, or results.
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResponse, McpError> {
+        let name = request.name.clone();
+        let tool = tool_label(&name);
+        let started = Instant::now();
+        let result = Self::tool_router()
+            .call(ToolCallContext::new(self, request, context))
+            .await;
+        tracing::info!(
+            event = "mcp_tool_call",
+            tool,
+            outcome = call_outcome(&result),
+            duration_ms = started.elapsed().as_millis() as u64,
+            "MCP tool call"
+        );
+        result
+    }
+}
+
+/// Tool name for usage events; unknown names collapse to "unknown".
+fn tool_label(name: &str) -> &str {
+    if ExodataMcp::tool_router().has_route(name) {
+        name
+    } else {
+        "unknown"
+    }
+}
+
+fn call_outcome(result: &Result<CallToolResponse, McpError>) -> &'static str {
+    match result {
+        Ok(CallToolResponse::Complete(done)) if done.is_error == Some(true) => {
+            "tool_error"
+        }
+        Ok(_) => "ok",
+        Err(error) if error.code == ErrorCode::INVALID_PARAMS => "invalid_params",
+        Err(_) => "error",
     }
 }
 
@@ -431,6 +480,30 @@ mod tests {
             Some("localhost:3000".to_string())
         );
         assert_eq!(site_url_host(""), None);
+    }
+
+    #[test]
+    fn tool_label_keeps_known_tools_and_collapses_unknown() {
+        assert_eq!(tool_label("health"), "health");
+        assert_eq!(tool_label("query_catalog"), "query_catalog");
+        assert_eq!(tool_label("drop_tables"), "unknown");
+    }
+
+    #[test]
+    fn call_outcome_classifies_results() {
+        let ok: Result<CallToolResponse, McpError> =
+            Ok(CallToolResult::success(vec![]).into());
+        let tool_error: Result<CallToolResponse, McpError> =
+            Ok(CallToolResult::error(vec![]).into());
+        let invalid: Result<CallToolResponse, McpError> =
+            Err(McpError::invalid_params("bad sql", None));
+        let internal: Result<CallToolResponse, McpError> =
+            Err(McpError::internal_error("timeout", None));
+
+        assert_eq!(call_outcome(&ok), "ok");
+        assert_eq!(call_outcome(&tool_error), "tool_error");
+        assert_eq!(call_outcome(&invalid), "invalid_params");
+        assert_eq!(call_outcome(&internal), "error");
     }
 
     #[test]

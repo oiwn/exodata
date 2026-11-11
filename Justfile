@@ -105,3 +105,38 @@ ansible-ssh:
 # Run arbitrary ansible command
 ansible-run cmd:
   cd {{ansible_dir}} && ansible all {{ansible_args}} -m shell -a "{{cmd}}"
+
+# =============================================================================
+# NixOS (exodata-vps)
+# =============================================================================
+nix_host := "root@exodata-vps"
+cachix_key := "exodata.cachix.org-1:pgrrFg4Ejd8QJWtEpXwV2U3tXKaDtwnGFI7s05BLQiU="
+
+# Deploy a pushed, CI-built commit, e.g. `just nix-deploy $(git rev-parse HEAD)`.
+# The options repeat base.nix settings so the first deploy works before they exist.
+nix-deploy rev:
+  ssh {{nix_host}} "nixos-rebuild switch \
+    --flake github:oiwn/exodata/{{rev}}#exodata-vps \
+    --option experimental-features 'nix-command flakes' \
+    --option extra-substituters https://exodata.cachix.org \
+    --option extra-trusted-public-keys {{cachix_key}}"
+
+# Copy local Grafana credentials (Git-ignored) to the VPS as a root-only file.
+nix-push-secrets:
+  test -f infrastructure/nix/alloy.env
+  ssh {{nix_host}} 'install -d -m 700 /var/lib/secrets && umask 077 && cat > /var/lib/secrets/alloy.env' < infrastructure/nix/alloy.env
+  ssh {{nix_host}} 'systemctl try-restart alloy'
+
+# Return the VPS to its previous NixOS generation.
+nix-rollback:
+  ssh {{nix_host}} "nixos-rebuild switch --rollback"
+
+# Upload Parquet data and metadata TOML files, then restart the app.
+nix-upload-data:
+  rsync -rtpv --chmod=Fu=rw,Fgo=r data/*.parquet data/*.toml {{nix_host}}:/var/lib/exodata/data/
+  ssh {{nix_host}} "systemctl restart exodata"
+
+# Upload generated stellar-host descriptions (description.md only), then restart the app.
+nix-upload-descriptions:
+  rsync -rtpv --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r --include='*/' --include='description.md' --exclude='*' content/systems/ {{nix_host}}:/var/lib/exodata/content/
+  ssh {{nix_host}} "systemctl restart exodata"

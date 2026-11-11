@@ -46,6 +46,9 @@ infrastructure/ansible/inventory/*.local.yml
 infrastructure/ansible/inventory/group_vars/*.local.yml
 infrastructure/ansible/inventory/group_vars/leptos_env.yml
 
+# Infrastructure - NixOS runtime credentials (pushed by `just nix-push-secrets`)
+infrastructure/nix/*.env
+
 # misc
 .DS_Store
 .crush.json

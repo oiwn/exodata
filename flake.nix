@@ -28,6 +28,7 @@
 
       nixosConfigurations.exodata-vps = nixpkgs.lib.nixosSystem {
         inherit system;
+        specialArgs = { inherit exodata; };
         modules = [ ./infrastructure/nix/hosts/exodata-vps.nix ];
       };
     };

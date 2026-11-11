@@ -69,7 +69,7 @@ grade: huge
 - Source is a fileset of tracked `Cargo.toml`, `Cargo.lock`, `.cargo`, `src`, `crates`, `docs`, `style`, `public`, `locales`, `content`. `BUILD_DATE`/`BUILD_TIMESTAMP` derive from the flake's commit time. Tests are not run in this build (`doCheck = false`); existing workflows cover them.
 - `cargo leptos build --release --split` output: `$out/bin/exodata` (from `exodata-web`) and `$out/share/exodata/site`.
 - `buildDepsOnly` mirrors cargo-leptos's server build and WASM build (`--target-dir=target/front`, `wasm-release`, `RUSTFLAGS=-Clink-args=--emit-relocs`) so source-only changes reuse cached dependency builds. Validate with a second source-only CI build.
-- CI (`.github/workflows/nixos.yml`) runs only on manual dispatch (`gh workflow run nixos.yml --ref dev`), frees runner disk, and builds `.#exodata` before the host. The `wasm-bindgen-cli` vendor hash starts as `lib.fakeHash`; the first CI run reports the real value.
+- CI (`.github/workflows/nixos.yml`) runs on `v*` tag pushes and on manual dispatch (`gh workflow run nixos.yml --ref <branch>`), frees runner disk, and builds `.#exodata` before the host. It never deploys.
 - Fetch standard packages from `cache.nixos.org`. CI pushes our application and system outputs to the public Cachix cache `exodata` (`https://exodata.cachix.org`, Cachix-managed signing, public key `exodata.cachix.org-1:pgrrFg4Ejd8QJWtEpXwV2U3tXKaDtwnGFI7s05BLQiU=`) via `cachix/cachix-action` with GitHub secret `CACHIX_AUTH_TOKEN` (created by the maintainer). Keep compiler/build-only dependencies out of the deployed runtime closure.
 - The deployed revision is the Git commit; CI's successful build of that commit defines the system store path. No secrets enter derivations or public logs.
 - No Docker on the NixOS host. The Docker/GHCR image workflow is disabled (`.github/workflows/deploy.yml.disabled`) at the maintainer's request; DigitalOcean keeps running its last image until retirement.
@@ -77,9 +77,9 @@ grade: huge
 
 ### 4. Cache retrieval, activation, and rollback
 
-- VPS configuration trusts `exodata.cachix.org` (`nix.settings.substituters` and `trusted-public-keys`) and sets `nix.settings.max-jobs = 0`, so it never builds: an output missing from the caches fails the deploy instead of compiling.
-- The installed system does not trust the cache yet; the first activation passes the cache as `--option extra-substituters` / `extra-trusted-public-keys` on the command line.
-- Proposed deploy, from the Mac after CI succeeds for commit `<rev>`: `ssh root@exodata-vps 'nixos-rebuild switch --flake github:oiwn/exodata/<rev>#exodata-vps'`. deploy-rs (`remoteBuild = true`, run from the Mac) remains an optional later addition for automatic rollback. CI holds no SSH credential to the server.
+- `modules/base.nix` enables `nix-command flakes`, adds `exodata.cachix.org` via `nix.settings.extra-substituters` / `extra-trusted-public-keys`, and sets `max-jobs = 0` with `always-allow-substitutes = true`, so the VPS never builds: an output missing from the caches fails the deploy instead of compiling.
+- The installed system had flakes disabled and no Cachix trust; `just nix-deploy <rev>` always passes `experimental-features`, `extra-substituters`, and `extra-trusted-public-keys` as `--option`, so the first activation works too.
+- Deploy, from the Mac after CI succeeds for a pushed commit: `just nix-deploy <rev>` (runs `nixos-rebuild switch --flake github:oiwn/exodata/<rev>#exodata-vps` over SSH). Rollback: `just nix-rollback`. deploy-rs (`remoteBuild = true`, run from the Mac) remains an optional later addition for automatic rollback. CI holds no SSH credential to the server.
 - Just recipes will wrap CI triggering/inspection, manifest retrieval, SSH activation, status, journal logs, uploads, smoke checks, and rollback. Final recipe names and executable commands go into `DEPLOY.md` as they are implemented.
 - Retain the current and previous system/application closures in both cache and host garbage-collection roots. Activation handles service changes; verify SSH and HTTP afterward. Select the previous generation to roll back, then test restoration of the new one. Kernel changes require a separately verified reboot.
 
@@ -93,13 +93,44 @@ grade: huge
 
 ### 6. Ferron, HTTPS, and public cutover
 
-- Pin the selected Ferron version/module and validate its configuration against that version's documentation. Declare firewall access for SSH and HTTP/HTTPS; keep application and telemetry listeners private.
+- Implemented in `infrastructure/nix/modules/ferron.nix`:
+  - Ferron 2.7.0 from pinned nixpkgs (no NixOS module exists), with a hand-written unit: `DynamicUser`, `StateDirectory=ferron`, `CAP_NET_BIND_SERVICE`. The KDL config is in the Nix store and holds no secrets or contact email.
+  - Firewall opens 80/443. The app listens on `127.0.0.1:3000` and port 3000 is closed. Access/error logs go to journald.
+- TLS: Cloudflare stays proxied in Full (strict) mode. Ferron obtains Let's Encrypt certificates via `auto_tls_challenge "http-01"`, because TLS-ALPN-01 cannot pass the proxy. The cache is `/var/lib/ferron/acme`.
+- First issuance happens at cutover:
+  1. Point the A records for `exodata.space` and `mcp` at the VPS with the proxy off.
+  2. Wait for `journalctl -u ferron` to report both certificates.
+  3. Re-enable the proxy.
+- Rollback: point the A record back at DigitalOcean.
+- Renewal runs through Cloudflare. Check that `/.well-known/acme-challenge/` reaches Ferron over HTTPS, or exempt it from Cloudflare's "Always Use HTTPS".
+- MCP moves to `https://mcp.exodata.space`:
+  - Ferron rewrites every path on that host to the app's `/mcp`, and replaces `Host` with `exodata.space`, the only public host `allowed_hosts` (`src/server/mcp.rs`) accepts.
+  - `exodata.space/mcp` (and `/mcp/...`) answers `308` to `https://mcp.exodata.space/`. 308 keeps POST, but clients that don't follow redirects must update their URL.
+  - Public docs (`docs/mcp.md`, `docs/api.md`, `docs/about.md`, `crates/exo-cli/README.md`) use the subdomain.
+- Verified on the server, 2026-11-10:
+  - LE certificates were issued for both hosts.
+  - The `Host` replacement and the `/mcp` 308 (POST followed) work.
+  - Proxied WASM is served with `content-encoding: br`.
+- Ferron locations inherit host-level directives. A host-level `proxy` therefore shadowed `location "/data"` with a 404 from the app, so the proxy now lives in a sibling `location "/"` block. `/data/` serves `exo download` (`crates/exo-cli/src/download.rs`).
+- `www.exodata.space` is not served (same as the old nginx).
 - Proxy `exodata.space` to loopback, expose only intended runtime download files under `/data/`, configure `/pkg/` caching and WASM compression, and allow startup/prewarm to complete before declaring health.
 - Route `mcp.exodata.space/` internally to `/mcp`; preserve the main site's `/mcp`. Verify forwarded Host/Origin behavior against the app's MCP allowed-host checks rather than assuming a subdomain works automatically.
 - Test real MCP initialization/tool calls, streaming/disconnect behavior, TLS for both hosts, static downloads, and compression. HTTP success alone is insufficient for MCP compatibility.
 - Determine DNS ownership and certificate validation method. Use a temporary hostname or DNS validation if certificates cannot be issued before public records move; verify the new host using explicit address resolution, then change DNS and recheck externally. Keep DigitalOcean available during propagation.
 
 ### 7. Host, HTTP, and MCP observability
+
+- Implemented:
+  - **Alloy:** `infrastructure/nix/modules/alloy.nix` uses the nixpkgs `services.alloy` module (Alloy 1.16.0, `DynamicUser` in `systemd-journal`).
+  - **Metrics:** `prometheus.exporter.unix` → scrape every 60s with `job="integrations/node_exporter"` and `instance="exodata-vps"` (labels used by the Grafana Cloud Linux Server dashboards) → `prometheus.remote_write`.
+  - **Logs:** journal entries for `exodata`, `ferron` and `alloy` units, labelled `unit`, `level` and `host` → `loki.write`.
+- Credentials: `/var/lib/secrets/alloy.env` (root 0600, systemd `EnvironmentFile`) provides `GRAFANA_PROM_URL`, `GRAFANA_PROM_USER`, `GRAFANA_LOKI_URL`, `GRAFANA_LOKI_USER` and `GRAFANA_TOKEN`.
+  - It is pushed from the Git-ignored `infrastructure/nix/alloy.env` by `just nix-push-secrets`. The template is `alloy.env.example`.
+  - The Alloy config reads them with `sys.env`.
+- Ferron access log: `log_format "{method} {path} {status_code} {content_length} \"{header:User-Agent}\""`, with no client IP and no query string.
+- MCP: `ExodataMcp::call_tool` (`src/server/mcp.rs`) wraps the tool router and logs one `event="mcp_tool_call"` per call.
+  - Fields: `tool` (a known name or `unknown`), `outcome` (`ok` | `tool_error` | `invalid_params` | `error`) and `duration_ms`.
+  - Arguments, SQL and results are never logged.
 
 - Current tracing output covers operational logs; MCP has no explicit per-tool usage/timing instrumentation. Add it as part of this step.
 - Alloy collects host CPU/load, RAM/swap, disk, and network metrics through its Unix exporter and forwards them to Grafana Cloud metrics. It ships Exodata's journal plus proxy access/error logs to Loki; pin collection settings to the installed service versions.
